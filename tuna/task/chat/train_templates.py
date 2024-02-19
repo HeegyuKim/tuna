@@ -3,8 +3,20 @@ from ...common import Registry
 
 train_templates = Registry("templates")
 
+def find_template(model_id):
+    for k in train_templates.keys():
+        template = train_templates[k]
+        if model_id in template.SUPPORTED_MODELS:
+            print(f"Select {k} template")
+            return template
+        
+    # default
+    print("Select default template")
+    return BaseTrainTemplate
+
 @train_templates.register("default")
 class BaseTrainTemplate:
+    SUPPORTED_MODELS = []
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = None
 
@@ -45,3 +57,15 @@ class BaseTrainTemplate:
         return "\n".join(utterances)
         
         
+
+@train_templates.register("tinyllama")
+class TinyLlamaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = None
+
+    SYSTEM_FORMAT = "<|system|>\n{content}{eos}\n"
+    USER_FORMAT = "<|user|>\n{content}{eos}\n"
+    ASSISTANT_FORMAT = "<|assistant|>\n{content}{eos}\n"

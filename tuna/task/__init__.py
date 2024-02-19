@@ -1,3 +1,3 @@
 from .base import Task, TensorWrapper, tasks, DatasetLoader, DatasetArguments, datasources
 
-from . import chat
+from . import chat, vlm

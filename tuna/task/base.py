@@ -138,12 +138,15 @@ class LMTask(Task):
     
     def __init__(self, args, model, tokenizer, wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")) -> None:
         super().__init__(args, model, tokenizer, wrapper)
+        self._init_collator()
+
+    def _init_collator(self):
         self.collator = GenerativeLanguageModelCollator(
-            tokenizer, 
-            padding=args.padding,
-            padding_side=args.padding_side,
-            max_length=args.max_length,
-            decoder_max_length=args.decoder_max_length,
+            self.tokenizer, 
+            padding=self.args.padding,
+            padding_side=self.args.padding_side,
+            max_length=self.args.max_length,
+            decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
     
     def collate_batch(self, batch):

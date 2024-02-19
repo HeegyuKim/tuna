@@ -65,10 +65,8 @@ def main():
 
     logger = WandbLogger(trainer_args)
     dataloader = DatasetLoader(data_args)
+
     model, tokenizer = model_cls(model_args).load_model_and_tokenizer()
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        print("Setting pad token to eos token")
         
     task = task_cls(
         task_args,

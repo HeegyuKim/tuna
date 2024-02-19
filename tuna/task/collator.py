@@ -198,7 +198,8 @@ class GenerativeLanguageModelCollator(object):
             decoder_max_length = self.decoder_max_length
             max_length = self.max_length
 
-        new_batch = {}
+        new_batch = {k: v for k, v in batch.items() if torch.is_tensor(v)}
+        
         for k in self.padding_keys:
             if k not in batch:
                 continue
@@ -222,6 +223,17 @@ class GenerativeLanguageModelCollator(object):
 
         return new_batch
 
+
+
+@collators("gen-vlm")
+@dataclass
+class GenerativeVLMCollator(GenerativeLanguageModelCollator):
+    image_processor: Optional[Callable] = None
+
+    def __collate(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        out = super().__collate(features)
+        out["pixel_values"] = self.image_processor(out["image"])
+        return out
 
 
 @collators("dpo")

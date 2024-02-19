@@ -21,3 +21,6 @@ class Registry:
 
     def get(self, key):
         return self._registry.get(key)
+
+    def keys(self):
+        return self._registry.keys()
