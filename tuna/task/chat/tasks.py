@@ -72,3 +72,9 @@ class ChatVLMTask(ChatLMTask):
 
     #     return item
 
+
+@tasks.register("llava-pretrain")
+class LlavaPretrainingTask(ChatVLMTask):
+    def get_trainable_parameters(self):
+        return self.model.multi_modal_projector.parameters()
+        

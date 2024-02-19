@@ -73,6 +73,9 @@ class Task:
         datasets = datasets.map(self.encode_item, num_proc=8, load_from_cache_file=False)
         return datasets
 
+    def get_trainable_parameters(self):
+        return self.model.parameters()
+    
     def encode_item(self, item):
         pass
 

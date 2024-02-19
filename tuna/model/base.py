@@ -42,25 +42,31 @@ class BaseModel:
         
         # LoRA
         if args.use_lora:
-            from peft import LoraConfig, TaskType, get_peft_model
-            from .lora_util import find_lora_targets
-
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM, 
-                inference_mode=False, 
-                r=args.lora_r, 
-                lora_alpha=args.lora_alpha, 
-                lora_dropout=args.lora_dropout, 
-                target_modules=find_lora_targets(model)
-                )
-            model = get_peft_model(model, peft_config)
-            model.print_trainable_parameters()
+            model = self.apply_lora(args, model)
 
         if tokenizer.pad_token_id is None:
             tokenizer.pad_token = tokenizer.eos_token
             print("Setting pad token to eos token")
             
         return model, tokenizer
+    
+    def apply_lora(self, args, model, targets=None):
+        targets = targets or find_lora_targets(model)
+
+        from peft import LoraConfig, TaskType, get_peft_model
+        from .lora_util import find_lora_targets
+
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM, 
+            inference_mode=False, 
+            r=args.lora_r, 
+            lora_alpha=args.lora_alpha, 
+            lora_dropout=args.lora_dropout, 
+            target_modules=targets
+            )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
+        return model
     
 
 @models("causal-lm")

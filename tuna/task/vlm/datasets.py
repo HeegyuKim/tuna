@@ -8,13 +8,37 @@ class VisionChatDataset(DataSource):
         pass
 
 @datasources("kollava-pretrain")
-class KoLlavaPretrainDataset(VisionChatDataset):
+class KoLlavaPretrainingDataset(VisionChatDataset):
 
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
         ds = load_dataset("heegyu/KoLLaVA-CC3M-Pretrain-595K", split=split)
+        ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
+        return ds
+
+
+    def map_conversations(self, item):
+        convs = []
         
+        for uttr in item["conversations"]:
+            convs.append({
+                "role": uttr["from"],
+                "content": uttr["value"]
+            })
+        
+        return {
+            "conversations": convs
+        }
+    
+@datasources("kollava-finetune")
+class KoLlavaFinetuningDataset(KoLlavaPretrainingDataset):
+
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/kollava_v1_5_mix581k", split=split)
+        ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
         return ds
 
 

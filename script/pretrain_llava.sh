@@ -1,26 +1,28 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 wandb online
 
+model="42dot/42dot_LLM-SFT-1.3B"
+
 accelerate launch -m tuna.launcher.train \
     --do_train \
-    --task chat-vlm \
+    --task llava-pretrain \
     --model_arch llava-for-pretrain \
     --project "llava" \
-    --run_name "TinyMistral-248M-v2.5-Instruct-VQA" \
-    --dataset="BilbaoQA" \
+    --run_name "42dot_LLM-kollava-pretrain" \
+    --dataset="kollava-pretrain" \
     --train_only_response False \
     --max_length=1024 \
-    --vision_tower openai/clip-vit-base-patch32 \
-    --model_name_or_path Locutusque/TinyMistral-248M-v2.5-Instruct \
-    --train_template default \
-    --logging_steps 1 \
-    --total_epochs 3 \
-    --learning_rate 1e-5 \
+    --vision_tower openai/clip-vit-large-patch14 \
+    --model_name_or_path $model \
+    --train_template $model \
+    --logging_steps 32 \
+    --total_epochs 1 \
+    --learning_rate 2e-5 \
     --weight_decay 0 \
-    --train_total_batch_size 32 \
-    --train_batch_size_per_device 1 \
-    --eval_batch_size_per_device 1 \
+    --train_total_batch_size 256 \
+    --train_batch_size_per_device 4 \
+    --eval_batch_size_per_device 4 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

@@ -69,3 +69,16 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "<|system|>\n{content}{eos}\n"
     USER_FORMAT = "<|user|>\n{content}{eos}\n"
     ASSISTANT_FORMAT = "<|assistant|>\n{content}{eos}\n"
+
+
+@train_templates.register("42dot")
+class TinyLlamaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "42dot/42dot_LLM-SFT-1.3B"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = None
+
+    SYSTEM_FORMAT = "{content}\n\n"
+    USER_FORMAT = "<human>:\n{content}\n"
+    ASSISTANT_FORMAT = "<bot>:\n{content}{eos}\n"

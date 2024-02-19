@@ -99,7 +99,7 @@ class BaseTrainer:
 
     def setup_optimizer(self):
         self.optimizer = optim.AdamW(
-            self.task.model.parameters(),
+            self.task.get_trainable_parameters(),
             self.args.learning_rate,
             [self.args.adam_beta1, self.args.adam_beta2],
             weight_decay=self.args.weight_decay
@@ -295,7 +295,7 @@ class BaseTrainer:
         elif self.args.push_to_hub:
             with tempfile.TemporaryDirectory() as path:
                 self.task.model.save_pretrained(path)
-                self.collator.tokenizer.save_pretrained(path)
+                self.task.tokenizer.save_pretrained(path)
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
         
         self.task.model.to(device)

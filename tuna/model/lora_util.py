@@ -1,4 +1,4 @@
-from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig
+from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig
 
 
 GPTNEOX_TARGETS = [
@@ -21,6 +21,14 @@ LLAMA_TARGETS = [
 MISTRAL_TARGETS = [
     "q_proj", "v_proj", # "o_proj", "k_proj", 
     # "gate_proj", "up_proj", "down_proj"
+]
+
+LLAVA_LM_TARGETS = [
+    f"language_model.+{x}"
+    for x in [
+        "q_proj", "v_proj", "o_proj", "k_proj",
+        "gate_proj", "up_proj", "down_proj"
+    ]
 ]
 
 LORA_TARGETS = [
