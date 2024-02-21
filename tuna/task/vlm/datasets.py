@@ -7,6 +7,14 @@ class VisionChatDataset(DataSource):
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         pass
 
+ROLE_MAPPER = {
+    "human": "user",
+    "user": "user",
+    "assistant": "assistant",
+    "gpt": "assistant",
+    "bot": "assistant",
+    "system": "system"
+}
 @datasources("kollava-pretrain")
 class KoLlavaPretrainingDataset(VisionChatDataset):
 
@@ -14,6 +22,8 @@ class KoLlavaPretrainingDataset(VisionChatDataset):
         if split != "train":
             return None
         ds = load_dataset("heegyu/KoLLaVA-CC3M-Pretrain-595K", split=split)
+        if args.limit:
+            ds = ds.select(range(args.limit))
         ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
         return ds
 
@@ -23,7 +33,7 @@ class KoLlavaPretrainingDataset(VisionChatDataset):
         
         for uttr in item["conversations"]:
             convs.append({
-                "role": uttr["from"],
+                "role": ROLE_MAPPER[uttr["from"]],
                 "content": uttr["value"]
             })
         

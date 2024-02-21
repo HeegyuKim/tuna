@@ -185,7 +185,7 @@ class BaseTrainer:
             ascii=''
             )
         epoch = 0
-        autocast_device = self.device.split(":")[0]
+        autocast_device = self.device.split(":")[0] if isinstance(self.device, str) else self.device.type
 
         while True:
             self.task.model.train()
@@ -286,16 +286,14 @@ class BaseTrainer:
 
         if self.args.output_dir:
             path = f"{self.args.output_dir}/{run_name}/{name}"
-            self.task.model.save_pretrained(path)
-            self.collator.tokenizer.save_pretrained(path)
+            self.task.save_artifacts(self.task.model, path)
 
             if self.args.push_to_hub:
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
 
         elif self.args.push_to_hub:
             with tempfile.TemporaryDirectory() as path:
-                self.task.model.save_pretrained(path)
-                self.task.tokenizer.save_pretrained(path)
+                self.task.save_artifacts(self.task.model, path)
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
         
         self.task.model.to(device)

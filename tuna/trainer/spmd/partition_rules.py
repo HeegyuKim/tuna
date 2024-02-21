@@ -4,7 +4,7 @@ import re
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_model as xm
 from transformers import (
-    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig
+    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig
 )
 
 GPTNEOX_RULES = (
@@ -90,12 +90,35 @@ ROBERTA_RULES = (
     ("score_head$", ("fsdp", "mp")),
     )
 
+    
+CLIP_RULES = (
+    ("patch_embedding$", ("fsdp", "mp", None, None)),
+    ("position_embedding$", ("mp", "fsdp")),
+    ("self_attn\\.(q_proj|k_proj|v_proj)$", ("fsdp", "mp")),
+    ("self_attn\\.out_proj$", ("mp", "fsdp")),
+    ("mlp\\.fc1$", ("fsdp", "mp")),
+    ("mlp\\.fc2$", ("mp", "fsdp")),
+    ("visual_projection$", ("fsdp", "mp")),
+    ("text_projection$", ("fsdp", "mp")),
+    )
+
+LLAVA_RULES = (
+    ("multi_modal_projector\\.linear_1$", ("fsdp", "mp")),
+    ("multi_modal_projector\\.linear_2$", ("mp", "fsdp")),
+    *LLAMA_RULES,
+    *CLIP_RULES,
+)
+
+
 ALL_RULES = [
     (GPTNeoXConfig, GPTNEOX_RULES),
     (T5Config, T5_RULES),
     (LlamaConfig, LLAMA_RULES),
     (MistralConfig, MISTRAL_RULES),
-    (RobertaConfig, ROBERTA_RULES)
+    (RobertaConfig, ROBERTA_RULES),
+    (CLIPConfig, CLIP_RULES),
+    (CLIPVisionConfig, CLIP_RULES),
+    (LlavaConfig, LLAVA_RULES,)
 ]
 
 def find_rule(model):
@@ -112,7 +135,7 @@ strkey2id = {
 
 def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
     partition_specs = find_rule(model)
-    rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
+    # rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
         
     # print(rule)
 
@@ -120,7 +143,7 @@ def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
         module.to(device)
         # print(name, module.__class__.__name__)
         if isinstance(module, (nn.Embedding, nn.Linear)):
-            for rule_pattern, spec in rule:
+            for rule_pattern, spec in partition_specs:
                 if re.findall(rule_pattern, name):
                     if verbose:
                         print("match", rule_pattern, name)

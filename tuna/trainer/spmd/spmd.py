@@ -10,11 +10,11 @@ import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 
 xr.use_spmd()
-try:
-    from jax_smi import initialise_tracking
-    initialise_tracking()
-except:
-    print("failed to execute jax-smi")
+# try:
+#     from jax_smi import initialise_tracking
+#     initialise_tracking()
+# except:
+#     print("failed to execute jax-smi")
     
     
 import torch_xla.experimental.xla_sharding as xs
@@ -29,9 +29,9 @@ from dataclasses import dataclass
 from copy import deepcopy
 from typing import Iterable, Optional
 from tqdm import trange, tqdm
-from task import Task, TensorWrapper
+from ...task import Task, TensorWrapper
 from ..base import BaseTrainer, BaseTrainingArguments, trainers
-from task.gta2.model_value_head import AutoModelForCausalLMWithValueHead, AutoModelForSeq2SeqLMWithValueHead
+# from task.gta2.model_value_head import AutoModelForCausalLMWithValueHead, AutoModelForSeq2SeqLMWithValueHead
 
 
 def build_mesh_shape(mesh_str: str, device_count: int):
@@ -56,11 +56,10 @@ class SPMDArguments(BaseTrainingArguments):
 PARTITION_INPUTS = ["input_ids", "decoder_input_ids", "labels", "attention_mask", "decoder_attention_mask"]
 
 class SPMDTensorWrapper(TensorWrapper):
-    ARG_CLASS = SPMDArguments
     
     def __init__(self, mesh, device) -> None:
+        super().__init__(device)
         self.mesh = mesh
-        self.device = device
 
     def shard_tensor(self, v):
         xs.mark_sharding(v, self.mesh, tuple(range(v.dim())))
@@ -79,6 +78,7 @@ class SPMDTensorWrapper(TensorWrapper):
 
 @trainers.register("spmd")
 class SPMDTrainer(BaseTrainer):
+    ARG_CLASS = SPMDArguments
 
     def setup(self):
         self.device = xm.xla_device()
@@ -110,10 +110,10 @@ class SPMDTrainer(BaseTrainer):
         xm.mark_step()
     
     def _make_cpu_copy(self, model):
-        if isinstance(model, (AutoModelForCausalLMWithValueHead, AutoModelForSeq2SeqLMWithValueHead)):
-            xla_states = model.state_dict(keep_vars=True, for_xla_copy=True)
-        else:
-            xla_states = model.state_dict(keep_vars=True)
+        # if isinstance(model, (AutoModelForCausalLMWithValueHead, AutoModelForSeq2SeqLMWithValueHead)):
+        #     xla_states = model.state_dict(keep_vars=True, for_xla_copy=True)
+        # else:
+        xla_states = model.state_dict(keep_vars=True)
 
         cpu_states = {}
         for k, v in xla_states.items():
@@ -133,16 +133,14 @@ class SPMDTrainer(BaseTrainer):
 
         if self.args.output_dir:
             path = f"{self.args.output_dir}/{run_name}/{name}"
-            model.save_pretrained(path)
-            self.collator.tokenizer.save_pretrained(path)
+            self.task.save_artifacts(model, path)
 
             if self.args.push_to_hub:
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
 
         elif self.args.push_to_hub:
             with tempfile.TemporaryDirectory() as path:
-                model.save_pretrained(path)
-                self.collator.tokenizer.save_pretrained(path)
+                self.task.save_artifacts(model, path)
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
 
 

@@ -178,7 +178,7 @@ class GenerativeLanguageModelCollator(object):
         ]
     )
 
-    def __collate(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _collate(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
         out = defaultdict(list)
         for item in features:
             for k, v in item.items():
@@ -186,7 +186,7 @@ class GenerativeLanguageModelCollator(object):
         return out
 
     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-        batch = self.__collate(features)
+        batch = self._collate(features)
 
         is_encoder_decoder = "decoder_input_ids" in features
 
@@ -230,9 +230,9 @@ class GenerativeLanguageModelCollator(object):
 class GenerativeVLMCollator(GenerativeLanguageModelCollator):
     image_processor: Optional[Callable] = None
 
-    def __collate(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
-        out = super().__collate(features)
-        out["pixel_values"] = self.image_processor(out["image"])
+    def _collate(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        out = super()._collate(features)
+        out["pixel_values"] = self.image_processor(out["image"], return_tensors="pt")["pixel_values"]
         return out
 
 

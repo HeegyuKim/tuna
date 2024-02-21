@@ -65,3 +65,12 @@ class AlpacaChat(BaseAlpacaDataset):
         if split != "train":
             return None
         return load_dataset("tatsu-lab/alpaca", split=split)
+
+@datasources("nvidia/OpenMathInstruct-1")
+class OpenMathInstruct(BaseAlpacaDataset):
+    instruction_key = "question"
+    output_key = "generated_solution"
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("nvidia/OpenMathInstruct-1", split=split)

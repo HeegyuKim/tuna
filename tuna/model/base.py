@@ -48,7 +48,11 @@ class BaseModel:
             tokenizer.pad_token = tokenizer.eos_token
             print("Setting pad token to eos token")
             
-        return model, tokenizer
+        artifacts = dict(
+            tokenizer=tokenizer,
+        )
+
+        return model, artifacts
     
     def apply_lora(self, args, model, targets=None):
         targets = targets or find_lora_targets(model)
@@ -128,9 +132,10 @@ class LlavaForPretrainingModel(BaseModel):
         model.vision_tower = vision_tower
         model.language_model = lm
 
-        processor = LlavaProcessor(processor.image_processor, tokenizer)
-        # unfreeze_model(model.multi_modal_projector)
-
-        return model, processor
+        artifacts = dict(
+            tokenizer=tokenizer,
+            image_processor=processor.image_processor
+        )
+        return model, artifacts
 
         

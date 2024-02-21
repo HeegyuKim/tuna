@@ -66,12 +66,12 @@ def main():
     logger = WandbLogger(trainer_args)
     dataloader = DatasetLoader(data_args)
 
-    model, tokenizer = model_cls(model_args).load_model_and_tokenizer()
+    model, artifacts = model_cls(model_args).load_model_and_tokenizer()
         
     task = task_cls(
         task_args,
         model,
-        tokenizer,
+        artifacts,
         trainer_args.device
         )
     

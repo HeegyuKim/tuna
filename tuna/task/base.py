@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from datasets import Dataset, DatasetDict, concatenate_datasets
 
 
@@ -20,6 +21,7 @@ class TaskArguments:
 
     truncation: bool = False
     truncation_side: Optional[str] = "right"
+    packing: bool = False
 
     max_length: Optional[int] = None
     decoder_max_length: Optional[int] = None
@@ -38,6 +40,7 @@ def collate_dictlist(dl):
 class TensorWrapper():
     def __init__(self, device) -> None:
         self.device = device
+        self.is_xla = "xla" in (device if isinstance(device, str) else device.type)
 
     def __call__(self, tensor):
         if torch.is_tensor(tensor):
@@ -47,6 +50,7 @@ class TensorWrapper():
                 if torch.is_tensor(v):
                     tensor[k] = v.to(self.device)
             return tensor
+    
 
 tasks = Registry("tasks")
 
@@ -57,12 +61,12 @@ class Task:
     def __init__(self,
                  args,
                  model,
-                 tokenizer,
+                 artifacts,
                  wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")
                  ) -> None:
         self.args = args
         self.model = model
-        self.tokenizer = tokenizer
+        self.tokenizer = artifacts.get("tokenizer")
         
         if isinstance(wrapper, TensorWrapper):
             self.wrapper = wrapper
@@ -107,6 +111,10 @@ class Task:
         return {}
     
 
+    def save_artifacts(self, model, path, **kwargs):
+        model.save_pretrained(path, **kwargs)
+        self.tokenizer.save_pretrained(path, **kwargs)
+
     def truncate_dict(self, d):
         if not self.args.truncation:
             return d
@@ -139,8 +147,8 @@ class Task:
 @tasks.register("lm")
 class LMTask(Task):
     
-    def __init__(self, args, model, tokenizer, wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")) -> None:
-        super().__init__(args, model, tokenizer, wrapper)
+    def __init__(self, args, model, artifacts, wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")) -> None:
+        super().__init__(args, model, artifacts, wrapper)
         self._init_collator()
 
     def _init_collator(self):
@@ -151,13 +159,70 @@ class LMTask(Task):
             max_length=self.args.max_length,
             decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
+        
+    def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
+        datasets = super().encode_datasets(datasets)
+        if self.args.packing:
+            datasets = datasets.map(self._pack, num_proc=8, load_from_cache_file=False, batched=True)
+            
+        return datasets
+
+    def _pack(self, items):
+        outputs = dict(
+            input_ids=[],
+            attention_mask=[],
+            labels=[]
+        )
+        accum_len = 0
+
+        batch_len = self.args.max_length
+        all_input_ids = items["input_ids"]
+        all_attention_mask = items.get("attention_mask")
+        all_labels = items["labels"]
+
+        batch_ids, batch_mask, batch_labels = [], [], []
+
+        for ids, mask, labels in zip(all_input_ids, all_attention_mask, all_labels):
+            accum_len += len(ids)
+
+            batch_ids.extend(ids)
+            if all_attention_mask is not None:
+                batch_mask.extend(mask)
+            batch_labels.extend(labels)
+
+            while accum_len > batch_len:
+                outputs["input_ids"].append(batch_ids[:batch_len + 1])
+                if all_attention_mask is not None:
+                    outputs["attention_mask"].append(batch_mask[:batch_len + 1])
+                outputs["labels"].append(batch_labels[:batch_len + 1])
+
+                batch_ids, batch_labels = batch_ids[-batch_len:], batch_labels[-batch_len:]
+                if all_attention_mask is not None:
+                    batch_mask = batch_mask[-batch_len:]
+                accum_len -= batch_len
+        
+        if all_attention_mask is None:
+            outputs.pop("attention_mask")
+        
+        return outputs
     
     def collate_batch(self, batch):
         return self.collator(batch)
     
     def step(self, batch, step):
+        if self.args.packing:
+            return self.packed_step(batch, step)
+
         outputs = self.model(**batch)
         loss = outputs.loss
+        return {"loss": loss}
+    
+    def packed_step(self, batch, step):
+        labels = batch.pop("labels")
+        outputs = self.model(**batch)
+        logits = outputs.logits
+        # cross entropy loss
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-100)
         return {"loss": loss}
 
     def collate_step_outputs(self, outputs):
