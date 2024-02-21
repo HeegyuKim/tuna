@@ -61,8 +61,11 @@ class DatasetLoader:
             except:
                 print(f"Failed to load dataset {name}")
                 raise
-
-        return concatenate_datasets(sources) if len(sources) > 1 else sources[0]
+        
+        if sources:
+            return concatenate_datasets(sources) if len(sources) > 1 else sources[0]
+        else:
+            return None
     
     @property
     def train_dataset(self):

@@ -1,6 +1,11 @@
 transformers
+huggingface-hub
+gradio
 peft
 datasets
 accelerate
 tokenizers
 sentencepiece
+wandb
+einops
+jsonlines

@@ -20,6 +20,15 @@
 ```
 # install torch, torch_xla
 pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com/libtpu-releases/index.html
+
+# or use docker
+sudo docker run -it --name tuna \
+    -d --privileged \
+    -p 7860:7860 \
+    -e VM_NAME="TPUv3-B" \
+    -v $HOME:/workspace \
+    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm \
+    /bin/bash
 ```
 
 If you see a error like a below while using conda:
