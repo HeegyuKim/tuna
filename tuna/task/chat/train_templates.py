@@ -55,6 +55,9 @@ class BaseTrainTemplate:
         
     def join_utterances(self, utterances: List[str]) -> str:
         return "\n".join(utterances)
+
+    def apply_chat_template(self, conversations):
+        return self.join_utterances([self.handle_utterance(utt, i)[0] for i, utt in enumerate(conversations)])
         
         
 

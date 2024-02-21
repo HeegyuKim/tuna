@@ -23,7 +23,9 @@ class DataSource:
 
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         pass
-
+    
+    def num_items(self, split: str) -> int:
+        pass
 
 class DatasetLoader:
     
@@ -47,7 +49,19 @@ class DatasetLoader:
     
     def get_sources(self, args, names, split):
         names = names.split(",")
-        sources = [datasources.get(name)().load(args, split) for name in names]
+        sources = []
+
+        for name in names:
+            try:
+                source = datasources.get(name)
+                source = source()
+                ds = source.load(args, split)
+                if ds is not None:
+                    sources.append(ds)
+            except:
+                print(f"Failed to load dataset {name}")
+                raise
+
         return concatenate_datasets(sources) if len(sources) > 1 else sources[0]
     
     @property

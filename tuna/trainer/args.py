@@ -18,7 +18,7 @@ class BaseTrainingArguments():
     total_steps: Optional[int] = None
     train_total_batch_size: Optional[int] = None
     train_batch_size_per_device: int = 8
-    amp: bool = True
+    amp: bool = False
 
     # evaluation
     do_eval: bool = False

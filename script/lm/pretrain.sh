@@ -1,16 +1,15 @@
-export CUDA_VISIBLE_DEVICES=0
-
 wandb offline
 
-# python -m tuna.launcher.train \
-accelerate launch -m tuna.launcher.train \
+export HF_DATASETS_CACHE="/data/hf-datasets-cache/"
+
+python -m tuna.launcher.train \
+    --mesh dp \
     --do_train \
-    --task chat-lm \
+    --task pretrain-lm \
     --model_arch causal-lm \
     --project "test" \
     --run_name "test" \
-    --dataset="tatsu-lab/alpaca" \
-    --train_only_response False \
+    --dataset="nvidia/OpenMathInstruct-1" \
     --max_length=1024 \
     --model_name_or_path EleutherAI/pythia-160m \
     --logging_steps 1 \

@@ -74,7 +74,7 @@ class Task:
             self.wrapper = TensorWrapper(wrapper)
 
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
-        datasets = datasets.map(self.encode_item, num_proc=8, load_from_cache_file=False)
+        datasets = datasets.map(self.encode_item, load_from_cache_file=False)
         return datasets
 
     def get_trainable_parameters(self):
@@ -163,7 +163,12 @@ class LMTask(Task):
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
         datasets = super().encode_datasets(datasets)
         if self.args.packing:
-            datasets = datasets.map(self._pack, num_proc=8, load_from_cache_file=False, batched=True)
+            cols = datasets["train"].column_names
+            if "input_ids" in cols:
+                cols.remove("input_ids")
+            if "labels" in cols:
+                cols.remove("labels")
+            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing")
             
         return datasets
 
@@ -191,14 +196,15 @@ class LMTask(Task):
             batch_labels.extend(labels)
 
             while accum_len > batch_len:
-                outputs["input_ids"].append(batch_ids[:batch_len + 1])
+                outputs["input_ids"].append(batch_ids[:batch_len])
                 if all_attention_mask is not None:
-                    outputs["attention_mask"].append(batch_mask[:batch_len + 1])
-                outputs["labels"].append(batch_labels[:batch_len + 1])
+                    outputs["attention_mask"].append(batch_mask[:batch_len])
+                outputs["labels"].append(batch_labels[1:batch_len + 1])
+                # outputs["labels"].append(batch_labels[:batch_len])
 
-                batch_ids, batch_labels = batch_ids[-batch_len:], batch_labels[-batch_len:]
+                batch_ids, batch_labels = batch_ids[batch_len:], batch_labels[batch_len:]
                 if all_attention_mask is not None:
-                    batch_mask = batch_mask[-batch_len:]
+                    batch_mask = batch_mask[batch_len:]
                 accum_len -= batch_len
         
         if all_attention_mask is None:
@@ -210,11 +216,15 @@ class LMTask(Task):
         return self.collator(batch)
     
     def step(self, batch, step):
+        if self.wrapper.is_xla:
+            batch = self.wrapper(batch)
+            
         if self.args.packing:
             return self.packed_step(batch, step)
-
         outputs = self.model(**batch)
         loss = outputs.loss
+        print(batch)
+        print(loss)
         return {"loss": loss}
     
     def packed_step(self, batch, step):

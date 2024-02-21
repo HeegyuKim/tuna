@@ -20,6 +20,7 @@ class BaseAlpacaDataset(ChatDataset):
             return None
         ds = self.load_dataset(args, split=split)
         if ds is not None:
+            print(ds)
             ds = ds.map(self.map_conversations).select_columns(["conversations"])
         return ds
     
@@ -55,8 +56,6 @@ class BaseAlpacaDataset(ChatDataset):
             "conversations": convs
         }
 
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        pass
 
 @datasources.register("tatsu-lab/alpaca")
 class AlpacaChat(BaseAlpacaDataset):
@@ -73,4 +72,31 @@ class OpenMathInstruct(BaseAlpacaDataset):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
-        return load_dataset("nvidia/OpenMathInstruct-1", split=split)
+        return load_dataset("nvidia/OpenMathInstruct-1", split=split, streaming=args.dataset_streaming)
+    
+    def num_items(self, split: str) -> int:
+        if split == "train":
+            return 5700000
+        elif split == "test":
+            return 1130000
+        
+
+@datasources.register("nampdn-ai/tiny-codes")
+class TinyCodes(BaseAlpacaDataset):
+    instruction_key = "prompt"
+    output_key = "response"
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("nampdn-ai/tiny-codes", split=split)
+        return ds
+    
+
+@datasources.register("HuggingFaceH4/ultrachat_200k")
+class UltraChat(ChatDataset):
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("HuggingFaceH4/ultrachat_200k", split=f"{split}_sft")
+        ds = ds.rename_column("messages", "conversations")
+        return ds
