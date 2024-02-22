@@ -68,7 +68,7 @@ class TextVQA(VisionChatDataset):
     
         convs.append({
             "role": "user",
-            "content": "<image>\n" + item["question"]
+            "content": item["question"]
         })
 
         convs.append({
@@ -93,7 +93,7 @@ class TextVQA(VisionChatDataset):
         convs = [
             {
                 "role": "user",
-                "content": "<image>\n" + item["question"] + "\n" + item["choices"]
+                "content": item["question"] + "\n" + item["choices"]
             },
             {
                 "role": "assistant",
