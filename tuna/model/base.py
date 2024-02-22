@@ -2,7 +2,7 @@
 from ..common import Registry
 from dataclasses import dataclass
 from typing import Optional
-from transformers import AutoModel, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, ClipImageProcessor
+from transformers import AutoModel, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, CLIPImageProcessor
 from .utils import smart_tokenizer_and_embedding_resize, freeze_model, unfreeze_model
 
 models = Registry("models")
