@@ -13,20 +13,18 @@ python -m tuna.launcher.train \
     --project "llava" \
     --run_name "42dot_LLM-kollava-pretrain" \
     --dataset="kollava-pretrain" \
-    --train_only_response False \
     --max_length=1024 \
     --vision_tower openai/clip-vit-large-patch14 \
     --model_name_or_path $model \
     --train_template $model \
     --logging_steps 32 \
-    --total_epochs 10 \
-    --learning_rate 2e-5 \
-    --limit 1024 \
+    --total_epochs 2 \
+    --learning_rate 1e-4 \
     --weight_decay 0 \
-    --train_total_batch_size 32 \
+    --train_total_batch_size 128 \
     --train_batch_size_per_device 4 \
     --eval_batch_size_per_device 4 \
-    --save_strategy no \
+    --save_strategy epoch \
     --output_dir ""
     
     # --save_strategy epoch \

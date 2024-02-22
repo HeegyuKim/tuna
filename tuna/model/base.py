@@ -2,7 +2,7 @@
 from ..common import Registry
 from dataclasses import dataclass
 from typing import Optional
-from transformers import AutoModel, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel
+from transformers import AutoModel, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, ClipImageProcessor
 from .utils import smart_tokenizer_and_embedding_resize, freeze_model, unfreeze_model
 
 models = Registry("models")
@@ -138,4 +138,23 @@ class LlavaForPretrainingModel(BaseModel):
         )
         return model, artifacts
 
+@models("llava-for-finetune")
+class LlavaForFinetuningModel(BaseModel):
+    AUTO_CLASS = LlavaForConditionalGeneration
         
+    def load_model_and_tokenizer(self):
+        args = self.args
+        tokenizer = args.tokenizer or args.model_name_or_path
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        model = LlavaForConditionalGeneration.from_pretrained(self.args.model_name_or_path)
+
+        processor = ClipImageProcessor.from_pretrained(self.args.model_name_or_path)
+
+        freeze_model(model.vision_tower)
+        # freeze_model(lm)
+
+        artifacts = dict(
+            tokenizer=tokenizer,
+            image_processor=processor
+        )
+        return model, artifacts
