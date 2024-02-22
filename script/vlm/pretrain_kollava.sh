@@ -11,7 +11,7 @@ python -m tuna.launcher.train \
     --task llava-pretrain \
     --model_arch llava-for-pretrain \
     --project "llava" \
-    --run_name "42dot_LLM-kollava-pretrain" \
+    --run_name "gemma-2b-it-kollava-pretrain" \
     --dataset="kollava-pretrain" \
     --max_length=1024 \
     --vision_tower openai/clip-vit-large-patch14 \
