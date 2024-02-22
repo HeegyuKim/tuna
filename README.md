@@ -27,8 +27,12 @@ sudo docker run -it --name tuna \
     -p 7860:7860 \
     -e VM_NAME="TPUv3-B" \
     -v $HOME:/workspace \
-    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm \
+    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm \
     /bin/bash
+
+# us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm
+# us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm
+
 ```
 
 If you see a error like a below while using conda:

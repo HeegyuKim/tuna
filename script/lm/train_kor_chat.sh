@@ -2,7 +2,8 @@ export CUDA_VISIBLE_DEVICES=0
 
 wandb online
 
-datasets="kyujinpy/KOR-OpenOrca-Platypus-v3,nampdn-ai/tiny-codes,nvidia/OpenMathInstruct-1"
+# datasets="kyujinpy/KOR-OpenOrca-Platypus-v3,nampdn-ai/tiny-codes,nvidia/OpenMathInstruct-1"
+datasets="kyujinpy/KOR-OpenOrca-Platypus-v3"
 
 # accelerate launch -m tuna.launcher.train \
 python -m tuna.launcher.train \
@@ -20,7 +21,7 @@ python -m tuna.launcher.train \
     --total_epochs 3 \
     --learning_rate 1e-5 \
     --train_total_batch_size 128 \
-    --train_batch_size_per_device 4 \
-    --eval_batch_size_per_device 4 \
+    --train_batch_size_per_device 2 \
+    --eval_batch_size_per_device 2 \
     --save_strategy epoch \
     --output_dir ""

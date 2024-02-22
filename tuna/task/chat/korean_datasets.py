@@ -6,7 +6,7 @@ from datasets import load_dataset, Dataset
 @datasources("kyujinpy/KOR-OpenOrca-Platypus-v3")
 class KOROpenOrcaPlatypusV3(BaseAlpacaDataset):
     
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
         ds = load_dataset("kyujinpy/KOR-OpenOrca-Platypus-v3", split=split)
