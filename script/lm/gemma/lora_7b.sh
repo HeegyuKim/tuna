@@ -4,8 +4,8 @@ wandb online
 
 # datasets="kyujinpy/KOR-OpenOrca-Platypus-v3,nampdn-ai/tiny-codes,nvidia/OpenMathInstruct-1"
 datasets="kyujinpy/KOR-OpenOrca-Platypus-v3"
-model="google/gemma-2b-it"
-run_name="gemma-2b-it-kor-openorca-platypus-v3"
+model="google/gemma-7b-it"
+run_name="gemma-7b-it-kor-openorca-platypus-v3"
 
 # accelerate launch -m tuna.launcher.train \
 python -m tuna.launcher.train \
@@ -16,6 +16,7 @@ python -m tuna.launcher.train \
     --project "kor-llm" \
     --run_name "$run_name" \
     --dataset="$datasets" \
+    --use_lora \
     --packing \
     --max_length=2048 \
     --model_name_or_path $model \

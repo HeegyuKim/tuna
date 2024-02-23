@@ -48,6 +48,8 @@ class KoLlavaFinetuningDataset(KoLlavaPretrainingDataset):
         if split != "train":
             return None
         ds = load_dataset("heegyu/kollava_v1_5_mix581k", split=split)
+        if args.limit:
+            ds = ds.select(range(args.limit))
         ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
         return ds
 

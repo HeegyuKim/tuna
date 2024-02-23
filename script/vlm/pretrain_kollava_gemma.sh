@@ -26,8 +26,8 @@ python -m tuna.launcher.train \
     --learning_rate 2e-5 \
     --weight_decay 0 \
     --train_total_batch_size 128 \
-    --train_batch_size_per_device 8 \
-    --eval_batch_size_per_device 8 \
+    --train_batch_size_per_device 4 \
+    --eval_batch_size_per_device 4 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

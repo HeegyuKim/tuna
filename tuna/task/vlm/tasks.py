@@ -47,6 +47,7 @@ class ChatVLMTask(ChatLMTask):
         return {"loss": loss}
 
     def xla_step(self, batch, step):
+        batch = self.wrapper(batch)
         if "attention_mask" in batch:
             inputs_embeds, labels, attention_mask = self.build_input_embeds_for_xla(
                 self.model, 

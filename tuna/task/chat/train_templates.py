@@ -106,10 +106,6 @@ class GemmaTemplate(BaseTrainTemplate):
 
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):
-    SUPPORTED_MODELS = [
-        "google/gemma-2b-it",
-        "google/gemma-7b-it"
-    ]
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
 
