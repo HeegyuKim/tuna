@@ -168,7 +168,8 @@ class LMTask(Task):
                 cols.remove("input_ids")
             if "labels" in cols:
                 cols.remove("labels")
-            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+            # datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing")
             
         return datasets
 
