@@ -21,10 +21,11 @@ python -m tuna.launcher.train \
     --model_name_or_path $model \
     --logging_steps 1 \
     --total_epochs 3 \
+    --use_lora \
     --learning_rate 1e-5 \
     --train_total_batch_size 128 \
-    --train_batch_size_per_device 1 \
-    --eval_batch_size_per_device 1 \
+    --train_batch_size_per_device 4 \
+    --eval_batch_size_per_device 4 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

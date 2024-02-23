@@ -11,7 +11,7 @@ from datasets import Dataset, DatasetDict, concatenate_datasets
 
 from ..common import Registry
 from .collator import GenerativeLanguageModelCollator
-from .dataset import DatasetArguments, DataSource, datasources, DatasetLoader
+from .dataset import DatasetArguments, DataSource, datasources, DatasetLoader, NUM_PROC
 
 
 @dataclass
@@ -74,7 +74,7 @@ class Task:
             self.wrapper = TensorWrapper(wrapper)
 
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
-        datasets = datasets.map(self.encode_item, load_from_cache_file=False)
+        datasets = datasets.map(self.encode_item, load_from_cache_file=False, num_proc=NUM_PROC)
         return datasets
 
     def get_trainable_parameters(self):
@@ -168,7 +168,7 @@ class LMTask(Task):
                 cols.remove("input_ids")
             if "labels" in cols:
                 cols.remove("labels")
-            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing")
+            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
             
         return datasets
 

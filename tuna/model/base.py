@@ -50,6 +50,7 @@ class BaseModel:
             
         artifacts = dict(
             tokenizer=tokenizer,
+            model_name_or_path=args.model_name_or_path,
         )
 
         return model, artifacts
@@ -133,6 +134,7 @@ class LlavaForPretrainingModel(BaseModel):
         model.language_model = lm
 
         artifacts = dict(
+            model_name_or_path=args.model_name_or_path,
             tokenizer=tokenizer,
             image_processor=processor.image_processor
         )

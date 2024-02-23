@@ -14,13 +14,13 @@ T5_TARGETS = [
 ]
 
 LLAMA_TARGETS = [
-    "q_proj", "v_proj", # "o_proj", "k_proj",
-    # "gate_proj", "up_proj", "down_proj"
+    "q_proj", "v_proj", "o_proj", "k_proj",
+    "gate_proj", "up_proj", "down_proj"
 ]
 
 MISTRAL_TARGETS = [
-    "q_proj", "v_proj", # "o_proj", "k_proj", 
-    # "gate_proj", "up_proj", "down_proj"
+    "q_proj", "v_proj", "o_proj", "k_proj", 
+    "gate_proj", "up_proj", "down_proj"
 ]
 
 LLAVA_LM_TARGETS = [

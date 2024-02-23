@@ -1,5 +1,5 @@
 from datasets import Dataset, load_dataset
-from ..dataset import DataSource, datasources, DatasetArguments
+from ..dataset import DataSource, datasources, DatasetArguments, NUM_PROC
 
 class ChatDataset(DataSource):
     
@@ -21,7 +21,7 @@ class BaseAlpacaDataset(ChatDataset):
         ds = self.load_dataset(args, split=split)
         if ds is not None:
             print(ds)
-            ds = ds.map(self.map_conversations).select_columns(["conversations"])
+            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=None).select_columns(["conversations"])
         return ds
     
     def map_conversations(self, item):

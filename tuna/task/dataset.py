@@ -1,10 +1,13 @@
 from typing import Optional
 from dataclasses import dataclass
+import os 
 
 from datasets import Dataset, DatasetDict, concatenate_datasets
 
 from ..common import Registry
 
+
+NUM_PROC = max(1, os.cpu_count() // 2)
 
 @dataclass
 class DatasetArguments():
