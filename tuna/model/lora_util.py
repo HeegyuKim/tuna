@@ -1,4 +1,4 @@
-from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig
+from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig, GemmaConfig
 
 
 GPTNEOX_TARGETS = [
@@ -35,7 +35,8 @@ LORA_TARGETS = [
     (GPTNeoXConfig, GPTNEOX_TARGETS),
     (T5Config, T5_TARGETS),
     (LlamaConfig, LLAMA_TARGETS),
-    (MistralConfig, MISTRAL_TARGETS)
+    (MistralConfig, MISTRAL_TARGETS),
+    (GemmaConfig, LLAMA_TARGETS)
 ]
 
 def find_lora_targets(model):
