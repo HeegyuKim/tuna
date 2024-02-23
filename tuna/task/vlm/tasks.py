@@ -4,13 +4,18 @@ from datasets import DatasetDict
 import torch 
 
 from ..base import LMTask, tasks, TaskArguments, TensorWrapper
-from ..chat.tasks import ChatLMTask
+from ..chat.tasks import ChatLMTask, ChatLMTaskArguments
 from ..collator import GenerativeVLMCollator
 from typing import Optional, Union
 
 
+@dataclass
+class ChatVLMArgs(ChatLMTaskArguments):
+    image_prefix: Optional[str] = None
+
 @tasks.register("chat-vlm")
 class ChatVLMTask(ChatLMTask):
+    ARG_CLASS = ChatVLMArgs
 
     def __init__(self, args, model, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
         self.image_processor = artifacts["image_processor"]
@@ -45,7 +50,6 @@ class ChatVLMTask(ChatLMTask):
         if "attention_mask" in batch:
             inputs_embeds, labels, attention_mask = self.build_input_embeds_for_xla(
                 self.model, 
-                None, 
                 batch["pixel_values"], 
                 batch["input_ids"], 
                 batch["labels"], 
@@ -54,7 +58,6 @@ class ChatVLMTask(ChatLMTask):
         else:
             inputs_embeds, labels = self.build_input_embeds_for_xla(
                 self.model, 
-                None, 
                 batch["pixel_values"], 
                 batch["input_ids"], 
                 batch["labels"], 
@@ -68,11 +71,15 @@ class ChatVLMTask(ChatLMTask):
             )
         return outputs
     
-    def build_input_embeds_for_xla(self, model, prefix, pixel_values, texts, labels, attention_masks = None):
+    def build_input_embeds_for_xla(self, model, pixel_values, texts, labels, attention_masks = None):
         embeddings = model.get_input_embeddings()
 
-        if prefix:
-            prefix_embeds = embeddings(prefix)
+        if self.args.image_prefix:
+            image_prefix = [self.args.image_prefix] * texts.shape[0]
+            image_prefix = self.wrapper(self.tokenizer(image_prefix, add_special_tokens=False, return_tensors="pt")["input_ids"])
+            prefix_embeds = embeddings(image_prefix)
+        else:
+            prefix_embeds = None
 
         texts_embeds = embeddings(texts)
         
@@ -91,10 +98,10 @@ class ChatVLMTask(ChatLMTask):
         elif vision_feature_select_strategy == "full":
             selected_image_feature = selected_image_feature
 
-        if prefix:
+        if prefix_embeds is not None:
             input_embeds = torch.cat([prefix_embeds, selected_image_feature, texts_embeds], dim=1)
             labels = torch.cat([
-                torch.full_like(prefix, -100),
+                torch.full(prefix_embeds.shape[:2], -100, device=texts.device), 
                 torch.full(selected_image_feature.shape[:2], -100, device=texts.device), 
                 texts
                 ], dim=1)
@@ -106,15 +113,19 @@ class ChatVLMTask(ChatLMTask):
                 ], dim=1)
 
         if attention_masks is not None:
-            if prefix:
+            if prefix_embeds is not None:
                 attention_masks = torch.cat([
-                    torch.ones_like(prefix),
-                    torch.ones_like(selected_image_feature[:, :, 0]), attention_masks], 
+                        torch.ones(prefix_embeds.shape[:2], device=texts.device),
+                        torch.ones(selected_image_feature.shape[:2], device=texts.device),
+                        attention_masks
+                    ], 
                     dim=1
                     )
             else:
                 attention_masks = torch.cat([
-                    torch.ones_like(selected_image_feature[:, :, 0]), attention_masks], 
+                        torch.ones(selected_image_feature.shape[:2], device=texts.device),
+                        attention_masks
+                    ], 
                     dim=1
                     )
                 

@@ -3,10 +3,14 @@ from ...common import Registry
 
 train_templates = Registry("templates")
 
-def find_template(model_id):
+def find_template(model_id_or_template):
+    if model_id_or_template in train_templates.keys():
+        print(f"Select {model_id_or_template} template")
+        return train_templates[model_id_or_template]
+
     for k in train_templates.keys():
         template = train_templates[k]
-        if model_id in template.SUPPORTED_MODELS:
+        if model_id_or_template in template.SUPPORTED_MODELS:
             print(f"Select {k} template")
             return template
         
@@ -75,7 +79,7 @@ class TinyLlamaTemplate(BaseTrainTemplate):
 
 
 @train_templates.register("42dot")
-class TinyLlamaTemplate(BaseTrainTemplate):
+class HD42DotTemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [
         "42dot/42dot_LLM-SFT-1.3B"
     ]
@@ -85,3 +89,30 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "{content}\n\n"
     USER_FORMAT = "<human>:\n{content}\n"
     ASSISTANT_FORMAT = "<bot>:\n{content}{eos}\n"
+
+
+@train_templates.register("gemma")
+class GemmaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "google/gemma-2b-it",
+        "google/gemma-7b-it"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = "<bos><start_of_turn>user\n{content}<end_of_turn>\n"
+
+    SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>\n\n"
+    USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
+    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
+
+@train_templates.register("gemma-vision")
+class VisionGemmaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "google/gemma-2b-it",
+        "google/gemma-7b-it"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
+
+    SYSTEM_FORMAT = "<start_of_turn>system{content}<end_of_turn>\n\n"
+    USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
+    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
