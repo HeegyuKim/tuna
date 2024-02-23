@@ -33,6 +33,11 @@ class ChatVLMTask(ChatLMTask):
             )
         
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
+        
+        if self.args.image_prefix and not self.wrapper.is_xla:
+            prompt_prefix = self.args.train_prompt_prefix or ""
+            self.args.train_prompt_prefix = f"{prompt_prefix} {self.args.image_prefix}"
+
         # no multi-processing (OOM)
         datasets = datasets.map(self.encode_item, load_from_cache_file=False)
         return datasets

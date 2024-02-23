@@ -10,6 +10,7 @@ from typing import Optional, Union
 class ChatLMTaskArguments(TaskArguments):
     train_template: Optional[str] = None
     train_only_response: bool = True
+    train_prompt_prefix: Optional[str] = None
 
 @tasks.register("chat-lm")
 class ChatLMTask(LMTask):
@@ -22,6 +23,11 @@ class ChatLMTask(LMTask):
     def encode_item(self, item):
         conversation = item["conversations"]
         concat_inputs, concat_labels = [], []
+        
+        if self.args.train_prompt_prefix:
+            ids = self.tokenizer.encode(self.args.train_prompt_prefix, add_special_tokens=False)
+            concat_inputs.extend(ids)
+            concat_labels.extend([-100] * len(concat_inputs) if self.args.train_only_response else ids)
 
         for i, uttr in enumerate(conversation):
             content, trainable = self.train_template.handle_utterance(uttr, i)

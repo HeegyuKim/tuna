@@ -21,7 +21,7 @@ class KoLlavaPretrainingDataset(VisionChatDataset):
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
-        ds = load_dataset("heegyu/KoLLaVA-CC3M-Pretrain-595K", split=split)
+        ds = load_dataset("heegyu/KoLLaVA-CC3M-Pretrain-595K", split=split, token=True)
         if args.limit:
             ds = ds.select(range(args.limit))
         ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
