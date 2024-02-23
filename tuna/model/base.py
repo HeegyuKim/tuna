@@ -55,10 +55,10 @@ class BaseModel:
         return model, artifacts
     
     def apply_lora(self, args, model, targets=None):
-        targets = targets or find_lora_targets(model)
-
         from peft import LoraConfig, TaskType, get_peft_model
         from .lora_util import find_lora_targets
+        targets = targets or find_lora_targets(model)
+
 
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM, 

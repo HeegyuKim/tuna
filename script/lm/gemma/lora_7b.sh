@@ -18,7 +18,7 @@ python -m tuna.launcher.train \
     --dataset="$datasets" \
     --use_lora \
     --packing \
-    --max_length=2048 \
+    --max_length=1024 \
     --model_name_or_path $model \
     --logging_steps 1 \
     --total_epochs 3 \
