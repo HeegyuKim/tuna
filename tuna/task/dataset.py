@@ -7,7 +7,7 @@ from datasets import Dataset, DatasetDict, concatenate_datasets
 from ..common import Registry
 
 
-NUM_PROC = max(1, min(16, os.cpu_count() // 2))
+NUM_PROC = max(1, min(8, os.cpu_count() // 2))
 
 @dataclass
 class DatasetArguments():
