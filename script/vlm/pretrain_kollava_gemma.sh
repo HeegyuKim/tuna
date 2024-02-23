@@ -5,7 +5,7 @@ export USE_TORCH=True
 wandb online
 
 model="google/gemma-2b-it"
-image_prefix="<bos> [Image] <image>"
+image_prefix="<bos> "
 
 # python -m tuna.launcher.train \
 accelerate launch -m tuna.launcher.train \

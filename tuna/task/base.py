@@ -74,7 +74,7 @@ class Task:
             self.wrapper = TensorWrapper(wrapper)
 
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
-        datasets = datasets.map(self.encode_item, load_from_cache_file=False, num_proc=NUM_PROC, desc="Encoding")
+        datasets = datasets.map(self.encode_item, load_from_cache_file=False, desc="Encoding")
         return datasets
 
     def get_trainable_parameters(self):
