@@ -4,7 +4,7 @@ import re
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_model as xm
 from transformers import (
-    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig
+    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig, GemmaConfig
 )
 
 GPTNEOX_RULES = (
@@ -118,7 +118,8 @@ ALL_RULES = [
     (RobertaConfig, ROBERTA_RULES),
     (CLIPConfig, CLIP_RULES),
     (CLIPVisionConfig, CLIP_RULES),
-    (LlavaConfig, LLAVA_RULES,)
+    (LlavaConfig, LLAVA_RULES),
+    (GemmaConfig, LLAMA_RULES)
 ]
 
 def find_rule(model):

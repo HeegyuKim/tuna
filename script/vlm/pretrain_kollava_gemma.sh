@@ -8,6 +8,7 @@ model="google/gemma-2b-it"
 image_prefix="<bos> [Image]"
 
 python -m tuna.launcher.train \
+    --mesh mp \
     --do_train \
     --task llava-pretrain \
     --model_arch llava-for-pretrain \
