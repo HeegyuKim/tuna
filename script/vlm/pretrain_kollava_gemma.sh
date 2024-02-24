@@ -25,6 +25,7 @@ accelerate launch -m tuna.launcher.train \
     --total_epochs 2 \
     --learning_rate 2e-5 \
     --weight_decay 0 \
+    --limit 1024 \
     --train_total_batch_size 128 \
     --train_batch_size_per_device 1 \
     --eval_batch_size_per_device 1 \

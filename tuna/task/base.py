@@ -60,12 +60,10 @@ class Task:
 
     def __init__(self,
                  args,
-                 model,
                  artifacts,
                  wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")
                  ) -> None:
         self.args = args
-        self.model = model
         self.tokenizer = artifacts.get("tokenizer")
         
         if isinstance(wrapper, TensorWrapper):
@@ -147,8 +145,8 @@ class Task:
 @tasks.register("lm")
 class LMTask(Task):
     
-    def __init__(self, args, model, artifacts, wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")) -> None:
-        super().__init__(args, model, artifacts, wrapper)
+    def __init__(self, args, artifacts, wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")) -> None:
+        super().__init__(args, artifacts, wrapper)
         self._init_collator()
 
     def _init_collator(self):

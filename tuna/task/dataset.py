@@ -7,7 +7,7 @@ from datasets import Dataset, DatasetDict, concatenate_datasets
 from ..common import Registry
 
 
-NUM_PROC = max(1, min(8, os.cpu_count() // 2))
+NUM_PROC = max(1, min(16, os.cpu_count() // 2))
 
 @dataclass
 class DatasetArguments():
@@ -46,7 +46,8 @@ class DatasetLoader:
 
         if args.limit:
             for k in dd.keys():
-                dd[k] = dd[k].select(range(args.limit))
+                if dd[k] is not None and len(dd[k]) > args.limit:
+                    dd[k] = dd[k].select(range(args.limit))
 
         return dd
     

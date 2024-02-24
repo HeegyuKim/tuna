@@ -34,26 +34,23 @@ class BaseModel:
     def __init__(self, args) -> None:
         self.args = args
 
-    def load_model_and_tokenizer(self):
+    def load_artifacts(self):
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
         tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer)
-        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path)
-        
-        # LoRA
-        if args.use_lora:
-            model = self.apply_lora(args, model)
-
-        if tokenizer.pad_token_id is None:
-            tokenizer.pad_token = tokenizer.eos_token
-            print("Setting pad token to eos token")
-            
-        artifacts = dict(
+        return dict(
             tokenizer=tokenizer,
             model_name_or_path=args.model_name_or_path,
         )
 
-        return model, artifacts
+    def load_model(self):
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path)
+        
+        # LoRA
+        if self.args.use_lora:
+            model = self.apply_lora(self.args, model)
+            
+        return model
     
     def apply_lora(self, args, model, targets=None):
         from peft import LoraConfig, TaskType, get_peft_model
@@ -95,12 +92,25 @@ class LlavaForPretrainingModel(BaseModel):
     AUTO_CLASS = LlavaForConditionalGeneration
     AUTO_TOKENIZER_CLASS = AutoProcessor
 
-    def load_model_and_tokenizer(self):
-        from transformers import LlavaConfig
-
+    def load_artifacts(self):
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
         tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer)
+        processor = AutoProcessor.from_pretrained(args.vision_tower)
+
+        self.tokenizer = tokenizer
+
+        return dict(
+            model_name_or_path=args.model_name_or_path,
+            tokenizer=tokenizer,
+            image_processor=processor.image_processor
+        )
+        
+    def load_mode(self):
+        from transformers import LlavaConfig
+
+        args = self.args
+        tokenizer = self.tokenizer
         lm = AutoModelForCausalLM.from_pretrained(self.args.model_name_or_path)
 
         if "<image>" not in tokenizer.special_tokens_map.values():
@@ -113,7 +123,6 @@ class LlavaForPretrainingModel(BaseModel):
                 lm
                 )
         
-        processor = AutoProcessor.from_pretrained(args.vision_tower)
         vision_tower = CLIPVisionModel.from_pretrained(args.vision_tower)
 
         image_token_index=tokenizer.convert_tokens_to_ids("<image>")
@@ -133,30 +142,28 @@ class LlavaForPretrainingModel(BaseModel):
         model.vision_tower = vision_tower
         model.language_model = lm
 
-        artifacts = dict(
-            model_name_or_path=args.model_name_or_path,
-            tokenizer=tokenizer,
-            image_processor=processor.image_processor
-        )
-        return model, artifacts
+        return model
 
 @models("llava-for-finetune")
 class LlavaForFinetuningModel(BaseModel):
     AUTO_CLASS = LlavaForConditionalGeneration
-        
-    def load_model_and_tokenizer(self):
+
+    def load_artifacts(self):
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(tokenizer)
-        model = LlavaForConditionalGeneration.from_pretrained(self.args.model_name_or_path)
+        processor = LlavaProcessor.from_pretrained(self.args.model_name_or_path)
 
-        processor = ClipImageProcessor.from_pretrained(self.args.model_name_or_path)
+        return dict(
+            tokenizer=tokenizer,
+            image_processor=processor
+        )
+        
+    def load_model(self):
+        args = self.args
+        model = LlavaForConditionalGeneration.from_pretrained(self.args.model_name_or_path)
 
         freeze_model(model.vision_tower)
         # freeze_model(lm)
 
-        artifacts = dict(
-            tokenizer=tokenizer,
-            image_processor=processor
-        )
-        return model, artifacts
+        return model

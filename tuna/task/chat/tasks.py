@@ -16,8 +16,8 @@ class ChatLMTaskArguments(TaskArguments):
 class ChatLMTask(LMTask):
     ARG_CLASS = ChatLMTaskArguments
 
-    def __init__(self, args, model, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
-        super().__init__(args, model, artifacts, wrapper)
+    def __init__(self, args, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
+        super().__init__(args, artifacts, wrapper)
         self.train_template = find_template(args.train_template or artifacts.get("model_name_or_path"))(self.tokenizer)
     
     def encode_item(self, item):

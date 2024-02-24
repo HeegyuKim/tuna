@@ -1,6 +1,6 @@
 
 from datasets import Dataset, load_dataset
-from ..dataset import DataSource, datasources, DatasetArguments
+from ..dataset import DataSource, datasources, DatasetArguments, NUM_PROC
 
 class VisionChatDataset(DataSource):
     
@@ -24,7 +24,7 @@ class KoLlavaPretrainingDataset(VisionChatDataset):
         ds = load_dataset("heegyu/KoLLaVA-CC3M-Pretrain-595K", split=split, token=True)
         if args.limit:
             ds = ds.select(range(args.limit))
-        ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
+        ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False)
         return ds
 
 
@@ -50,7 +50,7 @@ class KoLlavaFinetuningDataset(KoLlavaPretrainingDataset):
         ds = load_dataset("heegyu/kollava_v1_5_mix581k", split=split)
         if args.limit:
             ds = ds.select(range(args.limit))
-        ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
+        ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False)
         return ds
 
 
@@ -61,8 +61,12 @@ class TextVQA(VisionChatDataset):
         if split != "train":
             return None
         ds = load_dataset("textvqa", split=split)
+
         if ds is not None:
-            ds = ds.map(self.map_conversations, num_proc=8, load_from_cache_file=False)
+            if args.limit:
+                ds = ds.select(range(args.limit))
+
+            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False)
         return ds
     
     def map_conversations(self, item):

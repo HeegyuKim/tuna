@@ -17,9 +17,9 @@ class ChatVLMArgs(ChatLMTaskArguments):
 class ChatVLMTask(ChatLMTask):
     ARG_CLASS = ChatVLMArgs
 
-    def __init__(self, args, model, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
+    def __init__(self, args, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
         self.image_processor = artifacts["image_processor"]
-        super().__init__(args, model, artifacts, wrapper)
+        super().__init__(args, artifacts, wrapper)
 
     def _init_collator(self):
         self.collator = GenerativeVLMCollator(
