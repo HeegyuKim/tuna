@@ -30,6 +30,12 @@ class DataSource:
     def num_items(self, split: str) -> int:
         pass
 
+    def map_dataset(self, args: DatasetArguments, ds: Dataset, func, batched=False) -> Dataset:
+        if args.limit:
+            ds = ds.select(range(self.args.limit))
+        return ds.map(func, num_proc=NUM_PROC, load_from_cache_file=False, batched=batched)
+    
+
 class DatasetLoader:
     
     def __init__(self, args: DatasetArguments) -> None:

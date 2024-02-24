@@ -1,27 +1,64 @@
 from datasets import Dataset, load_dataset
 from ..dataset import DataSource, datasources, DatasetArguments, NUM_PROC
 
-class ChatDataset(DataSource):
+ROLE_MAPPER = {
+    "human": "user",
+    "user": "user",
+    "assistant": "assistant",
+    "gpt": "assistant",
+    "bot": "assistant",
+    "system": "system"
+}
+
+class ChatDataSource(DataSource):
     
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         pass
-
-class BaseAlpacaDataset(ChatDataset):
-    
-    system_key = "system"
-    instruction_key = "instruction"
-    input_key = "input"
-    output_key = "output"
-
-    instruction_input_format = "{instruction}\ninput: {input}"
 
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
         ds = self.load_dataset(args, split=split)
-        if ds is not None:
-            print(ds)
+        if ds is not None and hasattr(self, "map_conversations"):
             ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=None, desc="Converting to conversational format").select_columns(["conversations"])
+        return ds
+    
+    # def map_conversations(self, item):
+    #     return item
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        pass
+
+class VicunaChatDataSource(ChatDataSource):
+    CONVSERATION_KEY = "conversations"
+
+    def map_conversations(self, item):
+        convs = []
+        
+        for uttr in item[self.CONVSERATION_KEY]:
+            convs.append({
+                "role": ROLE_MAPPER[uttr["from"]],
+                "content": uttr["value"]
+            })
+        
+        return {
+            "conversations": convs
+        }
+
+class BaseAlpacaDataSource(ChatDataSource):
+    
+    system_key = "system"
+    instruction_key = "instruction"
+    input_key = "input"
+    output_key = "output"
+    dataset_path = None
+
+    instruction_input_format = "{instruction}\ninput: {input}"
+    
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset(self.dataset_path, split=split)
         return ds
     
     def map_conversations(self, item):
@@ -56,47 +93,3 @@ class BaseAlpacaDataset(ChatDataset):
             "conversations": convs
         }
 
-
-@datasources.register("tatsu-lab/alpaca")
-class AlpacaChat(BaseAlpacaDataset):
-        
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("tatsu-lab/alpaca", split=split)
-
-@datasources("nvidia/OpenMathInstruct-1")
-class OpenMathInstruct(BaseAlpacaDataset):
-    instruction_key = "question"
-    output_key = "generated_solution"
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("nvidia/OpenMathInstruct-1", split=split, streaming=args.dataset_streaming)
-    
-    def num_items(self, split: str) -> int:
-        if split == "train":
-            return 5700000
-        elif split == "test":
-            return 1130000
-        
-
-@datasources.register("nampdn-ai/tiny-codes")
-class TinyCodes(BaseAlpacaDataset):
-    instruction_key = "prompt"
-    output_key = "response"
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        ds = load_dataset("nampdn-ai/tiny-codes", split=split)
-        return ds
-    
-
-@datasources.register("HuggingFaceH4/ultrachat_200k")
-class UltraChat(ChatDataset):
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        ds = load_dataset("HuggingFaceH4/ultrachat_200k", split=f"{split}_sft")
-        ds = ds.rename_column("messages", "conversations")
-        return ds

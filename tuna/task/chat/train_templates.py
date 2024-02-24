@@ -28,6 +28,9 @@ class BaseTrainTemplate:
     USER_FORMAT = "<|im_start|>user\n{content}{eos}\n"
     ASSISTANT_FORMAT = "<|im_start|>assistant\n{content}{eos}\n"
 
+    FUNCTION_CALLING_FORMAT = "<|im_start|>function_calling\n{content}{eos}\n"
+    FUNCTION_RESPONSE_FORMAT = "<|im_start|>function_response\n{content}{eos}\n"
+
 
     def __init__(self, tokenizer) -> None:
         self.special_tokens = dict(
@@ -45,6 +48,10 @@ class BaseTrainTemplate:
 
         if role == "assistant":
             fmt = self.ASSISTANT_FORMAT
+        if role == "function-call":
+            fmt = self.FUNCTION_CALLING_FORMAT
+        elif role == "function-response":
+            fmt = self.FUNCTION_RESPONSE_FORMAT
         elif role == "user":
             if index == 0 and self.INITIAL_USER_FORMAT:
                 fmt = self.INITIAL_USER_FORMAT
@@ -77,6 +84,9 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     USER_FORMAT = "<|user|>\n{content}{eos}\n"
     ASSISTANT_FORMAT = "<|assistant|>\n{content}{eos}\n"
 
+    FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}{eos}\n"
+    FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}\n"
+
 
 @train_templates.register("42dot")
 class HD42DotTemplate(BaseTrainTemplate):
@@ -89,6 +99,10 @@ class HD42DotTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "{content}\n\n"
     USER_FORMAT = "<human>:\n{content}\n"
     ASSISTANT_FORMAT = "<bot>:\n{content}{eos}\n"
+
+    FUNCTION_CALLING_FORMAT = "<function-call>:\n{content}{eos}\n"
+    FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
+
 
 
 @train_templates.register("gemma")
@@ -103,6 +117,8 @@ class GemmaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>\n\n"
     USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
+    FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
+    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<end_of_turn>\n"
 
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):
@@ -112,3 +128,5 @@ class VisionGemmaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "<start_of_turn>system{content}<end_of_turn>\n\n"
     USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
+    FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
+    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<end_of_turn>\n"
