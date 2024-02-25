@@ -11,11 +11,11 @@ python -m tuna.launcher.train \
     --task sequence-classification \
     --model_arch sequence-classification \
     --project "esconv" \
-    --run_name "esconv-xlm-roberta-large" \
-    --dataset="esconv:context" \
+    --run_name "augesc-xlm-roberta-large" \
+    --dataset="augesc:context" \
     --max_length=512 \
     --model_name_or_path $model \
-    --total_epochs 50 \
+    --total_epochs 10 \
     --learning_rate 1e-4 \
     --train_total_batch_size 32 \
     --train_batch_size_per_device 8 \

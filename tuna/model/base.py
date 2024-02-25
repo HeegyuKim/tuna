@@ -46,6 +46,10 @@ class BaseModel:
     def load_model(self):
         model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path)
         
+        # if model.config.pad_token_id is None:
+        #     model.config.pad_token_id = model.config.eos_token_id
+        #     print("Setting model pad token to eos token")
+
         # LoRA
         if self.args.use_lora:
             model = self.apply_lora(self.args, model)

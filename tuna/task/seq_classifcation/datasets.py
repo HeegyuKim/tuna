@@ -53,6 +53,13 @@ class ESConvDataSource(BaseClassificationDataSource):
                     else:
                         text = prev_uttr["text"]
 
+                    # if self.augment_context:
+                    #     context = dialog[:i + 1]
+                    #     context = ["{speaker}:{text}".format(**uttr) for uttr in context]
+                    #     text = "\n".join(context)
+                    # else:
+                    #     text = uttr["text"]
+
                     outputs["text"].append(text)
                     outputs["label"].append(label)
 
@@ -65,6 +72,52 @@ class ESConvDataSource(BaseClassificationDataSource):
 class ESConvDataSourceWithContext(ESConvDataSource):
     augment_context: bool = True
     
+@datasources("augesc")
+class AugESCDataSource(DataSource):
+    augment_context: bool = False
+
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("heegyu/augesc", split=split)
+        ds = ds.map(
+            self.build_batch_dataset, load_from_cache_file=None, desc="Building batch dataset", batched=True,
+            remove_columns=ds.column_names
+            )
+        for i in range(4):
+            print(ds[i])
+        return ds
+
+    def build_batch_dataset(self, items):
+        outputs = { "text": [], "label": []}
+
+        for dialog in items["dialog"]:
+            # print(dialog)
+            prev_uttr = None
+            for i, uttr in enumerate(dialog):
+                speaker = uttr["speaker"]
+
+                if speaker == "sys" and prev_uttr is not None:
+                    label = ESCONV_STRATEGY.index(uttr["strategy"])
+                    assert label >= 0, f"{uttr['strategy']} not found"
+
+                    if self.augment_context:
+                        context = dialog[:i]
+                        context = ["{speaker}:{text}".format(**uttr) for uttr in context]
+                        text = "\n".join(context)
+                    else:
+                        text = prev_uttr["text"]
+
+                    outputs["text"].append(text)
+                    outputs["label"].append(label)
+
+                prev_uttr = uttr
+        
+        return outputs
+
+@datasources("augesc:context")
+class AugESCDataSourceWithContext(AugESCDataSource):
+    augment_context: bool = True
+    
+
 
 @datasources("dair-ai/emotion")
 class EmotionDataSource(BaseClassificationDataSource):

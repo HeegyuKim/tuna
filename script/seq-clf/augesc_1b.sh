@@ -1,30 +1,31 @@
-wandb offline
-model="prajjwal1/bert-tiny"
+wandb online
+model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
 # model="google-bert/bert-base-uncased"
 # dataset="dair-ai/emotion"
 dataset="augesc:context"
 
 
 python -m tuna.launcher.train \
-    --mesh dp \
+    --mesh fsdp \
     --do_train --do_eval \
     --padding max_length \
+    --padding_side left \
     --truncation \
     --truncation_side left \
+    --insert_eos_token \
     --num_labels 8 \
     --task sequence-classification \
     --model_arch sequence-classification \
-    --project "test" \
-    --run_name "test" \
+    --project "esconv" \
+    --run_name "TinyLlama-augesc-context" \
     --dataset="$dataset" \
-    --max_length=64 \
+    --max_length=512 \
     --model_name_or_path $model \
-    --logging_steps 8 \
-    --total_epochs 100 \
-    --limit 1024 \
-    --learning_rate 1e-4 \
+    --total_epochs 20 \
+    --learning_rate 5e-5 \
     --train_total_batch_size 32 \
-    --train_batch_size_per_device 32 \
-    --eval_batch_size_per_device 32 \
-    --save_strategy no \
+    --train_batch_size_per_device 1 \
+    --eval_batch_size_per_device 1 \
+    --save_strategy epoch \
+    --push_to_hub \
     --output_dir ""
