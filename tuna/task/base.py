@@ -221,8 +221,6 @@ class LMTask(Task):
             return self.packed_step(batch, step)
         outputs = self.model(**batch)
         loss = outputs.loss
-        print(batch)
-        print(loss)
         return {"loss": loss}
     
     def packed_step(self, batch, step):

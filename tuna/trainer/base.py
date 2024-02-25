@@ -173,6 +173,9 @@ class BaseTrainer:
         else:
             gradient_accumulation_steps = 1
 
+        if self.args.logging_steps is None:
+            self.args.logging_steps = gradient_accumulation_steps
+
         print("## Training specs")
         print("total batch", self.args.train_total_batch_size)
         print("grad_accum", gradient_accumulation_steps)

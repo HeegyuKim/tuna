@@ -8,7 +8,7 @@ class BaseTrainingArguments():
     
     # logger
     logger: Optional[str] = None # wandb
-    logging_steps: int = 128
+    logging_steps: Optional[int] = None
     project: str = "reward_model"
     run_name: Optional[str] = None
 

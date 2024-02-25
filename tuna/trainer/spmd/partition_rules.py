@@ -4,7 +4,8 @@ import re
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_model as xm
 from transformers import (
-    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig, GemmaConfig
+    GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig, GemmaConfig,
+    XLMRobertaConfig
 )
 
 GPTNEOX_RULES = (
@@ -116,6 +117,7 @@ ALL_RULES = [
     (LlamaConfig, LLAMA_RULES),
     (MistralConfig, MISTRAL_RULES),
     (RobertaConfig, ROBERTA_RULES),
+    (XLMRobertaConfig, ROBERTA_RULES),
     (CLIPConfig, CLIP_RULES),
     (CLIPVisionConfig, CLIP_RULES),
     (LlavaConfig, LLAVA_RULES),
@@ -134,7 +136,7 @@ strkey2id = {
     "mp": 2
 }
 
-def partition_module(model, mesh, device=xm.xla_device(), verbose=True):
+def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
     partition_specs = find_rule(model)
     # rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
         

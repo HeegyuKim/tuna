@@ -2,7 +2,7 @@
 from ..common import Registry
 from dataclasses import dataclass
 from typing import Optional
-from transformers import AutoModel, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, CLIPImageProcessor
+from transformers import AutoModel, AutoModelForSequenceClassification, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, CLIPImageProcessor
 from .utils import smart_tokenizer_and_embedding_resize, freeze_model, unfreeze_model
 
 models = Registry("models")
@@ -80,7 +80,18 @@ class CausalLanguageModel(BaseModel):
 class Seq2SeqLM(BaseModel):
     AUTO_CLASS = AutoModelForSeq2SeqLM
 
+@models("sequence-classification")
+class SequenceClassification(BaseModel):
+    AUTO_CLASS = AutoModelForSequenceClassification
 
+    def load_model(self):
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, num_labels=self.args.num_labels)
+        
+        # LoRA
+        if self.args.use_lora:
+            model = self.apply_lora(self.args, model)
+            
+        return model
 
 @dataclass
 class LlavaForPretrainingArguments(BaseModelArguments):
