@@ -53,22 +53,13 @@ class ChatVLMTask(ChatLMTask):
 
     def xla_step(self, batch, step):
         batch = self.wrapper(batch)
-        if "attention_mask" in batch:
-            inputs_embeds, labels, attention_mask = self.build_input_embeds_for_xla(
-                self.model, 
-                batch["pixel_values"], 
-                batch["input_ids"], 
-                batch["labels"], 
-                batch["attention_mask"]
-                )
-        else:
-            inputs_embeds, labels = self.build_input_embeds_for_xla(
-                self.model, 
-                batch["pixel_values"], 
-                batch["input_ids"], 
-                batch["labels"], 
-                )
-            attention_mask = None
+        inputs_embeds, labels, attention_mask = self.build_input_embeds_for_xla(
+            self.model, 
+            batch["pixel_values"], 
+            batch["input_ids"], 
+            batch["labels"], 
+            batch.get("attention_mask")
+            )
 
         outputs = self.model(
             inputs_embeds=inputs_embeds,
@@ -92,10 +83,11 @@ class ChatVLMTask(ChatLMTask):
         vision_feature_layer = model.config.vision_feature_layer
         vision_feature_select_strategy = model.config.vision_feature_select_strategy
 
+        # print("pixel_values", pixel_values.shape)
+        # print("model vision vision", model.vision_tower.config)
+
         image_outputs = model.vision_tower(pixel_values, output_hidden_states=True)
         selected_image_feature = image_outputs.hidden_states[vision_feature_layer]
-        # for i, hid in enumerate(image_outputs.hidden_states):
-        #     print("image_outputs.hidden_states", i, hid.shape)
 
         selected_image_feature = model.multi_modal_projector(selected_image_feature)
 
@@ -135,21 +127,19 @@ class ChatVLMTask(ChatLMTask):
                     dim=1
                     )
                 
-            return input_embeds, labels, attention_masks
-        else:
-            return input_embeds, labels
+        return input_embeds, labels, attention_masks
 
     def save_artifacts(self, model, path, **kwargs):
         super().save_artifacts(model, path, **kwargs)
         self.image_processor.save_pretrained(path, **kwargs)
 
 
-@tasks.register("llava-pretrain")
+@tasks.register("llava-for-pretrain")
 class LlavaPretrainingTask(ChatVLMTask):
     def get_trainable_parameters(self):
         return self.model.multi_modal_projector.parameters()
 
-@tasks.register("llava-finetune")
+@tasks.register("llava-for-finetune")
 class LlavaFinetuningTask(ChatVLMTask):
     def get_trainable_parameters(self):
         return list(self.model.multi_modal_projector.parameters()) + list(self.model.language_model.parameters())

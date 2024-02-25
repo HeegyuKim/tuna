@@ -1,8 +1,9 @@
 export CUDA_VISIBLE_DEVICES=0
 
-export HF_DATASETS_CACHE="/data/hf-datasets-cache/"
+# export HF_DATASETS_CACHE="/data/hf-datasets-cache/"
 
 wandb offline
+model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 
 # accelerate launch -m tuna.launcher.train \
 python -m tuna.launcher.train \
@@ -16,7 +17,7 @@ python -m tuna.launcher.train \
     --dataset="tatsu-lab/alpaca" \
     --packing \
     --max_length=512 \
-    --model_name_or_path EleutherAI/pythia-160m \
+    --model_name_or_path $model \
     --logging_steps 1 \
     --total_epochs 3 \
     --learning_rate 1e-5 \

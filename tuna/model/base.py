@@ -69,7 +69,8 @@ class BaseModel:
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
         return model
-    
+
+
 
 @models("causal-lm")
 class CausalLanguageModel(BaseModel):
@@ -106,7 +107,7 @@ class LlavaForPretrainingModel(BaseModel):
             image_processor=processor.image_processor
         )
         
-    def load_mode(self):
+    def load_model(self):
         from transformers import LlavaConfig
 
         args = self.args
@@ -123,7 +124,7 @@ class LlavaForPretrainingModel(BaseModel):
                 lm
                 )
         
-        vision_tower = CLIPVisionModel.from_pretrained(args.vision_tower)
+        vision_tower = AutoModel.from_pretrained(args.vision_tower).vision_model
 
         image_token_index=tokenizer.convert_tokens_to_ids("<image>")
         assert isinstance(image_token_index, int)
@@ -136,34 +137,35 @@ class LlavaForPretrainingModel(BaseModel):
         )
 
         freeze_model(vision_tower)
-        # freeze_model(lm)
+        freeze_model(lm)
 
         model = LlavaForConditionalGeneration(config)
         model.vision_tower = vision_tower
         model.language_model = lm
 
         return model
+    
 
-@models("llava-for-finetune")
-class LlavaForFinetuningModel(BaseModel):
-    AUTO_CLASS = LlavaForConditionalGeneration
+# @models("llava-for-finetune")
+# class LlavaForFinetuningModel(BaseModel):
+#     AUTO_CLASS = LlavaForConditionalGeneration
 
-    def load_artifacts(self):
-        args = self.args
-        tokenizer = args.tokenizer or args.model_name_or_path
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer)
-        processor = LlavaProcessor.from_pretrained(self.args.model_name_or_path)
+#     def load_artifacts(self):
+#         args = self.args
+#         tokenizer = args.tokenizer or args.model_name_or_path
+#         tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+#         processor = LlavaProcessor.from_pretrained(self.args.model_name_or_path)
 
-        return dict(
-            tokenizer=tokenizer,
-            image_processor=processor
-        )
+#         return dict(
+#             tokenizer=tokenizer,
+#             image_processor=processor
+#         )
         
-    def load_model(self):
-        args = self.args
-        model = LlavaForConditionalGeneration.from_pretrained(self.args.model_name_or_path)
+#     def load_model(self):
+#         args = self.args
+#         model = LlavaForConditionalGeneration.from_pretrained(self.args.model_name_or_path)
 
-        freeze_model(model.vision_tower)
-        # freeze_model(lm)
+#         # freeze_model(model.vision_tower)
+#         # freeze_model(lm)
 
-        return model
+#         return model

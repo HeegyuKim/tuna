@@ -13,9 +13,6 @@ ROLE_MAPPER = {
 class ChatDataSource(DataSource):
     
     def load(self, args: DatasetArguments, split: str) -> Dataset:
-        pass
-
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
         ds = self.load_dataset(args, split=split)
@@ -55,9 +52,7 @@ class BaseAlpacaDataSource(ChatDataSource):
 
     instruction_input_format = "{instruction}\ninput: {input}"
     
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         ds = load_dataset(self.dataset_path, split=split)
         return ds
     

@@ -5,22 +5,14 @@ from datasets import load_dataset, Dataset
 
 @datasources.register("tatsu-lab/alpaca")
 class AlpacaChat(BaseAlpacaDataSource):
-        
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("tatsu-lab/alpaca", split=split)
+    dataset_path = "tatsu-lab/alpaca"
 
 @datasources("nvidia/OpenMathInstruct-1")
 class OpenMathInstruct(BaseAlpacaDataSource):
     instruction_key = "question"
     output_key = "generated_solution"
+    dataset_path = "nvidia/OpenMathInstruct-1"
 
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("nvidia/OpenMathInstruct-1", split=split, streaming=args.dataset_streaming)
-    
     def num_items(self, split: str) -> int:
         if split == "train":
             return 5700000

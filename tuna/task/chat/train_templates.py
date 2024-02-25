@@ -48,7 +48,7 @@ class BaseTrainTemplate:
 
         if role == "assistant":
             fmt = self.ASSISTANT_FORMAT
-        if role == "function-call":
+        elif role == "function-call":
             fmt = self.FUNCTION_CALLING_FORMAT
         elif role == "function-response":
             fmt = self.FUNCTION_RESPONSE_FORMAT

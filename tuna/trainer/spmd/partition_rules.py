@@ -93,7 +93,7 @@ ROBERTA_RULES = (
     
 CLIP_RULES = (
     ("patch_embedding", ("fsdp", "mp", None, None)),
-    ("position_embedding", ("mp", "fsdp")),
+    ("position_embedding", ("fsdp", "mp")),
     ("self_attn\\.(q_proj|k_proj|v_proj)", ("fsdp", "mp")),
     ("self_attn\\.out_proj", ("mp", "fsdp")),
     ("mlp\\.fc1", ("fsdp", "mp")),
@@ -134,7 +134,7 @@ strkey2id = {
     "mp": 2
 }
 
-def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
+def partition_module(model, mesh, device=xm.xla_device(), verbose=True):
     partition_specs = find_rule(model)
     # rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
         
@@ -144,15 +144,18 @@ def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
         module.to(device)
         # print(name, module.__class__.__name__)
         if isinstance(module, (nn.Embedding, nn.Linear, nn.Conv1d, nn.Conv2d)):
+            find = False
             for rule_pattern, spec in partition_specs:
                 if re.findall(rule_pattern, name):
                     if verbose:
                         print("match", rule_pattern, name)
                     
                     xs.mark_sharding(module.weight, mesh, spec)
+                    find = True
                     break
-        
-            print(f"{name} not found in partition_specs")
+            
+            if not find:
+                print(f"{name} not found in partition_specs")
 
             
         

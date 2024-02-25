@@ -65,7 +65,7 @@ class SPMDTensorWrapper(TensorWrapper):
         xs.mark_sharding(v, self.mesh, tuple(range(v.dim())))
     
     def shard_pixel_values(self, v):
-        xs.mark_sharding(v, self.mesh, (0, None, 1, 2))
+        xs.mark_sharding(v, self.mesh, (0, 1, None, None))
 
     def __call__(self, tensor):
         if torch.is_tensor(tensor):
@@ -78,6 +78,7 @@ class SPMDTensorWrapper(TensorWrapper):
                     tensor[k] = v.to(self.device)
                     if k == "pixel_values":
                         self.shard_pixel_values(tensor[k])
+                        # pass
                     else:
                         self.shard_tensor(tensor[k])
             return tensor
