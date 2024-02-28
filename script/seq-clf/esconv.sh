@@ -12,7 +12,7 @@ python -m tuna.launcher.train \
     --task sequence-classification \
     --model_arch sequence-classification \
     --project "esconv" \
-    --run_name "esconv-xlm-roberta-base" \
+    --run_name "esconv-xlm-roberta-large" \
     --dataset="esconv:context" \
     --max_length=512 \
     --model_name_or_path $model \
