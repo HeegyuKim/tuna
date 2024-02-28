@@ -136,7 +136,7 @@ strkey2id = {
     "mp": 2
 }
 
-def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
+def partition_module(model, mesh, device=xm.xla_device(), verbose=True):
     partition_specs = find_rule(model)
     # rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
         
@@ -156,7 +156,7 @@ def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
                     find = True
                     break
             
-            if not find:
+            if not find and verbose:
                 print(f"{name} not found in partition_specs")
 
             

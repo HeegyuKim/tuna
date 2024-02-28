@@ -1,5 +1,5 @@
 
-from .datasets import ChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments
+from .datasets import ChatDataSource, VicunaChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments
 from datasets import load_dataset, Dataset
 
 
@@ -78,6 +78,15 @@ class KoLimaVicuna(ChatDataSource):
         ds = load_dataset("changpt/ko-lima-vicuna", split=split)
         return ds
     
+@datasources("FreedomIntelligence/evol-instruct-korean")
+class EvolInstructKorean(VicunaChatDataSource):
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("FreedomIntelligence/evol-instruct-korean", split=split)
+        return ds
+
 @datasources("heegyu/glaive-function-calling-v2-ko")
 class GlaiveFunctionCallingV2Ko(ChatDataSource):
     
