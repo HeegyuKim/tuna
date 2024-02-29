@@ -105,8 +105,13 @@ class AugESCDataSource(DataSource):
                     assert label >= 0, f"{uttr['strategy']} not found"
 
                     if self.augment_context:
-                        context = dialog[:i]
-                        context = ["{speaker}:{text}".format(**uttr) for uttr in context]
+                        context = []
+                        for uttr in dialog[:i]:
+                            if uttr['speaker'] == 'sys':
+                                context.append("{speaker}[{strategy}]:{text}".format(**uttr))
+                            else:
+                                context.append("{speaker}:{text}".format(**uttr))
+
                         text = "\n".join(context)
                     else:
                         text = prev_uttr["text"]
