@@ -17,7 +17,7 @@ python -m tuna.launcher.train \
     --task sequence-classification \
     --model_arch sequence-classification \
     --project "esconv" \
-    --run_name "TinyLlama-augesc-context" \
+    --run_name "TinyLlama-augesc-context-strategy" \
     --dataset="$dataset" \
     --max_length=512 \
     --model_name_or_path $model \
