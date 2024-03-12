@@ -136,7 +136,7 @@ strkey2id = {
     "mp": 2
 }
 
-def partition_module(model, mesh, device=xm.xla_device(), verbose=True):
+def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
     partition_specs = find_rule(model)
     # rule = [(k, tuple([strkey2id[x] for x in v])) for k, v in partition_specs]
         

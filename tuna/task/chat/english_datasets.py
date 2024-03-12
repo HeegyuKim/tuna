@@ -1,3 +1,4 @@
+import json
 
 from .datasets import ChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments
 from datasets import load_dataset, Dataset
@@ -29,9 +30,42 @@ class TinyCodes(BaseAlpacaDataSource):
 
 @datasources.register("HuggingFaceH4/ultrachat_200k")
 class UltraChat(ChatDataSource):
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
         ds = load_dataset("HuggingFaceH4/ultrachat_200k", split=f"{split}_sft")
         ds = ds.rename_column("messages", "conversations")
         return ds
+
+@datasources.register("thu-coai/esconv")
+class ESConv(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("thu-coai/esconv", split=f"{split}")
+        return ds
+
+    def map_conversations(self, item):
+        item = json.loads(item["text"])
+        dialog = item["dialog"]
+        convs = []
+        speaker2role = {
+            'sys': "assistant",
+            'usr': 'user'
+        }
+
+        for i in range(1, len(dialog) - 1):
+            uttr = dialog[i]
+            speaker = uttr["speaker"]
+
+            if speaker == "sys":
+                text = "[{strategy}] {text}".format(**uttr)
+            else:
+                text = uttr["text"]
+
+            convs.append({
+                "role": speaker2role[speaker],
+                "content": text,
+            })
+
+        return {
+            "conversations": convs
+        }

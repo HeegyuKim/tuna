@@ -17,7 +17,7 @@ class ChatDataSource(DataSource):
             return None
         ds = self.load_dataset(args, split=split)
         if ds is not None and hasattr(self, "map_conversations"):
-            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=None, desc="Converting to conversational format").select_columns(["conversations"])
+            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations"])
         return ds
     
     # def map_conversations(self, item):
