@@ -214,12 +214,16 @@ class GenerativeLanguageModelCollator(object):
             else:
                 pad_max_length = max_length
 
-            new_batch[k] = pad_sequences(
-                batch[k],
-                self.padding_side,
-                pad_max_length,
-                pad_token_id
-            )
+            try:
+                new_batch[k] = pad_sequences(
+                    batch[k],
+                    self.padding_side,
+                    pad_max_length,
+                    pad_token_id
+                )
+            except:
+                print("error in collator: key", k, "batch:", batch[k])
+                raise
 
         return new_batch
 
