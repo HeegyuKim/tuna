@@ -30,4 +30,4 @@ train() {
 
 train $1 # "HuggingFaceH4/mistral-7b-sft-beta"
 
-# train "openchat/openchat-3.5-0106"
+# ./script/lm/dfo/train_feedback.sh "openchat/openchat-3.5-0106"

@@ -77,10 +77,12 @@ class BaseTrainTemplate:
         
         
 
-@train_templates.register("tinyllama")
+@train_templates.register("zephyr")
 class TinyLlamaTemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [
-        "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "HuggingFaceH4/mistral-7b-sft-beta",
+        "HuggingFaceH4/zephyr-7b-beta"
     ]
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = None
@@ -135,3 +137,17 @@ class VisionGemmaTemplate(BaseTrainTemplate):
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
     FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
     FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<end_of_turn>\n"
+
+
+@train_templates.register("openchat")
+class VisionGemmaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "openchat/openchat-3.5-0106",
+        "openchat/openchat-3.5-1210",
+        "openchat/openchat-3.5",
+    ]
+    SYSTEM_FORMAT = "{content}\n"
+    USER_FORMAT = "GPT4 Correct User: {content}<|end_of_turn|>"
+    ASSISTANT_FORMAT = "GPT4 Correct Assistant:{content}<|end_of_turn|>"
+    FUNCTION_CALLING_FORMAT = "GPT4 Correct User: [function-call] {content}<|end_of_turn|>"
+    FUNCTION_RESPONSE_FORMAT = "GPT4 Correct Assistant: [function-response] {content}<|end_of_turn|>"
