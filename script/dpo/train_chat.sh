@@ -1,9 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
-# export HF_DATASETS_CACHE="/data/hf-datasets-cache/"
-
 wandb offline
-model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
+model="Locutusque/TinyMistral-248M-v2.5"
 
 # accelerate launch -m tuna.launcher.train \
 python -m tuna.launcher.train \
@@ -16,7 +14,7 @@ python -m tuna.launcher.train \
     --model_arch causal-lm \
     --project "test" \
     --run_name "test" \
-    --dataset="ultrafeedback" \
+    --dataset="dpo:ultrafeedback" \
     --use_lora \
     --max_length=1024 \
     --model_name_or_path $model \

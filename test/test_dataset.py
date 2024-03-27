@@ -1,7 +1,7 @@
 from pprint import pprint
 from tuna.task.dataset import DatasetLoader, DatasetArguments
 
-dataset_name = "thu-coai/esconv"
+dataset_name = "dpo:heegyu/ultrafeedback_binarized_feedback:self-feedback"
 args = DatasetArguments(
     dataset = dataset_name
 )

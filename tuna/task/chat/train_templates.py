@@ -62,7 +62,12 @@ class BaseTrainTemplate:
         else:
             raise ValueError(f"Unknown role: {role}")
         
-        return fmt.format(content=utterance["content"], **self.special_tokens), role == "assistant"
+        if "trainable" in utterance and utterance["trainable"] is not None:
+            trainable = utterance["trainable"]
+        else:
+            trainable = role == "assistant"
+
+        return fmt.format(content=utterance["content"], **self.special_tokens), trainable
         
     def join_utterances(self, utterances: List[str]) -> str:
         return "\n".join(utterances)

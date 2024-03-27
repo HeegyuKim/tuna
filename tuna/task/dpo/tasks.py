@@ -197,3 +197,17 @@ class DPOTask(LMTask):
         step_output = self.step(batch, step)
         step_output["loss"] = step_output["loss"].mean()
         return step_output
+
+    def collate_step_outputs(self, outputs):
+        keys = ["loss", "chosen_rewards", "rejected_rewards", "accuracy"]
+        return {
+            k: torch.stack([x[k] for x in outputs]).mean() for k in keys
+        }
+
+    @property
+    def eval_metric_definitions(self):
+        return {
+            "accuracy": "max",
+            "loss": "min",
+            }
+    
