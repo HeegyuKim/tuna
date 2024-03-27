@@ -38,6 +38,10 @@ class BaseModel:
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
         tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer)
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+            print("Setting tokenizer pad token to eos token")
+            
         return dict(
             tokenizer=tokenizer,
             model_name_or_path=args.model_name_or_path,
