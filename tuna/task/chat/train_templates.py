@@ -132,7 +132,7 @@ class VisionGemmaTemplate(BaseTrainTemplate):
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
 
-    SYSTEM_FORMAT = "<start_of_turn>system{content}<end_of_turn>\n\n"
+    SYSTEM_FORMAT = "<start_of_turn>system\n{content}<end_of_turn>\n\n"
     USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
     FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
@@ -147,7 +147,7 @@ class VisionGemmaTemplate(BaseTrainTemplate):
         "openchat/openchat-3.5",
     ]
     SYSTEM_FORMAT = "{content}\n"
-    USER_FORMAT = "GPT4 Correct User: {content}<|end_of_turn|>"
-    ASSISTANT_FORMAT = "GPT4 Correct Assistant:{content}<|end_of_turn|>"
-    FUNCTION_CALLING_FORMAT = "GPT4 Correct User: [function-call] {content}<|end_of_turn|>"
-    FUNCTION_RESPONSE_FORMAT = "GPT4 Correct Assistant: [function-response] {content}<|end_of_turn|>"
+    USER_FORMAT = "GPT4 Correct User: {content}{eos}"
+    ASSISTANT_FORMAT = "GPT4 Correct Assistant: {content}{eos}"
+    FUNCTION_CALLING_FORMAT = "GPT4 Correct User: [function-call] {content}{eos}"
+    FUNCTION_RESPONSE_FORMAT = "GPT4 Correct Assistant: [function-response] {content}{eos}"

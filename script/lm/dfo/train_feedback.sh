@@ -12,7 +12,7 @@ train() {
         --truncation_side left \
         --model_arch causal-lm \
         --project "dfo-feedback" \
-        --run_name "$model-self-feedback-0327" \
+        --run_name "$model-self-feedback-0328" \
         --dataset="heegyu/ultrafeedback_binarized_feedback:self-feedback" \
         --max_length=2048 \
         --model_name_or_path $model \
