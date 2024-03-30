@@ -48,3 +48,20 @@ class AIHubTranslationKoEn(DataSource):
             "output": output
         }
     
+@datasources("aihub-mt-koen-report")
+class AIHubTranslationKoEnReport(AIHubTranslationKoEn):
+    
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        
+        ds = load_dataset("iknow-lab/aihub_translations", split=split, streaming=args.dataset_streaming)
+
+        keywords = ["과학", "전문분야"]
+        ds = ds.filter(lambda x: any([kw in x["dataset"] for kw in keywords]))
+
+        if args.dataset_streaming:
+            ds = ds.map(self.randomize)
+        else:
+            ds = ds.map(self.randomize, num_proc=NUM_PROC, load_from_cache_file=False, desc="Randomizing input-output pairs")
+
+        return ds
+    

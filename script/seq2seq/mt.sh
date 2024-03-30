@@ -1,10 +1,18 @@
+# example
+# ./script/seq2seq/mt.sh aihub-mt-koen
+# ./script/seq2seq/mt.sh aihub-mt-koen-report
+
 wandb online
 model="KETI-AIR/ke-t5-base-ko"
+dataset=$1
+
 
 batch=4
 total_steps=$(( 10000000 / $batch * 3 ))
 save_steps=$(( $total_steps / 30 ))
 
+echo "Model: $model"
+echo "Dataset: $dataset"
 echo "Total steps: $total_steps"
 
 python -m tuna.launcher.train \
@@ -15,7 +23,7 @@ python -m tuna.launcher.train \
     --model_arch seq2seq-lm \
     --project "kamo" \
     --run_name "aihub_mt_$model" \
-    --dataset="aihub-mt-koen" \
+    --dataset=$dataset \
     --dataset_streaming \
     --truncation \
     --max_length=128 \
