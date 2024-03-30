@@ -22,7 +22,7 @@ python -m tuna.launcher.train \
     --padding max_length \
     --model_arch seq2seq-lm \
     --project "kamo" \
-    --run_name "aihub_mt_$model" \
+    --run_name "aihub_mt_ket5-base-ko_$dataset" \
     --dataset=$dataset \
     --dataset_streaming \
     --truncation \
