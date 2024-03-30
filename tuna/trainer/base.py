@@ -337,6 +337,9 @@ class BaseTrainer:
                 outputs = {"loss": outputs}
             step_outputs.append(convert_dict_tensor_devices(outputs, "cpu"))
 
+            if self.args.eval_batch_limit and step >= self.args.eval_batch_limit:
+                break
+
         eval_results = self.task.collate_evaluation_outputs(step_outputs)
         eval_results = {f"eval/{k}": v.item() if torch.is_tensor(v) else v for k, v in eval_results.items()}
         eval_results["epoch"] = round(epoch, 2)

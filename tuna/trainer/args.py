@@ -26,6 +26,8 @@ class BaseTrainingArguments():
     eval_strategy: str = "epoch" # steps, epoch, last
     eval_epochs: Optional[float] = None
     eval_per_epoch: int = 1
+    eval_steps: Optional[int] = None
+    eval_batch_limit: Optional[int] = None
 
     ## optimizer, lr decay
     # optimizer: str = "adamw"

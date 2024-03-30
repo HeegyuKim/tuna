@@ -6,7 +6,7 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from datasets import Dataset, DatasetDict, concatenate_datasets
+from datasets import Dataset, DatasetDict, concatenate_datasets, IterableDataset
 
 
 from ..common import Registry
@@ -72,7 +72,13 @@ class Task:
             self.wrapper = TensorWrapper(wrapper)
 
     def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
-        datasets = datasets.map(self.encode_item, load_from_cache_file=False, desc="Encoding", num_proc=NUM_PROC)
+        for k in datasets:
+            ds = datasets[k]
+            if isinstance(ds, IterableDataset):
+                datasets[k] = ds.map(self.encode_item)
+            else:
+                datasets[k] = ds.map(self.encode_item, load_from_cache_file=False, desc="Encoding", num_proc=NUM_PROC)
+
         return datasets
 
     def get_trainable_parameters(self):
@@ -80,6 +86,18 @@ class Task:
     
     def encode_item(self, item):
         pass
+
+    # def encode_item_batch(self, batch):
+    #     print(batch)
+    #     keys = list(batch.keys())
+    #     outputs = defaultdict(list)
+    #     batch_size = len(batch[keys[0]])
+    #     for i in range(batch_size):
+    #         item = {k: batch[k][i] for k in keys}
+    #         encoded = self.encode_item(item)
+    #         for k, v in encoded.items():
+    #             outputs[k].append(v)
+    #     return outputs
 
     def step(self, batch, step):
         raise NotImplemented()
