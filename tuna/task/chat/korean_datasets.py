@@ -16,6 +16,23 @@ class OpenOrcaGugugoKo(BaseAlpacaDataSource):
     output_key = "response"
     dataset_path = "squarelike/OpenOrca-gugugo-ko"
 
+
+@datasources("MarkrAI/KoCommercial-Dataset")
+class KoCommercialDataset(BaseAlpacaDataSource):
+    dataset_path = "MarkrAI/KoCommercial-Dataset"
+
+@datasources("heegyu/KoCommercial-Dataset")
+class KoCommercialDatasetHeegyu(BaseAlpacaDataSource):
+    dataset_path = "heegyu/KoCommercial-Dataset"
+    
+
+@datasources("maywell/koVast")
+class KoVast(VicunaChatDataSource):
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("maywell/koVast", split=split, streaming=args.streaming)
+        return ds
+    
 @datasources("heegyu/PKU-SafeRLHF-ko:safer")
 class PKUSafeRLHFKoSafer(ChatDataSource):
 

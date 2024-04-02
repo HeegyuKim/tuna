@@ -17,16 +17,14 @@ python -m tuna.launcher.train \
     --run_name "$run_name" \
     --dataset="$datasets" \
     --packing \
+    --amp \
     --max_length=2048 \
     --model_name_or_path $model \
-    --logging_steps 1 \
     --total_epochs 3 \
-    --use_lora \
-    --limit 1024 \
     --learning_rate 1e-5 \
     --train_total_batch_size 32 \
-    --train_batch_size_per_device 4 \
-    --eval_batch_size_per_device 4 \
+    --train_batch_size_per_device 2 \
+    --eval_batch_size_per_device 2 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

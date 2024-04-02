@@ -206,7 +206,7 @@ class BaseTrainer:
                     progress.desc = f"{description} epoch: {epoch_float:.4f}"
 
                 batch = convert_dict_tensor_devices(batch, self.device)
-                with torch.autocast(autocast_device, enabled=args.amp):
+                with torch.autocast(autocast_device, enabled=args.amp, dtype=torch.bfloat16):
                     step_output = self.task.train_step(batch, global_step)
 
                     if torch.is_tensor(step_output):
