@@ -1,4 +1,4 @@
-from datasets import Dataset, load_dataset
+from datasets import IterableDataset, Dataset, load_dataset
 from ..dataset import DataSource, datasources, DatasetArguments, NUM_PROC
 
 ROLE_MAPPER = {
@@ -17,7 +17,10 @@ class ChatDataSource(DataSource):
             return None
         ds = self.load_dataset(args, split=split)
         if ds is not None and hasattr(self, "map_conversations"):
-            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations"])
+            if isinstance(ds, IterableDataset):
+                ds = ds.map(self.map_conversations)
+            else:
+                ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations"])
         return ds
     
     # def map_conversations(self, item):
@@ -53,7 +56,7 @@ class BaseAlpacaDataSource(ChatDataSource):
     instruction_input_format = "{instruction}\ninput: {input}"
     
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        ds = load_dataset(self.dataset_path, split=split)
+        ds = load_dataset(self.dataset_path, split=split, streaming=args.dataset_streaming)
         return ds
     
     def map_conversations(self, item):

@@ -30,7 +30,7 @@ class KoCommercialDatasetHeegyu(BaseAlpacaDataSource):
 class KoVast(VicunaChatDataSource):
     
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        ds = load_dataset("maywell/koVast", split=split, streaming=args.streaming)
+        ds = load_dataset("maywell/koVast", split=split, streaming=args.dataset_streaming)
         return ds
     
 @datasources("heegyu/PKU-SafeRLHF-ko:safer")
