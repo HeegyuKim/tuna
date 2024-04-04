@@ -5,6 +5,8 @@ import os
 from datasets import Dataset, DatasetDict, concatenate_datasets
 
 from ..common import Registry
+from pprint import pprint
+
 
 
 NUM_PROC = max(1, min(16, os.cpu_count() // 2))
@@ -15,6 +17,7 @@ class DatasetArguments():
     eval_dataset: Optional[str] = None
     dataset_streaming: bool = False
 
+    add_source: bool = False
     limit: Optional[int] = None
     eval_limit: Optional[int] = None
 
@@ -50,10 +53,10 @@ class DatasetLoader:
         if test_set is not None:
             dd["test"] = test_set
 
-        if args.limit:
-            for k in dd.keys():
-                if dd[k] is not None and len(dd[k]) > args.limit:
-                    dd[k] = dd[k].select(range(args.limit))
+        # if args.limit:
+        #     for k in dd.keys():
+        #         if dd[k] is not None and len(dd[k]) > args.limit:
+        #             dd[k] = dd[k].select(range(args.limit))
 
         return dd
     
@@ -66,12 +69,24 @@ class DatasetLoader:
                 source = datasources.get(name)
                 source = source()
                 ds = source.load(args, split)
+
                 if ds is not None:
+                    if args.limit:
+                        ds = ds.select(range(args.limit))
+                    if args.add_source:
+                        new_column = [name] * len(ds)
+                        ds = ds.add_column("source", new_column)
                     sources.append(ds)
+                    print(f"Loaded dataset {name} - {len(ds)} items")
+                    pprint(ds[0])
             except:
                 print(f"Failed to load dataset {name}")
                 raise
-        
+
+        print("split", split)
+        for name, source in zip(names, sources):
+            print(f"{name}: {len(source)} items")
+
         if sources:
             return concatenate_datasets(sources) if len(sources) > 1 else sources[0]
         else:

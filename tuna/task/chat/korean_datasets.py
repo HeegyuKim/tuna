@@ -112,21 +112,19 @@ class GlaiveFunctionCallingV2Ko(ChatDataSource):
             return None
         ds = load_dataset("heegyu/glaive-function-calling-v2-ko", split=split)
         ds = ds.select_columns(["function_description", "conversations_ko"])
-        ds.rename_column("conversations_ko", "conversations")
+        ds = ds.rename_column("conversations_ko", "conversations")
         return ds
     
     def map_conversations(self, item):
-        item = super().map_conversations(item)
-
         if item["function_description"]:
             item["conversations"].insert(0, {
                 "role": "system",
-                "content": item["system_message"] + "\n" + item["function_description"]
+                "content": "당신은 사용자에게 도움이 되는 AI 어시스턴트입니다. 필요하다면 다음 함수를 사용하세요\n" + item["function_description"]
             })
         else:
             item["conversations"].insert(0, {
                 "role": "system",
-                "content": item["system_message"]
+                "content": "당신은 사용자에게 도움이 되는 AI 어시스턴트입니다. 사용할 수 있는 함수는 없습니다."
             })
         return item
     

@@ -1,6 +1,6 @@
 import json
 
-from .datasets import ChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments
+from .datasets import ChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments, VicunaChatDataSource
 from datasets import load_dataset, Dataset
 from copy import deepcopy
 
@@ -27,6 +27,12 @@ class TinyCodes(BaseAlpacaDataSource):
     instruction_key = "prompt"
     output_key = "response"
     dataset_path = "nampdn-ai/tiny-codes"
+
+@datasources("glaiveai/glaive-code-assistant-v2")
+class GlaiveCodeAssistantV2(BaseAlpacaDataSource):
+    instruction_key = "question"
+    output_key = "answer"
+    dataset_path = "glaiveai/glaive-code-assistant-v2"
     
 
 @datasources.register("HuggingFaceH4/ultrachat_200k")
@@ -35,8 +41,17 @@ class UltraChat(ChatDataSource):
         if split != "train":
             return None
         ds = load_dataset("HuggingFaceH4/ultrachat_200k", split=f"{split}_sft")
-        ds = ds.rename_column("messages", "conversations")
+        ds = ds.rename_column("messages", "conversations").select_columns(["conversations"])
         return ds
+
+@datasources("Open-Orca/SlimOrca-Dedup")
+class SlimOrcaDedup(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("Open-Orca/SlimOrca-Dedup", split=split)
+        return ds
+
 
 @datasources("heegyu/ultrafeedback_binarized_feedback:user-feedback")
 class UltraFeedbackUserFeedback(ChatDataSource):
