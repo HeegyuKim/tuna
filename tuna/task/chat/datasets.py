@@ -10,7 +10,13 @@ ROLE_MAPPER = {
     "system": "system"
 }
 
+
+@datasources("hf-chat:")
 class ChatDataSource(DataSource):
+
+    def __init__(self, dataset_name: str = None) -> None:
+        super().__init__()
+        self.dataset_name = dataset_name
     
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
@@ -27,7 +33,10 @@ class ChatDataSource(DataSource):
     #     return item
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        pass
+        ds = load_dataset(self.dataset_name, streaming=args.dataset_streaming).get(split)
+        if ds:
+            ds = ds.select_columns("conversations")
+        return ds
 
 class VicunaChatDataSource(ChatDataSource):
     CONVSERATION_KEY = "conversations"

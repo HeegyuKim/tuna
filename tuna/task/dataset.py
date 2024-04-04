@@ -66,8 +66,12 @@ class DatasetLoader:
 
         for name in names:
             try:
-                source = datasources.get(name)
-                source = source()
+                if name.startswith("hf-chat:"):
+                    source = datasources.get("hf-chat:")
+                    source = source(dataset_name=name.split("hf-chat:", 1)[1])
+                else:
+                    source = datasources.get(name)
+                    source = source()
                 ds = source.load(args, split)
 
                 if ds is not None:

@@ -4,8 +4,8 @@ wandb online
 
 # datasets="maywell/koVast,heegyu/PKU-SafeRLHF-ko:safer,FreedomIntelligence/evol-instruct-korean"
 # run_name="gemma-ko-2b-0403"
-datasets="heegyu/KoCommercial-Dataset"
-run_name="gemma-ko-2b-kocomm-0403"
+datasets="hf-chat:heegyu/ko-openchat-0404-test"
+run_name="gemma-ko-2b-0404-test"
 model="beomi/gemma-ko-2b"
 
 # accelerate launch -m tuna.launcher.train \
