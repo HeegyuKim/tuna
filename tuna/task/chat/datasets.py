@@ -19,8 +19,6 @@ class ChatDataSource(DataSource):
         self.dataset_name = dataset_name
     
     def load(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
         ds = self.load_dataset(args, split=split)
         if ds is not None and hasattr(self, "map_conversations"):
             if isinstance(ds, IterableDataset):

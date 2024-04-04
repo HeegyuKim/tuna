@@ -2,7 +2,7 @@ from typing import Optional
 from dataclasses import dataclass
 import os 
 
-from datasets import Dataset, DatasetDict, concatenate_datasets
+from datasets import Dataset, DatasetDict, concatenate_datasets, IterableDataset
 
 from ..common import Registry
 from pprint import pprint
@@ -46,9 +46,9 @@ class DatasetLoader:
         self.dataset = self.prepare_dataset(args)
 
     def prepare_dataset(self, args: DatasetArguments):
-        dd = DatasetDict({
+        dd = {
             "train": self.get_sources(args, args.dataset, "train"),
-        })
+        }
         test_set = self.get_sources(args, args.eval_dataset or args.dataset, "test")
         if test_set is not None:
             dd["test"] = test_set
@@ -81,15 +81,19 @@ class DatasetLoader:
                         new_column = [name] * len(ds)
                         ds = ds.add_column("source", new_column)
                     sources.append(ds)
-                    print(f"Loaded dataset {name} - {len(ds)} items")
-                    pprint(ds[0])
+                    if not isinstance(ds, IterableDataset):
+                        print(f"Loaded dataset {name} - {len(ds)} items")
+                        pprint(ds[0])
             except:
                 print(f"Failed to load dataset {name}")
                 raise
 
         print("split", split)
         for name, source in zip(names, sources):
-            print(f"{name}: {len(source)} items")
+            if not isinstance(ds, IterableDataset):
+                print(f"{name}: {len(source)} items")
+            else:
+                print(f"{name}: unknown items")
 
         if sources:
             return concatenate_datasets(sources) if len(sources) > 1 else sources[0]

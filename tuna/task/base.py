@@ -71,11 +71,11 @@ class Task:
         else:
             self.wrapper = TensorWrapper(wrapper)
 
-    def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
+    def encode_datasets(self, datasets: Dict) -> DatasetDict:
         for k in datasets:
             ds = datasets[k]
             if isinstance(ds, IterableDataset):
-                datasets[k] = ds.map(self.encode_item)
+                datasets[k] = ds.map(self.encode_item).select_columns(["input_ids", "attention_mask", "labels"])
             else:
                 datasets[k] = ds.map(self.encode_item, load_from_cache_file=False, desc="Encoding", num_proc=NUM_PROC)
 
@@ -176,15 +176,20 @@ class LMTask(Task):
             decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
         
-    def encode_datasets(self, datasets: DatasetDict) -> DatasetDict:
+    def encode_datasets(self, datasets: Dict) -> DatasetDict:
         datasets = super().encode_datasets(datasets)
         if self.args.packing:
             cols = datasets["train"].column_names
-            if "input_ids" in cols:
-                cols.remove("input_ids")
-            if "labels" in cols:
-                cols.remove("labels")
-            datasets = datasets.map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+            if cols:
+                if "input_ids" in cols:
+                    cols.remove("input_ids")
+                if "labels" in cols:
+                    cols.remove("labels")
+                for k in datasets:
+                    datasets[k] = datasets[k].map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+            else: # iterable dataset
+                for k in datasets:
+                    datasets[k] = datasets[k].map(self._pack, batched=True)
             
         return datasets
 

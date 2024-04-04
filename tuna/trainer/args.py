@@ -47,7 +47,7 @@ class BaseTrainingArguments():
     save_epochs: int = 1
     save_per_epoch: Optional[int] = None 
     save_steps: int = 10000
-    save_format: Optional[str] = None 
+    save_format: Optional[str] = "bf16" 
 
     output_dir: Optional[str] = "./checkpoint"
     push_to_hub: bool = False

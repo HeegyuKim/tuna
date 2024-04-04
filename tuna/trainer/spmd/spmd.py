@@ -135,6 +135,8 @@ class SPMDTrainer(BaseTrainer):
 
         if self.args.save_format == "fp16":
             model.half()
+        elif self.args.save_format == "bf16":
+            model.bfloat16()
 
         repo_id = run_name.replace("/", "__").replace(",", "_")
 

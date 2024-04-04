@@ -124,8 +124,15 @@ class GemmaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>\n\n"
     USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
-    FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
-    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<end_of_turn>\n"
+    FUNCTION_CALLING_FORMAT = "<start_of_turn>model\n```function-call\n{content}```<end_of_turn>\n"
+    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>```function-response\n{content}```<end_of_turn>\n"
+    
+    def __init__(self, tokenizer) -> None:
+        super().__init__(tokenizer)
+        additional_tokens = ['<start_of_turn>','<end_of_turn>']
+        tokenizer.add_special_tokens({
+            'additional_special_tokens': additional_tokens
+            })
 
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):
