@@ -81,6 +81,9 @@ class Task:
 
         return datasets
 
+    def set_model(self, model):
+        self.model = model
+        
     def get_trainable_parameters(self):
         return self.model.parameters()
     

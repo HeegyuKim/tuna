@@ -24,13 +24,15 @@ class BaseTrainTemplate:
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = None
 
-    SYSTEM_FORMAT = "<|im_start|>system\n{content}{eos}\n"
-    USER_FORMAT = "<|im_start|>user\n{content}{eos}\n"
-    ASSISTANT_FORMAT = "<|im_start|>assistant\n{content}{eos}\n"
+    SYSTEM_FORMAT = "<|im_start|>system\n{content}{eos}"
+    USER_FORMAT = "<|im_start|>user\n{content}{eos}"
+    ASSISTANT_FORMAT = "<|im_start|>assistant\n{content}{eos}"
+    GENERATION_PROMPT = "<|im_start|>assistant"
 
-    FUNCTION_CALLING_FORMAT = "<|im_start|>function_calling\n{content}{eos}\n"
-    FUNCTION_RESPONSE_FORMAT = "<|im_start|>function_response\n{content}{eos}\n"
+    FUNCTION_CALLING_FORMAT = "<|im_start|>function_calling\n{content}{eos}"
+    FUNCTION_RESPONSE_FORMAT = "<|im_start|>function_response\n{content}{eos}"
 
+    TURN_SEPERATOR = "\n"
 
     def __init__(self, tokenizer) -> None:
         self.special_tokens = dict(
@@ -70,30 +72,91 @@ class BaseTrainTemplate:
         return fmt.format(content=utterance["content"], **self.special_tokens), trainable
         
     def join_utterances(self, utterances: List[str]) -> str:
-        return "\n".join(utterances)
+        return self.TURN_SEPERATOR.join(utterances)
 
-    def apply_chat_template(self, conversations):
-        return self.join_utterances([self.handle_utterance(utt, i)[0] for i, utt in enumerate(conversations)])
+    def apply_chat_template(self, conversations, add_generation_prompt=False):
+        output = self.join_utterances([self.handle_utterance(utt, i)[0] for i, utt in enumerate(conversations)])
+        if add_generation_prompt:
+            output = output + self.GENERATION_PROMPT
+        return output
         
         
+@train_templates.register("default:bos")
+class BaseBOSTrainTemplate(BaseTrainTemplate):
+    INITIAL_USER_FORMAT = "{bos}<|im_start|>user\n{content}{eos}"
 
-@train_templates.register("zephyr")
+@train_templates.register("tinyllama")
 class TinyLlamaTemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [
         "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "HuggingFaceH4/mistral-7b-sft-beta",
-        "HuggingFaceH4/zephyr-7b-beta"
     ]
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = None
 
-    SYSTEM_FORMAT = "<|system|>\n{content}{eos}\n"
-    USER_FORMAT = "<|user|>\n{content}{eos}\n"
-    ASSISTANT_FORMAT = "<|assistant|>\n{content}{eos}\n"
+    SYSTEM_FORMAT = "<|system|>\n{content}{eos}"
+    USER_FORMAT = "<|user|>\n{content}{eos}"
+    ASSISTANT_FORMAT = "<|assistant|>\n{content}{eos}"
+    GENERATION_PROMPT = "<|assistant|>"
 
-    FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}{eos}\n"
-    FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}\n"
+    FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}{eos}"
+    FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}"
 
+
+@train_templates.register("llama")
+class LlamaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "meta-llama/Llama-2-7b-chat-hf",
+        "openbmb/Eurus-7b-sft",
+        "openbmb/Eurus-7b-kto"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = "{bos}[INST] {content} [/INST]"
+    SYSTEM_FORMAT = "{bos}[INST] <<SYS>>\n{content}<</SYS>>\n"
+    SECOND_USER_FORMAT = "\n{content} [/INST]"
+    USER_FORMAT = "[INST] {content} [/INST]"
+    ASSISTANT_FORMAT = "{content}{eos}"
+    GENERATION_PROMPT = ""
+
+    FUNCTION_CALLING_FORMAT = "[function-call] {content}{eos}"
+    FUNCTION_RESPONSE_FORMAT = "[function-response] {content}{eos}"
+
+    TURN_SEPERATOR = " "
+
+    def handle_utterance(self, utterance: Dict, index: int) -> Tuple[str, bool]:
+        role = utterance["role"]
+
+        if role == "assistant":
+            fmt = self.ASSISTANT_FORMAT
+        elif role == "function-call":
+            fmt = self.FUNCTION_CALLING_FORMAT
+        elif role == "function-response":
+            fmt = self.FUNCTION_RESPONSE_FORMAT
+        elif role == "user":
+            if index == 0:
+                fmt = self.INITIAL_USER_FORMAT
+            if index == 1:
+                fmt = self.SECOND_USER_FORMAT
+            else:
+                fmt = self.USER_FORMAT
+        elif role == "system":
+            fmt = self.SYSTEM_FORMAT
+        else:
+            raise ValueError(f"Unknown role: {role}")
+        
+        if "trainable" in utterance and utterance["trainable"] is not None:
+            trainable = utterance["trainable"]
+        else:
+            trainable = role == "assistant"
+
+        return fmt.format(content=utterance["content"], **self.special_tokens), trainable
+        
+
+@train_templates.register("zephyr")
+class ZephyrTemplate(TinyLlamaTemplate):
+    SUPPORTED_MODELS = [
+        "HuggingFaceH4/mistral-7b-sft-beta",
+        "HuggingFaceH4/zephyr-7b-beta"
+    ]
 
 @train_templates.register("42dot")
 class HD42DotTemplate(BaseTrainTemplate):
@@ -106,6 +169,7 @@ class HD42DotTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "{content}\n\n"
     USER_FORMAT = "<human>:\n{content}\n"
     ASSISTANT_FORMAT = "<bot>:\n{content}{eos}\n"
+    GENERATION_PROMPT = "<bot>:"
 
     FUNCTION_CALLING_FORMAT = "<function-call>:\n{content}{eos}\n"
     FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
@@ -119,13 +183,14 @@ class GemmaTemplate(BaseTrainTemplate):
         "google/gemma-7b-it"
     ]
     # for the first user message without system instruction (\eg Llama-2)
-    INITIAL_USER_FORMAT = "<bos><start_of_turn>user\n{content}<end_of_turn>\n"
+    INITIAL_USER_FORMAT = "<bos><start_of_turn>user\n{content}<end_of_turn>"
 
-    SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>\n\n"
-    USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
-    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
-    FUNCTION_CALLING_FORMAT = "<start_of_turn>model\n```function-call\n{content}```<end_of_turn>\n"
-    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>```function-response\n{content}```<end_of_turn>\n"
+    SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>"
+    USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>"
+    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>"
+    GENERATION_PROMPT = "<start_of_turn>model"
+    FUNCTION_CALLING_FORMAT = "<start_of_turn>model\n```function-call\n{content}```<end_of_turn>"
+    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>user\n```function-response\n{content}```<end_of_turn>"
     
     def __init__(self, tokenizer) -> None:
         super().__init__(tokenizer)
@@ -133,28 +198,53 @@ class GemmaTemplate(BaseTrainTemplate):
         tokenizer.add_special_tokens({
             'additional_special_tokens': additional_tokens
             })
-
+        
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):
     # for the first user message without system instruction (\eg Llama-2)
-    INITIAL_USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
+    INITIAL_USER_FORMAT = "<start_of_turn>user\n{content}<eos>\n"
 
-    SYSTEM_FORMAT = "<start_of_turn>system\n{content}<end_of_turn>\n\n"
-    USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>\n"
-    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>\n"
-    FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<end_of_turn>\n"
-    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<end_of_turn>\n"
+    SYSTEM_FORMAT = "<start_of_turn>system{content}<eos>\n\n"
+    USER_FORMAT = "<start_of_turn>user\n{content}<eos>\n"
+    ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<eos>\n"
+    GENERATION_PROMPT = "<start_of_turn>model"
+    
+    FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<eos>\n"
+    FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<eos>\n"
 
 
-@train_templates.register("openchat")
-class VisionGemmaTemplate(BaseTrainTemplate):
-    SUPPORTED_MODELS = [
-        "openchat/openchat-3.5-0106",
-        "openchat/openchat-3.5-1210",
-        "openchat/openchat-3.5",
+if __name__ == "__main__":
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained("beomi/gemma-ko-2b")
+    print(tokenizer.encode("<end_of_turn>"))
+    t = GemmaTemplate(tokenizer)
+    print(tokenizer.encode("<end_of_turn>"))
+    convs = [
+        {
+            "role": "user",
+            "content": "Hi"
+        },
+        {
+            "role": "assistant",
+            "content": "Hi"
+        },
+        {
+            "role": "user",
+            "content": "Hi22"
+        },
+        {
+            "role": "assistant",
+            "content": "Hi22"
+        },
     ]
-    SYSTEM_FORMAT = "{content}\n"
-    USER_FORMAT = "GPT4 Correct User: {content}{eos}"
-    ASSISTANT_FORMAT = "GPT4 Correct Assistant: {content}{eos}"
-    FUNCTION_CALLING_FORMAT = "GPT4 Correct User: [function-call] {content}{eos}"
-    FUNCTION_RESPONSE_FORMAT = "GPT4 Correct Assistant: [function-response] {content}{eos}"
+    out = t.apply_chat_template(convs)
+
+    print(out)
+
+    for i, c in enumerate(convs):
+        print(f"uttr #{i}")
+        uttr, _ = t.handle_utterance(c, i)
+        print(uttr)
+        ids = tokenizer.encode(uttr, add_special_tokens=False)
+        print(ids)
+        print(tokenizer.decode(ids, skip_special_tokens=False))

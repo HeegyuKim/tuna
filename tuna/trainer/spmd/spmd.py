@@ -36,11 +36,11 @@ from ..base import BaseTrainer, BaseTrainingArguments, trainers
 
 def build_mesh_shape(mesh_str: str, device_count: int):
     if mesh_str == "fsdp":
-        mesh_str = "1,-1,1"
+        mesh_str = "1,-1,1,1"
     elif mesh_str == "dp":
-        mesh_str = "-1,1,1"
+        mesh_str = "-1,1,1,1"
     elif mesh_str == "mp":
-        mesh_str = "1,1,-1"
+        mesh_str = "1,1,-1,1"
 
     mesh_str = mesh_str.replace("-1", str(device_count))
     mesh = [int(x) for x in mesh_str.split(",")]
@@ -101,12 +101,18 @@ class SPMDTrainer(BaseTrainer):
         device_count = xr.global_runtime_device_count()
         mesh_shape = build_mesh_shape(self.args.mesh, device_count)
         device_ids = np.array(range(device_count))
-        self.mesh = Mesh(device_ids, mesh_shape, ('dp', 'fsdp', 'mp'))
+        self.mesh = Mesh(device_ids, mesh_shape, ('dp', 'fsdp', 'mp', 'sp'))
+
+        has_ref = hasattr(self.task, "ref_model")
 
         if mesh_shape[1] == 1 and mesh_shape[2] == 1:
             partition_module_dp(self.task.model, self.mesh, self.device)
+            if has_ref and self.task.ref_model:
+                partition_module_dp(self.task.ref_model, self.mesh, self.device)
         else:
             partition_module(self.task.model, self.mesh, self.device)
+            if has_ref and self.task.ref_model:
+                partition_module(self.task.ref_model, self.mesh, self.device)
 
     def backward_loss(self, loss):
         loss.backward()

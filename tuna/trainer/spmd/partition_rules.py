@@ -10,102 +10,102 @@ from transformers import (
 
 GPTNEOX_RULES = (
     # embeddings
-    ("gpt_neox\\.embed_in", ("mp", "fsdp")),
+    ("gpt_neox\\.embed_in", ("mp", ("fsdp", "sp"))),
     # atention
-    ("attention\\.query_key_value", ("fsdp", "mp")),
-    ("attention\\.dense", ("mp", "fsdp")),
+    ("attention\\.query_key_value", (("fsdp", "sp"), "mp")),
+    ("attention\\.dense", ("mp", ("fsdp", "sp"))),
     # mlp
-    ("mlp\\.dense_h_to_4h", ("fsdp", "mp")),
-    ("mlp\\.dense_4h_to_h", ("mp", "fsdp")),
+    ("mlp\\.dense_h_to_4h", (("fsdp", "sp"), "mp")),
+    ("mlp\\.dense_4h_to_h", ("mp", ("fsdp", "sp"))),
     # output
-    ("embed_out", ("fsdp", "mp")),
+    ("embed_out", (("fsdp", "sp"), "mp")),
     # GTA2
-    ("heads.\d+", ("fsdp", "mp")),
-    ("v_heads.\d+", ("fsdp", "mp")),
+    ("heads.\d+", (("fsdp", "sp"), "mp")),
+    ("v_heads.\d+", (("fsdp", "sp"), "mp")),
     # PKU score model
-    ("score_head", ("fsdp", "mp")),
+    ("score_head", (("fsdp", "sp"), "mp")),
 )
 
 T5_RULES = (
     # embeddings
-    ("shared", ("mp", "fsdp")),
-    ("embed_tokens", ("mp", "fsdp")),
+    ("shared", ("mp", ("fsdp", "sp"))),
+    ("embed_tokens", ("mp", ("fsdp", "sp"))),
     
     # attention
-    ("q", ("fsdp", "mp")),
-    ("k", ("fsdp", "mp")),
-    ("v", ("fsdp", "mp")),
-    ("o", ("mp", "fsdp")),
+    ("q", (("fsdp", "sp"), "mp")),
+    ("k", (("fsdp", "sp"), "mp")),
+    ("v", (("fsdp", "sp"), "mp")),
+    ("o", ("mp", ("fsdp", "sp"))),
 
     # mlp
-    ("w", ("fsdp", "mp")),
-    ("wi_0", ("fsdp", "mp")),
-    ("wi_1", ("fsdp", "mp")),
-    ("wo", ("mp", "fsdp")),
+    ("w", (("fsdp", "sp"), "mp")),
+    ("wi_0", (("fsdp", "sp"), "mp")),
+    ("wi_1", (("fsdp", "sp"), "mp")),
+    ("wo", ("mp", ("fsdp", "sp"))),
 
     # seq2seq lm head
-    ("lm_head", ("fsdp", "mp")),
+    ("lm_head", (("fsdp", "sp"), "mp")),
 )
 
 LLAMA_RULES = (
-    ("model\\.embed_tokens", ("mp", "fsdp")),
-    ("self_attn\\.(q_proj|k_proj|v_proj)", ("fsdp", "mp")),
-    ("self_attn\\.o_proj", ("mp", "fsdp")),
-    ("mlp\\.gate_proj", ("fsdp", "mp")),
-    ("mlp\\.down_proj", ("mp", "fsdp")),
-    ("mlp\\.up_proj", ("fsdp", "mp")),
-    ("lm_head", ("fsdp", "mp")),
-    ("score", ("fsdp", "mp")),
+    ("model\\.embed_tokens", ("mp", ("fsdp", "sp"))),
+    ("self_attn\\.(q_proj|k_proj|v_proj)", (("fsdp", "sp"), "mp")),
+    ("self_attn\\.o_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.gate_proj", (("fsdp", "sp"), "mp")),
+    ("mlp\\.down_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.up_proj", (("fsdp", "sp"), "mp")),
+    ("lm_head", (("fsdp", "sp"), "mp")),
+    ("score", (("fsdp", "sp"), "mp")),
     # GTA2
-    ("heads.\d+", ("fsdp", "mp")),
-    ("v_heads.\d+", ("fsdp", "mp")),
+    ("heads.\d+", (("fsdp", "sp"), "mp")),
+    ("v_heads.\d+", (("fsdp", "sp"), "mp")),
     # PKU score model
-    ("score_head", ("fsdp", "mp")),
+    ("score_head", (("fsdp", "sp"), "mp")),
     )
 
 MISTRAL_RULES = (
-    ("model\\.embed_tokens", ("mp", "fsdp")),
-    ("self_attn\\.(q_proj|k_proj|v_proj)", ("fsdp", "mp")),
-    ("self_attn\\.o_proj", ("mp", "fsdp")),
-    ("mlp\\.gate_proj", ("fsdp", "mp")),
-    ("mlp\\.down_proj", ("mp", "fsdp")),
-    ("mlp\\.up_proj", ("fsdp", "mp")),
-    ("lm_head", ("fsdp", "mp")),
-    ("score", ("fsdp", "mp")),
+    ("model\\.embed_tokens", ("mp", ("fsdp", "sp"))),
+    ("self_attn\\.(q_proj|k_proj|v_proj)", (("fsdp", "sp"), "mp")),
+    ("self_attn\\.o_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.gate_proj", (("fsdp", "sp"), "mp")),
+    ("mlp\\.down_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.up_proj", (("fsdp", "sp"), "mp")),
+    ("lm_head", (("fsdp", "sp"), "mp")),
+    ("score", (("fsdp", "sp"), "mp")),
     # GTA2
-    ("heads.\d+", ("fsdp", "mp")),
-    ("v_heads.\d+", ("fsdp", "mp")),
+    ("heads.\d+", (("fsdp", "sp"), "mp")),
+    ("v_heads.\d+", (("fsdp", "sp"), "mp")),
     # PKU score model
-    ("score_head", ("fsdp", "mp")),
+    ("score_head", (("fsdp", "sp"), "mp")),
     )
     
 ROBERTA_RULES = (
-    ("embeddings", ("mp", "fsdp")),
-    ("attention\\.self\\.(query|key|value)", ("fsdp", "mp")),
-    ("attention\\.output\\.dense", ("mp", "fsdp")),
-    ("intermediate\\.dense", ("fsdp", "mp")),
-    ("output\\.dense", ("mp", "fsdp")),
-    ("classifier\\.dense", ("fsdp", "mp")),
-    ("classifier\\.out_proj", ("mp", "fsdp")),
+    ("embeddings", ("mp", ("fsdp", "sp"))),
+    ("attention\\.self\\.(query|key|value)", (("fsdp", "sp"), "mp")),
+    ("attention\\.output\\.dense", ("mp", ("fsdp", "sp"))),
+    ("intermediate\\.dense", (("fsdp", "sp"), "mp")),
+    ("output\\.dense", ("mp", ("fsdp", "sp"))),
+    ("classifier\\.dense", (("fsdp", "sp"), "mp")),
+    ("classifier\\.out_proj", ("mp", ("fsdp", "sp"))),
     # PKU score model
-    ("score_head", ("fsdp", "mp")),
+    ("score_head", (("fsdp", "sp"), "mp")),
     )
 
     
 CLIP_RULES = (
-    ("patch_embedding", ("fsdp", "mp", None, None)),
-    ("position_embedding", ("fsdp", "mp")),
-    ("self_attn\\.(q_proj|k_proj|v_proj)", ("fsdp", "mp")),
-    ("self_attn\\.out_proj", ("mp", "fsdp")),
-    ("mlp\\.fc1", ("fsdp", "mp")),
-    ("mlp\\.fc2", ("mp", "fsdp")),
-    ("visual_projection", ("fsdp", "mp")),
-    ("text_projection", ("fsdp", "mp")),
+    ("patch_embedding", (("fsdp", "sp"), "mp", None, None)),
+    ("position_embedding", (("fsdp", "sp"), "mp")),
+    ("self_attn\\.(q_proj|k_proj|v_proj)", (("fsdp", "sp"), "mp")),
+    ("self_attn\\.out_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.fc1", (("fsdp", "sp"), "mp")),
+    ("mlp\\.fc2", ("mp", ("fsdp", "sp"))),
+    ("visual_projection", (("fsdp", "sp"), "mp")),
+    ("text_projection", (("fsdp", "sp"), "mp")),
     )
 
 LLAVA_RULES = (
-    ("multi_modal_projector\\.linear_1", ("fsdp", "mp")),
-    ("multi_modal_projector\\.linear_2", ("mp", "fsdp")),
+    ("multi_modal_projector\\.linear_1", (("fsdp", "sp"), "mp")),
+    ("multi_modal_projector\\.linear_2", ("mp", ("fsdp", "sp"))),
     *LLAMA_RULES,
     *CLIP_RULES,
 )
@@ -133,7 +133,8 @@ def find_rule(model):
 strkey2id = {
     "dp": 0,
     "fsdp": 1,
-    "mp": 2
+    "mp": 2,
+    "sp": 3,
 }
 
 def partition_module(model, mesh, device=xm.xla_device(), verbose=False):

@@ -108,3 +108,22 @@ class UltraFeedbackSelfFeedback(DPODataSource):
             "chosen": item["chosen"][-1]["content"],
             "rejected": item["chosen_second"][-1]["content"]
         }
+
+
+@datasources.register("dpo:heegyu/UltraFeedback-feedback-tree-3")
+class UltraFeedbackDataSource(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("heegyu/UltraFeedback-feedback-tree-3", split=split)
+
+
+@datasources.register("dpo:heegyu/UltraFeedback-max-margin")
+class UltraFeedbackDataSource(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("heegyu/UltraFeedback-max-margin", split=split)
+        
