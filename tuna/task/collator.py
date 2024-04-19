@@ -198,7 +198,7 @@ class GenerativeLanguageModelCollator(object):
             decoder_max_length = self.decoder_max_length
             max_length = self.max_length
 
-        new_batch = {k: v for k, v in batch.items() if torch.is_tensor(v)}
+        new_batch = {k: v for k, v in batch.items() if torch.is_tensor(v) or isinstance(v, np.ndarray)}
         
         for k in self.padding_keys:
             if k not in batch:
@@ -219,7 +219,8 @@ class GenerativeLanguageModelCollator(object):
                     batch[k],
                     self.padding_side,
                     pad_max_length,
-                    pad_token_id
+                    pad_token_id,
+                    return_tensors=self.return_tensors
                 )
             except:
                 print("error in collator: key", k, "batch:", batch[k])

@@ -65,3 +65,26 @@ class AIHubTranslationKoEnReport(AIHubTranslationKoEn):
 
         return ds
     
+    
+@datasources("kamo-mt-koen")
+class AIHubTranslationKoEnReport(AIHubTranslationKoEn):
+    
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        
+        ds = load_dataset("iknow-lab/kamo_translation_split", split=split, streaming=args.dataset_streaming)
+
+        if args.dataset_streaming:
+            ds = ds.map(self.randomize)
+        else:
+            ds = ds.map(self.randomize, num_proc=NUM_PROC, load_from_cache_file=False, desc="Randomizing input-output pairs")
+
+        return ds
+    
+    def randomize(self, item: str) -> dict:
+        instruction = "Translate to English: "
+        input, output = item["ko"], item["en"]
+        
+        return {
+            "input": instruction + input,
+            "output": output
+        }

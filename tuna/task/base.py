@@ -55,21 +55,13 @@ class TensorWrapper():
 tasks = Registry("tasks")
 
 
-class Task:
-    ARG_CLASS = TaskArguments
+class BaseTask:
 
     def __init__(self,
                  args,
                  artifacts,
-                 wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")
                  ) -> None:
         self.args = args
-        self.tokenizer = artifacts.get("tokenizer")
-        
-        if isinstance(wrapper, TensorWrapper):
-            self.wrapper = wrapper
-        else:
-            self.wrapper = TensorWrapper(wrapper)
 
     def encode_datasets(self, datasets: Dict) -> DatasetDict:
         for k in datasets:
@@ -86,50 +78,6 @@ class Task:
     
     def encode_item(self, item):
         pass
-
-    # def encode_item_batch(self, batch):
-    #     print(batch)
-    #     keys = list(batch.keys())
-    #     outputs = defaultdict(list)
-    #     batch_size = len(batch[keys[0]])
-    #     for i in range(batch_size):
-    #         item = {k: batch[k][i] for k in keys}
-    #         encoded = self.encode_item(item)
-    #         for k, v in encoded.items():
-    #             outputs[k].append(v)
-    #     return outputs
-
-    def step(self, batch, step):
-        raise NotImplemented()
-    
-    def train_step(self, batch, step):
-        return self.step(batch, step)
-
-    def evaluation_step(self, batch, step):
-        return self.step(batch, step)
-    
-    def collate_batch(self, batch):
-        return collate_dictlist(batch)
-
-    def collate_step_outputs(self, outputs):
-        outputs = collate_dictlist(outputs)
-        metrics = {k: torch.stack(v).type(torch.float32).mean() for k, v in outputs.items() if torch.is_tensor(v[0])}
-        return metrics
-    
-    def collate_train_step_outputs(self, outputs):
-        return self.collate_step_outputs(outputs)
-
-    def collate_evaluation_outputs(self, outputs):
-        return self.collate_step_outputs(outputs)
-
-    @property
-    def eval_metric_definitions(self):
-        return {}
-    
-
-    def save_artifacts(self, model, path, **kwargs):
-        model.save_pretrained(path, **kwargs)
-        self.tokenizer.save_pretrained(path, **kwargs)
 
     def truncate_dict(self, d):
         if not self.args.truncation:
@@ -159,6 +107,57 @@ class Task:
             nd[k] = arr
         
         return nd
+    
+class Task(BaseTask):
+    ARG_CLASS = TaskArguments
+
+    def __init__(self,
+                 args,
+                 artifacts,
+                 wrapper: Union[TensorWrapper, str] = TensorWrapper("cpu")
+                 ) -> None:
+        self.args = args
+        self.tokenizer = artifacts.get("tokenizer")
+        
+        if isinstance(wrapper, TensorWrapper):
+            self.wrapper = wrapper
+        else:
+            self.wrapper = TensorWrapper(wrapper)
+
+    def get_trainable_parameters(self):
+        return self.model.parameters()
+
+    def step(self, batch, step):
+        raise NotImplemented()
+    
+    def train_step(self, batch, step):
+        return self.step(batch, step)
+
+    def evaluation_step(self, batch, step):
+        return self.step(batch, step)
+    
+    def collate_batch(self, batch):
+        return collate_dictlist(batch)
+
+    def collate_step_outputs(self, outputs):
+        outputs = collate_dictlist(outputs)
+        metrics = {k: torch.stack(v).type(torch.float32).mean() for k, v in outputs.items() if torch.is_tensor(v[0])}
+        return metrics
+    
+    def collate_train_step_outputs(self, outputs):
+        return self.collate_step_outputs(outputs)
+
+    def collate_evaluation_outputs(self, outputs):
+        return self.collate_step_outputs(outputs)
+
+    @property
+    def eval_metric_definitions(self):
+        return {}
+    
+    def save_artifacts(self, model, path, **kwargs):
+        model.save_pretrained(path, **kwargs)
+        self.tokenizer.save_pretrained(path, **kwargs)
+
 
 @tasks.register("lm")
 class LMTask(Task):

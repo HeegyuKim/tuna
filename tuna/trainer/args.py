@@ -19,6 +19,7 @@ class BaseTrainingArguments():
     train_total_batch_size: Optional[int] = None
     train_batch_size_per_device: int = 8
     amp: bool = False
+    dtype: str = "bfloat16"
 
     # evaluation
     do_eval: bool = False
@@ -37,7 +38,9 @@ class BaseTrainingArguments():
     learning_rate: float = 5e-5
     last_learning_rate: Optional[float] = None
     last_learning_rate_ratio: Optional[float] = None
+    gradient_clip: float = 1.0
     lr_scheduler: Optional[str] = "linear"
+    lr_decay_ratio: float = 1.0
     lr_decay_steps: Optional[int] = None # no_decay(none or -1)
     lr_warmup_steps: Optional[int] = 0 # no_decay(none or -1)
     lr_warmup_ratio: Optional[int] = None # no_decay(none or -1)
@@ -51,6 +54,7 @@ class BaseTrainingArguments():
 
     output_dir: Optional[str] = "./checkpoint"
     push_to_hub: bool = False
+    push_to_hub_id: Optional[str] = None
 
     def setup_logger(self):
         if self.config.logger == "wandb":

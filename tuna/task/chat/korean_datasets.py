@@ -16,7 +16,43 @@ class OpenOrcaGugugoKo(BaseAlpacaDataSource):
     output_key = "response"
     dataset_path = "squarelike/OpenOrca-gugugo-ko"
 
+@datasources("heegyu/OpenOrca-gugugo-ko-len500")
+class OpenOrcaGugugoKoLen500(OpenOrcaGugugoKo):
+    dataset_path = "heegyu/OpenOrca-gugugo-ko-len500"
 
+@datasources("heegyu/CoT-collection-ko")
+class Cot_Collection_Ko(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != 'train':
+            return None
+        
+        ds = load_dataset("heegyu/CoT-collection-ko", split=split)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = []
+        convs.append({
+            "role": "user",
+            "content": item["source"]
+        })
+        response = item[f"rationale"] + "\n#### " + item["target"]
+        convs.append({
+            "role": "assistant",
+            "content": response
+        })
+        return {
+            "conversations": convs
+        }
+
+@datasources("dbdu/ShareGPT-74k-ko")
+class KoVast(VicunaChatDataSource):
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("dbdu/ShareGPT-74k-ko", split=split, streaming=args.dataset_streaming)
+        return ds
+    
 @datasources("MarkrAI/KoCommercial-Dataset")
 class KoCommercialDataset(BaseAlpacaDataSource):
     dataset_path = "MarkrAI/KoCommercial-Dataset"
@@ -24,13 +60,53 @@ class KoCommercialDataset(BaseAlpacaDataSource):
 @datasources("heegyu/KoCommercial-Dataset")
 class KoCommercialDatasetHeegyu(BaseAlpacaDataSource):
     dataset_path = "heegyu/KoCommercial-Dataset"
+
+@datasources('kuotient/gsm8k-ko')
+class GSM8k_Ko(BaseAlpacaDataSource):
+
+    instruction_key = "question"
+    output_key = "answer"
+    dataset_path = "kuotient/gsm8k-ko"
+
     
+@datasources("heegyu/HRC")
+class HRC(BaseAlpacaDataSource):
+    dataset_path = "heegyu/HRC"
+    instruction_key = "질의"
+    output_key = "상담례, 결정례 기반 답변"
+
+@datasources("MrBananaHuman/kor_ethical_question_answer")
+class kor_ethical_question_answer(BaseAlpacaDataSource):
+    instruction_key = "question"
+    output_key = "answer"
+    dataset_path = "MrBananaHuman/kor_ethical_question_answer"
+
+
+@datasources("heegyu/kor_counselgpt_multiturn")
+class KorCounselGPTMultiturn(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/kor_counselgpt_multiturn", split=split, streaming=args.dataset_streaming)
+        return ds
+
 
 @datasources("maywell/koVast")
 class KoVast(VicunaChatDataSource):
     
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
         ds = load_dataset("maywell/koVast", split=split, streaming=args.dataset_streaming)
+        return ds
+    
+@datasources("FreedomIntelligence/evol-instruct-korean")
+class KoVast(VicunaChatDataSource):
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("FreedomIntelligence/evol-instruct-korean", split=split, streaming=args.dataset_streaming)
         return ds
     
 @datasources("heegyu/PKU-SafeRLHF-ko:safer")
@@ -87,7 +163,7 @@ class PKUSafeRLHFKoBetter(ChatDataSource):
 
 
 @datasources("changpt/ko-lima-vicuna")
-class KoLimaVicuna(ChatDataSource):
+class KoLimaVicuna(VicunaChatDataSource):
     
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":

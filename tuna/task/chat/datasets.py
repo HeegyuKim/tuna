@@ -7,7 +7,10 @@ ROLE_MAPPER = {
     "assistant": "assistant",
     "gpt": "assistant",
     "bot": "assistant",
-    "system": "system"
+    "chatgpt": "assistant",
+    "bing": "assistant",
+    "bard": "assistant",
+    "system": "system",
 }
 
 
@@ -61,8 +64,12 @@ class BaseAlpacaDataSource(ChatDataSource):
     dataset_path = None
 
     instruction_input_format = "{instruction}\ninput: {input}"
-    
+    has_testset: bool = False
+
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if not self.has_testset and split == 'test':
+            return None
+        
         ds = load_dataset(self.dataset_path, split=split, streaming=args.dataset_streaming)
         return ds
     

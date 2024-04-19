@@ -9,6 +9,29 @@ from copy import deepcopy
 class AlpacaChat(BaseAlpacaDataSource):
     dataset_path = "tatsu-lab/alpaca"
 
+@datasources.register("GAIR/lima")
+class Lima(ChatDataSource):
+    def load(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("GAIR/lima", split=split, streaming=args.dataset_streaming)
+        ds = ds.map(self._map_conv, load_from_cache_file=False, desc="Converting a GAIR/lima dataset")
+        
+        return ds
+
+    def _map_conv(self, item):
+        convs = []
+
+        for i, conv in enumerate(item["conversations"]):
+            convs.append(dict(
+                role="user" if i % 2 == 0 else "assistant",
+                content=conv
+            ))
+
+        return {
+            "conversations": convs
+        }
+
 @datasources("nvidia/OpenMathInstruct-1")
 class OpenMathInstruct(BaseAlpacaDataSource):
     instruction_key = "question"
