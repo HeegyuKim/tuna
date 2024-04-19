@@ -6,21 +6,28 @@ from ..collator import GenerativeVLMCollator
 from typing import Optional, Union, List, Dict, Any, Tuple
 from copy import deepcopy
 from collections import defaultdict
-from .collator import DPOCollator
+from .collator import DistillationCollator
 
 import torch
 import torch.nn.functional as F
 
 
 @dataclass
-class DPOTaskArguments(TaskArguments):
+class SelfDistillationTaskArguments(TaskArguments):
     train_template: Optional[str] = None
     dpo_beta: float = 0.1
     dpo_loss_type: str = "sigmoid"
+    
+    distil_gamma: float = 0.1
+    distil_objective: str = "kl"
 
-@tasks.register("dpo")
-class DPOTask(LMTask):
-    ARG_CLASS = DPOTaskArguments
+    max_prompt_length: int = 1024
+    max_response_length: int = 1024
+
+
+@tasks.register("self-distillation")
+class SelfDistillationTask(LMTask):
+    ARG_CLASS = SelfDistillationTaskArguments
 
     def __init__(self, args, artifacts, wrapper: Union[TensorWrapper, str]) -> None:
         super().__init__(args, artifacts, wrapper)
@@ -28,6 +35,11 @@ class DPOTask(LMTask):
         self.beta = args.dpo_beta
         self.loss_type = args.dpo_loss_type
         self.label_pad_token_id = -100
+
+        prefix_tokenizer = deepcopy(self.tokenizer)
+        prefix_tokenizer.padding_side = "left"
+        prefix_tokenizer.truncation_side = 'left'
+        self.prefix_tokenizer = prefix_tokenizer
 
     def set_model(self, model):
         super().set_model(model)
@@ -39,47 +51,38 @@ class DPOTask(LMTask):
             self.ref_model = None
     
     def _init_collator(self):
-        self.collator = DPOCollator(
+        self.collator = DistillationCollator(
             self.tokenizer, 
             # padding=self.args.padding,
             padding_side=self.args.padding_side,
-            max_length=self.args.max_length,
+            max_length=self.args.max_prompt_length + self.args.max_response_length,
             # decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
         
     def encode_item(self, item):
         conversation = item["conversations"]
-        chosen = self._encode_prompt_response(conversation, item["chosen"])
-        rejected = self._encode_prompt_response(conversation, item["rejected"])
+        teacher = self._encode_prompt_response(conversation, item["chosen"])
+        student = self._encode_prompt_response([conversation[0]], item["chosen"])
+        # student = self._encode_prompt_response([conversation[0]], item["rejected"])
 
         return dict(
-            chosen=chosen,
-            rejected=rejected
+            teacher=teacher,
+            student=student
         )
 
 
     def _encode_prompt_response(self, conversation, response):
-        concat_inputs, concat_labels = [], []
+        prompt = self.train_template.apply_chat_template(conversation, add_generation_prompt=True)
+        prompt_ids = self.prefix_tokenizer(prompt, add_special_tokens=False, truncation=True, max_length=self.args.max_prompt_length, padding="max_length")
+        response_ids = self.tokenizer(response + self.tokenizer.eos_token, add_special_tokens=False, truncation=True, max_length=self.args.max_response_length, padding="max_length")
+
+        output = {}
+        for k in ["input_ids", "attention_mask"]:
+            output[k] = prompt_ids[k] + response_ids[k]
+        response_labels = [rid if mask == 1 else -100 for rid, mask in zip(response_ids["input_ids"], response_ids["attention_mask"])]
+        output["labels"] = [-100] * len(prompt_ids["input_ids"]) + response_labels
         
-        for i, uttr in enumerate(conversation):
-            content, _ = self.train_template.handle_utterance(uttr, i)
-
-            input_ids = self.tokenizer.encode(content, add_special_tokens=False)
-            labels = [-100] * len(input_ids)
-
-            concat_inputs.extend(input_ids)
-            concat_labels.extend(labels)
-
-        response_id = self.tokenizer.encode(response + self.tokenizer.eos_token, add_special_tokens=False)
-        concat_inputs.extend(response_id)
-        concat_labels.extend(response_id)
-
-        return self.truncate_dict({
-            "input_ids": concat_inputs,
-            "attention_mask": [1] * len(concat_inputs),
-            "labels": concat_labels
-        })
-        
+        return output
     
     def dpo_loss(
         self,
@@ -175,7 +178,7 @@ class DPOTask(LMTask):
         rejected_logprobs = self._get_batch_logps(rejected, rejected_labels)
         return chosen_logprobs, rejected_logprobs
 
-    def step(self, batch, step):
+    def dpo_step(self, batch, step):
         chosen_input, rejected_input = self.wrapper(batch["chosen"]), self.wrapper(batch["rejected"])
 
         chosen_labels = chosen_input.pop("labels")
@@ -201,6 +204,43 @@ class DPOTask(LMTask):
             rejected_rewards=rejected_rewards,
             accuracy=(chosen_rewards > rejected_rewards).float()
         )
+    
+    def distil_step(self, batch, step):
+        teacher_input, student_input = self.wrapper(batch["teacher"]), self.wrapper(batch["student"])
+        teacher_labels, student_labels = teacher_input.pop("labels"), student_input.pop("labels")
+
+        prompt_length, response_length = self.args.max_prompt_length, self.args.max_response_length
+        with torch.no_grad():
+            if self.ref_model:
+                teacher_logits = self.ref_model(**teacher_input).logits[:, prompt_length-1:prompt_length+response_length-1]
+            else:
+                with self.model.disable_adapter():
+                    teacher_logits = self.model(**teacher_input).logits[:, prompt_length-1:prompt_length+response_length-1]
+
+        student_logits = self.model(**student_input).logits[:, prompt_length-1:prompt_length+response_length-1]
+        attention_mask = student_input["attention_mask"][:, prompt_length-1:prompt_length+response_length-1].unsqueeze(-1)
+
+        if self.args.distil_objective == "kl":
+            loss = F.kl_div(
+                F.log_softmax(student_logits, dim=-1),
+                F.softmax(teacher_logits, dim=-1),
+                reduction="none",
+            )
+            loss = (loss * attention_mask).sum() / attention_mask.sum()
+        else:
+            raise ValueError(f"Unknown distillation objective: {self.args.distil_objective}. Should be one of ['kl']")
+        
+        return loss
+
+    def step(self, batch, step):
+        sft_loss = self.model(**batch["student"]).loss
+        distil_loss = self.distil_step(batch, step)
+
+        return dict(
+            loss=distil_loss * self.args.distil_gamma + sft_loss,
+            distil_loss=distil_loss,
+            sft_loss=sft_loss
+        )
 
     def train_step(self, batch, step):
         step_output = self.step(batch, step)
@@ -208,7 +248,8 @@ class DPOTask(LMTask):
         return step_output
 
     def collate_step_outputs(self, outputs):
-        keys = ["loss", "chosen_rewards", "rejected_rewards", "accuracy"]
+        # keys = ["loss", "chosen_rewards", "rejected_rewards", "accuracy"]
+        keys = ["loss", "distil_loss", "sft_loss"]
         return {
             k: torch.stack([x[k] for x in outputs]).mean() for k in keys
         }

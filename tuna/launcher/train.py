@@ -77,7 +77,7 @@ def main():
     dataloader.dataset = task.encode_datasets(dataloader.dataset)
 
     print("load model")
-    task.model = model_loader.load_model()
+    task.set_model(model_loader.load_model())
     
     
     trainer = trainer_cls(
