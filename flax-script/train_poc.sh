@@ -15,6 +15,8 @@ python -m tuna.launcher.train_flax \
     --logging_steps 1 \
     --total_epochs 3 \
     --learning_rate 1e-4 \
+    --last_learning_rate_ratio 0.1 \
+    --lr_warmup_ratio 0.1 \
     --train_total_batch_size 16 \
     --train_batch_size_per_device 8 \
     --eval_batch_size_per_device 8 \

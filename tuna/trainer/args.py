@@ -43,7 +43,7 @@ class BaseTrainingArguments():
     lr_decay_ratio: float = 1.0
     lr_decay_steps: Optional[int] = None # no_decay(none or -1)
     lr_warmup_steps: Optional[int] = 0 # no_decay(none or -1)
-    lr_warmup_ratio: Optional[int] = None # no_decay(none or -1)
+    lr_warmup_ratio: Optional[float] = None # no_decay(none or -1)
 
     # checkpoint
     save_strategy: Optional[str] = None # steps, epoch, last, eval

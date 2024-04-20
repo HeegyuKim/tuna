@@ -10,8 +10,8 @@ python -m tuna.launcher.train_flax \
     --trainer dpo \
     --padding max_length \
     --project "feedback-tree-sft" \
-    --run_name "TinyLlama-1.1b-max-margin" \
-    --dataset="dpo:heegyu/UltraFeedback-max-margin" \
+    --run_name "TinyLlama-1.1b-feedback-tree-3" \
+    --dataset="heegyu/UltraFeedback-feedback-tree-3" \
     --packing False \
     --truncation \
     --truncation_side left \

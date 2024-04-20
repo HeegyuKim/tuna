@@ -142,6 +142,8 @@ class FlaxBaseTrainer:
             return len(self.train_dataset) * self.args.total_epochs
 
     def init_optimizer(self, total_steps):
+        total_steps = total_steps // self.args.train_batch_size_per_device
+
         if self.args.last_learning_rate or self.args.last_learning_rate_ratio:
             end_value=self.args.last_learning_rate or (self.args.learning_rate * self.args.last_learning_rate_ratio)
         else:
@@ -193,7 +195,6 @@ class FlaxBaseTrainer:
             tx, sc = fjformer.optimizers.get_adamw_with_warmup_linear_scheduler(
                 learning_rate_start=self.args.learning_rate,
                 steps=lr_decay_steps,
-                weight_decay=self.args.weight_decay,
                 learning_rate_end=end_value,
                 gradient_accumulation_steps=gradient_accumulation_steps,
                 warmup_steps=lr_warmup_steps,
