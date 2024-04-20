@@ -139,7 +139,7 @@ class FlaxBaseTrainer:
         else:
             if isinstance(self.train_dataset, IterableDataset):
                 raise ValueError("total_steps must be provided for IterableDataset")
-            return len(self.train_dataset) // self.args.train_batch_size_per_device * self.args.total_epochs
+            return len(self.train_dataset) * self.args.total_epochs
 
     def init_optimizer(self, total_steps):
         if self.args.last_learning_rate or self.args.last_learning_rate_ratio:
@@ -192,7 +192,7 @@ class FlaxBaseTrainer:
         if lr_warmup_steps > 0:
             tx, sc = fjformer.optimizers.get_adamw_with_warmup_linear_scheduler(
                 learning_rate_start=self.args.learning_rate,
-                steps=total_steps,
+                steps=lr_decay_steps,
                 weight_decay=self.args.weight_decay,
                 learning_rate_end=end_value,
                 gradient_accumulation_steps=gradient_accumulation_steps,

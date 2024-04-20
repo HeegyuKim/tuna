@@ -5,7 +5,7 @@ from transformers import HfArgumentParser
 from ..task import DatasetArguments, DatasetLoader
 from ..task.flax import flax_tasks
 from ..trainer.utils.wandb_logger import WandbLogger
-
+from ..trainer import flax_trainer
 
 @dataclass
 class LauncherArguments:
@@ -16,6 +16,11 @@ def eval_env_device(trainer: Optional[str] = None):
     if trainer is None or trainer == "default":
         from ..trainer import flax_base
         trainer_cls = flax_base.FlaxBaseTrainer
+    elif trainer == "dpo":
+        from ..trainer import flax_base
+        trainer_cls = flax_trainer.FlaxDPOTrainer
+    else:
+        raise ValueError(f"Unknown trainer: {trainer}")
 
     return trainer_cls
 

@@ -80,7 +80,10 @@ class BaseTrainTemplate:
             output = output + self.GENERATION_PROMPT
         return output
         
-        
+@train_templates.register("chatml")
+class ChatMLTrainTemplate(BaseTrainTemplate):
+    pass
+
 @train_templates.register("default:bos")
 class BaseBOSTrainTemplate(BaseTrainTemplate):
     INITIAL_USER_FORMAT = "{bos}<|im_start|>user\n{content}{eos}"

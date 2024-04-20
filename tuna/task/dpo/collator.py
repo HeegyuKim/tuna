@@ -79,7 +79,8 @@ class DPOCollator(object):
                 batch[k],
                 self.padding_side,
                 max_length,
-                pad_token_id
+                pad_token_id,
+                return_tensors=self.return_tensors
             )
 
         return batch

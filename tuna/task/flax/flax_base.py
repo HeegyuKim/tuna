@@ -80,7 +80,12 @@ class FlaxLMTask(FlaxTask):
 
     def init_tokenizer_collator(self):
         model_name = self.args.model_name_or_path
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+        if "@" in model_name:
+            model_name, revision = model_name.split("@")
+        else:
+            revision = None
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, revision=revision)
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             print("Set pad token to eos token")
@@ -89,8 +94,13 @@ class FlaxLMTask(FlaxTask):
     def init_model(self, dtype):
         input_shape = (1, self.args.max_length)
         model_name = self.args.model_name_or_path
+        if "@" in model_name:
+            model_name, revision = model_name.split("@")
+        else:
+            revision = None
+
         with jax.default_device(jax.devices('cpu')[0]):
-            config = transformers.AutoConfig.from_pretrained(model_name)
+            config = transformers.AutoConfig.from_pretrained(model_name, revision=revision)
             flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
                 config,
                 _do_init=True,
@@ -100,7 +110,7 @@ class FlaxLMTask(FlaxTask):
                 input_shape=input_shape
                 )
 
-            pt_model = transformers.AutoModelForCausalLM.from_pretrained(model_name)
+            pt_model = transformers.AutoModelForCausalLM.from_pretrained(model_name, revision=revision)
             pt_state_dict = pt_model.state_dict()
 
             print("Converting Pytorch parameters to Flax")
@@ -185,16 +195,16 @@ class FlaxLMTask(FlaxTask):
     def collate_batch(self, batch):
         return self.collator(batch)
     
-    def collate_step_outputs(self, outputs):
-        loss = jnp.stack([x["loss"] for x in outputs]).mean()
-        acc = jnp.stack([x["accuracy"] for x in outputs]).mean().tolist()
-        return {"loss": loss, "accuracy": acc}
-    
     def collate_train_step_outputs(self, outputs):
         return self.collate_step_outputs(outputs)
 
     def collate_eval_step_outputs(self, outputs):
         return self.collate_step_outputs(outputs)
+    
+    def collate_step_outputs(self, outputs):
+        loss = jnp.stack([x["loss"] for x in outputs]).mean()
+        acc = jnp.stack([x["accuracy"] for x in outputs]).mean().tolist()
+        return {"loss": loss, "accuracy": acc}
 
     @property
     def eval_metric_definitions(self):
