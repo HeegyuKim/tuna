@@ -6,7 +6,7 @@ python -m tuna.serve.gradio_flax \
     --mesh sp
 
 python -m tuna.serve.gradio_flax \
-    --model_name heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 \
+    --model_name heegyu/TinyLlama-1.1b-max-margin@epoch-3 \
     --chat_template zephyr 
     
     \
