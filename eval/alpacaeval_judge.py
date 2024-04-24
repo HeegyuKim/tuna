@@ -1,3 +1,4 @@
+import transformers
 import datasets
 import os
 import fire
