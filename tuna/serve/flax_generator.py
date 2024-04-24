@@ -68,7 +68,7 @@ class FlaxHuggingfaceModel:
         if chat_template:
             tokenizer.chat_template = PROMPT_TEMPLATES[chat_template]
         if tokenizer.chat_template is None:
-            tokenizer.chat_template = PROMPT_TEMPLATES[model_name]
+            tokenizer.chat_template = PROMPT_TEMPLATES.get(model_name)
 
         if eos_token_id is not None:
             tokenizer.eos_token_id = eos_token_id

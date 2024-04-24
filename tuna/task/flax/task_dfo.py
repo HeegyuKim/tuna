@@ -48,7 +48,7 @@ class DFOTaskArguments(FlaxLMTaskArguments):
     prompt_length: Optional[int] = None
 
 
-@flax_tasks.register("dpo")
+@flax_tasks.register("dfo")
 class DFOTask(FlaxLMTask):
     ARG_CLASS = DFOTaskArguments
 
@@ -58,8 +58,6 @@ class DFOTask(FlaxLMTask):
     
     def __init__(self, args) -> None:
         super().__init__(args)
-        self.beta = args.dpo_beta
-        self.loss_type = args.dpo_loss_type
         self.label_pad_token_id = -100
     
     def _init_collator(self):

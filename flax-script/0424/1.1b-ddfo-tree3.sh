@@ -1,21 +1,21 @@
 wandb online
 # model="Felladrin/TinyMistral-248M-Chat-v2"
 # model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
-model="heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897"
+model="heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3"
 
 python -m tuna.launcher.train_flax \
     --mesh fsdp \
     --do_train \
-    --task dpo \
-    --trainer dpo \
+    --task dfo \
     --padding max_length \
-    --project "feedback-tree-sft" \
-    --run_name "TinyLlama-1.1b-feedback-tree-3-0422" \
-    --dataset="dpo:heegyu/UltraFeedback-feedback-tree-3" \
+    --project "DDFO" \
+    --run_name "TinyLlama-1.1b-feedback-tree-3-epoch3-distil" \
+    --dataset="ddfo:heegyu/UltraFeedback-feedback-tree-3" \
     --packing False \
     --truncation \
     --truncation_side left \
     --max_length=2048 \
+    --prompt_length 1024 \
     --model_name_or_path $model \
     --total_epochs 3 \
     --logging_steps 128 \

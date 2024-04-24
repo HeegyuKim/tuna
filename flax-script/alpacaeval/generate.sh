@@ -19,3 +19,7 @@ eval "heegyu/TinyLlama-1.1b-max-margin@epoch-3" "zephyr"
 eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-1" "zephyr"
 eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-2" "zephyr"
 eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3" "zephyr"
+
+eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr

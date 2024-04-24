@@ -7,6 +7,7 @@ from datasets import load_dataset
 from tuna.serve.flax_generator import FlaxHuggingfaceModel
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length
+from .judges import PrometheusJudge
 
 
 def main(
@@ -20,15 +21,7 @@ def main(
 
     if output_path is None:
         input_filename = os.path.basename(input_path)
-        output_path = input_path.replace(".jsonl", f"_{judge.replace('/', '-')}/{input_filename}")
-
-    if "prometheus" in judge:
-        model = FlaxHuggingfaceModel(
-            model,
-            prompt_length=prompt_length,
-            max_new_tokens=max_new_tokens,
-            gen_args={"do_sample": False},
-        )
+        output_path = os.path.join(os.path.dirname(input_path), "alpacaeval", input_filename)
 
     # load input data
     eval_set = list(jsonlines.open(input_path))
@@ -46,15 +39,29 @@ def main(
 
     # skip examples that have already been processed
     skip_length = estimate_skip_length(output_path)
+    if skip_length == len(eval_set):
+        print(f"Already evaluated. skip this model {judge}")
+        return
     if skip_length > 0:
         print(f"Skipping {skip_length} examples")
 
+    if "prometheus" in judge:
+        model = FlaxHuggingfaceModel(
+            judge,
+            prompt_length=prompt_length,
+            max_new_tokens=max_new_tokens,
+            gen_args={"do_sample": False},
+        )
+        model = PrometheusJudge(model)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     # judge examples
     with jsonlines.open(output_path, "a") as f:
-        for example in tqdm(eval_set[skip_length:], desc=f"AlpacaEval {output_path}"):
+        for example in tqdm(eval_set[skip_length:], desc=f"AlpacaEval Judge {output_path}"):
             example["judge"] = model.judge(
                 example['instruction'],
-                example['response'],
+                example['output'],
                 reference_map[example['instruction']],
                 )
             example["judge_model"] = judge

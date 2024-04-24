@@ -119,6 +119,17 @@ class UltraFeedbackDataSource(DPODataSource):
         return load_dataset("heegyu/UltraFeedback-feedback-tree-3", split=split)
 
 
+@datasources.register("ddfo:heegyu/UltraFeedback-feedback-tree-3")
+class UltraFeedbackDataSourceForDistil(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/UltraFeedback-feedback-tree-3", split=split)
+        ds = ds.filter(lambda x: len(x['conversations']) > 1)
+        return ds
+
+
 @datasources.register("dpo:heegyu/UltraFeedback-max-margin")
 class UltraFeedbackDataSource(DPODataSource):
 

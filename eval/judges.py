@@ -52,11 +52,21 @@ class PrometheusJudge:
             raise ValueError("Reference answer is required for PrometheusJudge")
         prompt = PROMETHEUS_FORMAT.format(context=instruction, response=response, reference=reference)
         critic = self.model.generate(prompt, greedy=True)
-        score = int(critic.split("[RESULT]")[1])
-        return {
-            "critic": critic,
-            "score": score
-        }
+        if "[RESULT]" not in critic:
+            return {
+                "critic": critic,
+                "score": -1
+            }
+        
+        else:
+            try:
+                score = int(critic.split("[RESULT]")[1])
+            except ValueError:
+                score = -1
+            return {
+                "critic": critic,
+                "score": score
+            }
     
     def judge_conversation(self, conversation: list[dict], reference: str = None) -> dict:
         if reference is None:

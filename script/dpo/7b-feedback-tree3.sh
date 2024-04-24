@@ -32,4 +32,4 @@ train() {
 }
 
 # train "dpo:heegyu/UltraFeedback-max-margin" "mistral-7b-sft-max-margin-0418"
-train "dpo:heegyu/UltraFeedback-feedback-tree-3" "mistral-7b-sft-max-margin-0418"
+train "dpo:heegyu/UltraFeedback-feedback-tree-3" "mistral-7b-sft-feedback-tree3-0422"

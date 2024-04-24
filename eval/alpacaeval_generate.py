@@ -20,6 +20,17 @@ def main(
         top_p: float = 0.9,
         eos_token_id: int = None,
         ):
+    model_name = model
+    eval_set = datasets.load_dataset("tatsu-lab/alpaca_eval", "alpaca_eval")["eval"]
+
+    skip_length = estimate_skip_length(output_path)
+    if skip_length == len(eval_set):
+        print(f"Already generated. skip this model {model}")
+        return
+    
+    if skip_length > 0:
+        print(f"Skipping {skip_length} examples")
+
     model = FlaxHuggingfaceModel(
         model,
         prompt_length=prompt_length,
@@ -28,15 +39,16 @@ def main(
         chat_template=chat_template,
         eos_token_id=eos_token_id,
     )
-    eval_set = datasets.load_dataset("tatsu-lab/alpaca_eval", "alpaca_eval")["eval"]
 
-    skip_length = estimate_skip_length(output_path)
-    if skip_length > 0:
-        print(f"Skipping {skip_length} examples")
-
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with jsonlines.open(output_path, "a") as f:
-        for example in tqdm(eval_set[skip_length:], desc=f"AlpacaEval {output_path}"):
+        for i, example in enumerate(tqdm(eval_set, desc=f"AlpacaEval {output_path}")):
+            if i < skip_length:
+                continue
+
             example["output"] = model.generate(example["instruction"], greedy=not do_sample)
+            example['generator'] = model_name
+            print(example)
             f.write(example)
 
 if __name__ == "__main__":
