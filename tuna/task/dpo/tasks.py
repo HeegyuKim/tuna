@@ -32,6 +32,8 @@ class DPOTask(LMTask):
     def set_model(self, model):
         super().set_model(model)
 
+        self.is_encoder_decoder = getattr(self.model.config, "is_encoder_decoder", False)
+        
         from peft import PeftModel
         if not isinstance(self.model, PeftModel):
             self.ref_model = deepcopy(self.model)
@@ -143,9 +145,9 @@ class DPOTask(LMTask):
         if logits.shape[:-1] != labels.shape:
             raise ValueError("Logits (batch and sequence length dim) and labels must have the same shape.")
 
-        # if not self.is_encoder_decoder:
-        #     labels = labels[:, 1:].clone()
-        #     logits = logits[:, :-1, :]
+        if not self.is_encoder_decoder:
+            labels = labels[:, 1:].clone()
+            logits = logits[:, :-1, :]
         loss_mask = labels != self.label_pad_token_id
 
         # dummy token; we'll ignore the losses on these tokens later
