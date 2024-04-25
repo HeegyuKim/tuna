@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from .flax_base import FlaxLMTask, flax_tasks, FlaxLMTaskArguments
 from ..chat.train_templates import find_template
-from ..dpo.collator import DPOCollator
+from ..dpo.collator import DDFOCollator
 from typing import Optional, Union
 
 import jax, flax
@@ -61,7 +61,7 @@ class DFOTask(FlaxLMTask):
         self.label_pad_token_id = -100
     
     def _init_collator(self):
-        self.collator = DPOCollator(
+        self.collator = DDFOCollator(
             self.tokenizer, 
             # padding=self.args.padding,
             padding_side=self.args.padding_side,
@@ -71,20 +71,30 @@ class DFOTask(FlaxLMTask):
         
     def encode_item(self, item):
         conversation = item["conversations"]
-        chosen = self._encode_prompt_response(conversation, item["chosen"])
-        rejected = self._encode_prompt_response(conversation, item["rejected"])
+        full_chosen = self._encode_prompt_response(conversation, item["chosen"])
+        full_rejected = self._encode_prompt_response(conversation, item["rejected"])
+        chosen = self._encode_prompt_response(conversation, item["chosen"], True)
+        rejected = self._encode_prompt_response(conversation, item["rejected"], False)
 
         return dict(
+            full_chosen=full_chosen,
+            full_rejected=full_rejected,
             chosen=chosen,
             rejected=rejected
         )
 
 
-    def _encode_prompt_response(self, conversation, response):
+    def _encode_prompt_response(self, conversation, response, singleturn=False):
         concat_inputs, concat_labels = [], []
         prompt_length = self.args.prompt_length
         response_length = self.args.max_length - prompt_length
         
+        if singleturn:
+            if conversation[0]['role'] == 'system':
+                conversation = conversation[:2]
+            else:
+                conversation = conversation[:1]
+
         for i, uttr in enumerate(conversation):
             content, _ = self.train_template.handle_utterance(uttr, i)
 
@@ -113,14 +123,13 @@ class DFOTask(FlaxLMTask):
     
     def collate_step_outputs(self, outputs):
         loss = jnp.stack([x["loss"] for x in outputs]).mean()
-        acc = jnp.stack([x["accuracy"] for x in outputs]).mean().tolist()
-        chosen_rewards = jnp.stack([x["chosen_rewards"] for x in outputs]).mean().tolist()
-        rejected_rewards = jnp.stack([x["rejected_rewards"] for x in outputs]).mean().tolist()
-        return {"loss": loss, "accuracy": acc, "chosen_rewards": chosen_rewards, "rejected_rewards": rejected_rewards}
+        chosen_loss = jnp.stack([x["chosen_loss"] for x in outputs]).mean().tolist()
+        rejected_loss = jnp.stack([x["rejected_loss"] for x in outputs]).mean().tolist()
+        return {"loss": loss, "chosen_loss": chosen_loss, "rejected_loss": rejected_loss}
 
     @property
     def eval_metric_definitions(self):
-        return {"loss": "min", "accuracy": "max", "chosen_rewards": "max", "rejected_rewards": "min"}
+        return {"loss": "min"}
     
     def create_train_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
@@ -149,7 +158,7 @@ class DFOTask(FlaxLMTask):
                 rejected_loss = distil_loss(ref_rejected_logits, rejected_logits, response_length, rejected_loss_mask)
                 
                 loss = chosen_loss + rejected_loss
-                return loss, dict(loss=loss)
+                return loss, dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
             (loss, aux_output), grad = grad_fn(state.params, ref_chosen_logits, ref_rejected_logits, alpha)
@@ -189,7 +198,7 @@ class DFOTask(FlaxLMTask):
             rejected_loss = distil_loss(ref_rejected_logits, rejected_logits, response_length, rejected_loss_mask)
             
             loss = chosen_loss + rejected_loss
-            return dict(loss=loss)
+            return dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
 
         return pjit_func(
             eval_step,

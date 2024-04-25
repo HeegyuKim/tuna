@@ -7,6 +7,7 @@ python -m tuna.launcher.train_flax \
     --mesh fsdp \
     --do_train \
     --task dfo \
+    --trainer dpo \
     --padding max_length \
     --project "DDFO" \
     --run_name "TinyLlama-1.1b-feedback-tree-3-epoch3-distil" \
@@ -24,8 +25,8 @@ python -m tuna.launcher.train_flax \
     --lr_warmup_ratio 0.1 \
     --train_template zephyr \
     --train_total_batch_size 32 \
-    --train_batch_size_per_device 2 \
-    --eval_batch_size_per_device 2 \
+    --train_batch_size_per_device 4 \
+    --eval_batch_size_per_device 4 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

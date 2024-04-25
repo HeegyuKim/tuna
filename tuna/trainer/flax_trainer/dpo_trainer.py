@@ -36,8 +36,9 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
     def shard_params(self):
         self.init_mesh()
         self.task.init_model(self.dtype)
-        params=self.task.params
-        ref_params = copy.deepcopy(params)
+        with jax.default_device(jax.devices("cpu")[0]):
+            params=self.task.params
+            ref_params = copy.deepcopy(params)
 
         def init_train_state():
             state = DPOTrainState.create(

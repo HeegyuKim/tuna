@@ -56,7 +56,7 @@ class DPOCollator(object):
                 out[k].append(v)
         return out
 
-    def __pad(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def pad(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
         batch = self.__collate(features)
 
         is_encoder_decoder = "decoder_input_ids" in features
@@ -89,10 +89,25 @@ class DPOCollator(object):
         chosens = [x["chosen"] for x in features]
         rejections = [x["rejected"] for x in features]
 
-        chosens = self.__pad(chosens)
-        rejections = self.__pad(rejections)
+        chosens = self.pad(chosens)
+        rejections = self.pad(rejections)
 
         return {
             "chosen": chosens,
             "rejected": rejections
         }
+
+
+DDFO_KEYS = ["chosen", "rejected", "full_chosen", "full_rejected"]
+@dataclass
+class DDFOCollator(DPOCollator):
+    
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        final_output = {}
+        for k in DDFO_KEYS:
+            batch = [x[k] for x in features]
+            batch = self.pad(batch)
+            final_output[k] = batch
+
+        return final_output
+
