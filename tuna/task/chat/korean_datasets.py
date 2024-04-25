@@ -100,14 +100,6 @@ class KoVast(VicunaChatDataSource):
         ds = load_dataset("maywell/koVast", split=split, streaming=args.dataset_streaming)
         return ds
     
-@datasources("FreedomIntelligence/evol-instruct-korean")
-class KoVast(VicunaChatDataSource):
-    
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        ds = load_dataset("FreedomIntelligence/evol-instruct-korean", split=split, streaming=args.dataset_streaming)
-        return ds
     
 @datasources("heegyu/PKU-SafeRLHF-ko:safer")
 class PKUSafeRLHFKoSafer(ChatDataSource):

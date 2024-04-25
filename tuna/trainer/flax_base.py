@@ -206,6 +206,7 @@ class FlaxBaseTrainer:
                 learning_rate_end=end_value,
                 steps=total_steps,
                 gradient_accumulation_steps=gradient_accumulation_steps,
+                warmup_steps=lr_warmup_steps,
                 **extra_optimizer_kwargs
             )
         self.optimizer = tx

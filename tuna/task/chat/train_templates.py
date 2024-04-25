@@ -178,6 +178,31 @@ class HD42DotTemplate(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
 
 
+@train_templates.register("llama3")
+class Llama3(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "beomi/Llama-3-Open-Ko-8B"
+    ]
+
+    INITIAL_USER_FORMAT = "{bos}<start_of_turn>user\n{content}<end_of_turn>"
+    SYSTEM_FORMAT = "<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    USER_FORMAT = "<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    ASSISTANT_FORMAT = "<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    GENERATION_PROMPT = "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+    FUNCTION_CALLING_FORMAT = "<|start_header_id|>function-call<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    FUNCTION_RESPONSE_FORMAT = "<|start_header_id|>function-response<|end_header_id|>\n\n{content}<|eot_id|>\n"
+
+    def __init__(self, tokenizer) -> None:
+        super().__init__(tokenizer)
+        additional_tokens = ['<|start_header_id|>', '<|end_header_id|>', '<|eot_id|>']
+
+        tokenizer.add_special_tokens({
+            'additional_special_tokens': additional_tokens
+            })
+
+        tokenizer.eos_token = "<|eot_id|>"
+
 
 @train_templates.register("gemma")
 class GemmaTemplate(BaseTrainTemplate):
@@ -218,10 +243,10 @@ class VisionGemmaTemplate(BaseTrainTemplate):
 
 if __name__ == "__main__":
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("beomi/gemma-ko-2b")
-    print(tokenizer.encode("<end_of_turn>"))
-    t = GemmaTemplate(tokenizer)
-    print(tokenizer.encode("<end_of_turn>"))
+    tokenizer = AutoTokenizer.from_pretrained("beomi/Llama-3-Open-Ko-8B")
+    # print(tokenizer.encode("<end_of_turn>"))
+    t = Llama3(tokenizer)
+    # print(tokenizer.encode("<end_of_turn>"))
     convs = [
         {
             "role": "user",
