@@ -21,7 +21,7 @@ def get_batch_logps(
     logits: chex.Array,
     labels: chex.Array,
     loss_mask: chex.Array,
-    average_log_prob: bool = False
+    average_log_prob: bool = True
 ) -> chex.Array:
     per_token_logps = jnp.take_along_axis(
         jax.nn.log_softmax(logits), 
@@ -95,7 +95,7 @@ def compute_orpo_loss(
     chosen_rewards = beta * policy_chosen_logps
     rejected_rewards = beta * policy_rejected_logps
 
-    return losses, chosen_rewards, rejected_rewards
+    return losses, chosen_rewards, rejected_rewards, ratio.mean(), log_odds.mean()
     
 
 @dataclass
@@ -160,15 +160,12 @@ class ORPOTask(FlaxLMTask):
         
     
     def collate_step_outputs(self, outputs):
-        loss = jnp.stack([x["loss"] for x in outputs]).mean()
-        acc = jnp.stack([x["accuracy"] for x in outputs]).mean().tolist()
-        chosen_rewards = jnp.stack([x["chosen_rewards"] for x in outputs]).mean().tolist()
-        rejected_rewards = jnp.stack([x["rejected_rewards"] for x in outputs]).mean().tolist()
-        return {"loss": loss, "accuracy": acc, "chosen_rewards": chosen_rewards, "rejected_rewards": rejected_rewards}
+        keys = list(outputs[0].keys())
+        return {k: jnp.stack([x[k] for x in outputs]).mean().tolist() for k in keys}
 
     @property
     def eval_metric_definitions(self):
-        return {"loss": "min", "accuracy": "max", "chosen_rewards": "max", "rejected_rewards": "min"}
+        return {"loss": "min", "sft_accuracy": "max", "orpo_accuracy": "max", "chosen_rewards": "max", "rejected_rewards": "min"}
     
     def create_train_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
@@ -179,43 +176,47 @@ class ORPOTask(FlaxLMTask):
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
-            chosen, rejected = batch["chosen"], batch["rejected"]
-            chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
+            def calculate_loss(params, batch, beta):
+                chosen, rejected = batch["chosen"], batch["rejected"]
+                chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
 
-            chosen_loss_mask = chosen_labels >= 0 
-            rejected_loss_mask = rejected_labels >= 0
+                chosen_loss_mask = chosen_labels >= 0 
+                rejected_loss_mask = rejected_labels >= 0
+                
+                chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
+                rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
 
-            chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
-            rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
-
-            def calculate_loss(params, beta):
                 chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                     self.model, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
                 )
                 sft_loss, sft_accuracy = compute_sft_loss(
-                    batch, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
+                    chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
                 )
-                orpo_losses, chosen_rewards, rejected_rewards = compute_orpo_loss(
+                orpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_orpo_loss(
                     policy_chosen_logps,
                     policy_rejected_logps,
                     beta
                 )
-                orpo_loss = orpo_losses.mean()
+                orpo_loss = -orpo_losses.mean()
                 orpo_accuracy = (chosen_rewards > rejected_rewards).mean()
 
                 loss = sft_loss + orpo_loss
 
                 return loss, dict(
                     loss=loss, 
+                    orpo_loss=orpo_loss,
+                    sft_loss=sft_loss,
                     sft_accuracy=sft_accuracy,
                     orpo_accuracy=orpo_accuracy,
                     chosen_rewards=chosen_rewards,
-                    rejected_rewards=rejected_rewards
+                    rejected_rewards=rejected_rewards,
+                    odds_ratio=odds_ratio,
+                    log_odds=log_odds
                     )
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
-            (loss, aux_output), grad = grad_fn(state.params, beta)
+            (loss, aux_output), grad = grad_fn(state.params, batch, beta)
             state = state.apply_gradients(grads=grad)
             return state, aux_output
 
@@ -228,7 +229,7 @@ class ORPOTask(FlaxLMTask):
 
     def create_eval_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
-        beta = self.args.dpo_beta
+        beta = self.args.orpo_beta
         label_smoothing_factor = self.args.label_smoothing_factor
         z_loss = self.args.z_loss
 
@@ -240,33 +241,37 @@ class ORPOTask(FlaxLMTask):
 
             chosen_loss_mask = chosen_labels >= 0 
             rejected_loss_mask = rejected_labels >= 0
-
-            chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
-            rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
+            
+            chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
+            rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
 
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                 self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
                 chosen_loss_mask, rejected_loss_mask
             )
             sft_loss, sft_accuracy = compute_sft_loss(
-                batch, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
+                chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
             )
-            orpo_losses, chosen_rewards, rejected_rewards = compute_orpo_loss(
+            orpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_orpo_loss(
                 policy_chosen_logps,
                 policy_rejected_logps,
                 beta
             )
-            orpo_loss = orpo_losses.mean()
+            orpo_loss = -orpo_losses.mean()
             orpo_accuracy = (chosen_rewards > rejected_rewards).mean()
 
             loss = sft_loss + orpo_loss
 
             return dict(
                 loss=loss, 
+                orpo_loss=orpo_loss,
+                sft_loss=sft_loss,
                 sft_accuracy=sft_accuracy,
                 orpo_accuracy=orpo_accuracy,
                 chosen_rewards=chosen_rewards,
-                rejected_rewards=rejected_rewards
+                rejected_rewards=rejected_rewards,
+                odds_ratio=odds_ratio,
+                log_odds=log_odds
                 )
 
         return pjit_func(
@@ -276,3 +281,41 @@ class ORPOTask(FlaxLMTask):
             donate_argnums=(0, 0),
         )
     
+
+def test_orpo_loss():
+
+    # Test ORPOTask
+    # [1, 3, 3]
+    chosen = jnp.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.4, 0.5, 0.6]]])
+    rejected = jnp.array([[[0.4, 0.2, 0.1], [0.4, 0.3, 0.6], [0.4, 0.2, 0.6]]])
+    attention_mask = jnp.array([[1, 1, 1]])
+    # [1, 3]
+    labels = jnp.array([[-100, 1, 2]])
+
+    chosen, rejected = chosen[:, :-1], rejected[:, :-1]
+    labels= labels[:, 1:]
+
+    chosen_loss_mask = labels >= 0 
+    rejected_loss_mask = labels >= 0
+
+    chosen_labels = jnp.where(chosen_loss_mask, labels, 0)
+    rejected_labels = jnp.where(rejected_loss_mask, labels, 0)
+
+    print(chosen_labels)
+
+    chosen_logprobs = get_batch_logps(chosen, chosen_labels, chosen_loss_mask)
+    rejected_logprobs = get_batch_logps(rejected, rejected_labels, rejected_loss_mask)
+
+    orpo_losses, chosen_rewards, rejected_rewards = compute_orpo_loss(
+        chosen_logprobs,
+        rejected_logprobs,
+        0.1
+    )
+    orpo_loss = orpo_losses.mean()
+    orpo_accuracy = (chosen_rewards > rejected_rewards).mean()
+
+    print(orpo_loss, orpo_accuracy)
+
+if __name__ == "__main__":
+    with jax.default_device(jax.devices("cpu")[0]):
+        test_orpo_loss()
