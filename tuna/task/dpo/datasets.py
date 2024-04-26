@@ -119,7 +119,7 @@ class UltraFeedbackDataSource(DPODataSource):
         return load_dataset("heegyu/UltraFeedback-feedback-tree-3", split=split)
 
 
-@datasources.register("ddfo:heegyu/UltraFeedback-feedback-tree-3")
+@datasources.register("dfo:heegyu/UltraFeedback-feedback-tree-3")
 class UltraFeedbackDataSourceForDistil(DPODataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
