@@ -134,3 +134,42 @@ class EmotionDataSource(BaseClassificationDataSource):
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         ds = load_dataset("dair-ai/emotion", split=split)
         return ds
+
+
+
+@datasources("llamaguard-classification:heegyu/PKU-SafeRLHF-ko")
+class PKU_SafeRLHF_ko(BaseClassificationDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("heegyu/PKU-SafeRLHF-ko", split=split)
+        ds = ds.map(self.make_llamaguard_dataset,
+                    batched=True,
+                    remove_columns=ds.column_names
+        )
+        return ds
+    
+    def make_llamaguard_dataset(self, item):
+        texts, labels = [], []
+
+        for prompt, res1, res2, res1_safe, res2_safe in zip(
+            item["prompt_k"], item["response_0_ko"], item["response_1_ko"], item["is_response_0_safe"], item["is_response_1_safe"]
+        ):
+            texts.append(
+                f"{prompt} [SEP] {res1}"
+            )
+            texts.append(
+                f"{prompt} [SEP] {res2}"
+            )
+            labels.append(
+                0 if res1_safe else 1
+            )
+            labels.append(
+                0 if res2_safe else 1
+            )
+            
+
+        return dict(
+            text=texts,
+            label=labels
+        )
+    

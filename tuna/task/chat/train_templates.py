@@ -240,6 +240,17 @@ class VisionGemmaTemplate(BaseTrainTemplate):
     FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<eos>\n"
     FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<eos>\n"
 
+@train_templates.register("llamaguard")
+class LlamaGuardTemplate(BaseTrainTemplate):
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = "{bos}{content}"
+
+    SYSTEM_FORMAT = "{bos}{content}"
+    USER_FORMAT = "{content}"
+    ASSISTANT_FORMAT = "{content}{eos}"
+    GENERATION_PROMPT = ""
+
+
 
 if __name__ == "__main__":
     from transformers import AutoTokenizer

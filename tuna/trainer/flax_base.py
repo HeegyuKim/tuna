@@ -484,6 +484,18 @@ class FlaxBaseTrainer:
 
     def evaluate(self, epoch, global_step):
         print("start evaluation", epoch, global_step)
+        step_outputs=[]
+        
+        for eval_step, batch in enumerate(tqdm(self.eval_loader, desc="Evaluating...")):
+            step_output = self.sharded_eval_step(self.sharded_state, batch)
+            step_outputs.append(step_output)
+
+        metrics = self.task.collate_train_step_outputs(step_outputs)
+        metrics = {f"eval/{k}": v for k, v in metrics.items()}
+        metrics["global_step"] = global_step
+        metrics["epoch"] = epoch
+        self.logger.log_metric(metrics)
+        step_outputs = []
     
     def save_model(self, name, is_last=False):
         print("save", name)
