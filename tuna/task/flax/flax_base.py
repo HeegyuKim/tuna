@@ -16,12 +16,42 @@ from fjformer.func.loss_func import (
 )
 
 import transformers
+from datasets import IterableDataset
 
 from ...common import Registry
 from ..dataset import NUM_PROC
 
 flax_tasks = Registry("flax-tasks")
 
+
+def global_norm(tree):
+    """ Return the global L2 norm of a pytree. """
+    squared = jax.tree_util.tree_map(lambda x: jnp.sum(jnp.square(x)), tree)
+    flattened, _ = jax.flatten_util.ravel_pytree(squared)
+    return jnp.sqrt(jnp.sum(flattened))
+
+
+def cross_entropy_loss_and_accuracy(logits, labels):
+    valid = (labels >= 0).astype(jnp.float32)
+    valid_text_length = jnp.maximum(jnp.sum(valid, axis=-1), 1e-10)
+    logits = logits.astype(jnp.float32) # for numerical stability
+    token_log_prob = jnp.squeeze(
+        jnp.take_along_axis(
+            jax.nn.log_softmax(logits, axis=-1),
+            jnp.expand_dims(labels, -1),
+            axis=-1,
+        ),
+        -1,
+    )
+    token_log_prob = jnp.where(valid > 0.0, token_log_prob, jnp.array(0.0))
+    loss = -jnp.mean(jnp.sum(token_log_prob, axis=-1) / valid_text_length)
+    correct = jnp.where(
+        valid > 0.0,
+        jnp.argmax(logits, axis=-1) == labels,
+        jnp.array(False)
+    )
+    accuracy = jnp.mean(jnp.sum(correct, axis=-1) / valid_text_length)
+    return loss, accuracy
 
 @dataclass
 class FlaxTaskArguments(TaskArguments):
@@ -150,8 +180,25 @@ class FlaxLMTask(FlaxTask):
             else: # iterable dataset
                 for k in datasets:
                     datasets[k] = datasets[k].map(self._pack, batched=True)
+        
+        for k in datasets:
+            datasets[k] = self.check_dataset(k, datasets[k])
             
         return datasets
+
+    def check_dataset(self, split, dataset):
+        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC)
+        if not isinstance(dataset, IterableDataset):
+            original_size = len(dataset)
+            filtered_len = len(filtered_dataset)
+            if original_size != filtered_len:
+                print(f"Filtered: {filtered_len - original_size} items from {split} set: {original_size} -> {filtered_len}")
+        return filtered_dataset
+
+
+    def filter_item(self, item):
+        trainables = [x >= 0 for x in item["labels"]]
+        return trainables != 0
 
     def _pack(self, items):
         outputs = dict(
@@ -202,9 +249,9 @@ class FlaxLMTask(FlaxTask):
         return self.collate_step_outputs(outputs)
     
     def collate_step_outputs(self, outputs):
-        loss = jnp.stack([x["loss"] for x in outputs]).mean()
-        acc = jnp.stack([x["accuracy"] for x in outputs]).mean().tolist()
-        return {"loss": loss, "accuracy": acc}
+        keys = list(outputs[0].keys())
+        return {k: jnp.stack([x[k] for x in outputs]).mean().tolist() for k in keys}
+
 
     @property
     def eval_metric_definitions(self):
@@ -221,6 +268,7 @@ class FlaxLMTask(FlaxTask):
             def calculate_loss(params):
                 labels = batch.pop("labels")[:, 1:]
                 logits = self.model(params=params, **batch, return_dict=True).logits
+
                 loss_normalizing_factor = (
                     SpecialLossNormalizingFactor.NUM_REAL_TARGET_TOKENS
                 )
@@ -253,7 +301,12 @@ class FlaxLMTask(FlaxTask):
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
             (loss__, accuracy__), grad = grad_fn(state.params)
             state = state.apply_gradients(grads=grad)
-            return state, {"loss": loss__, "accuracy": accuracy__}
+            return state, dict(
+                    loss=loss__, 
+                    accuracy=accuracy__, 
+                    gradient_norm=global_norm(grad),
+                    param_norm=global_norm(state.params)
+            )
 
         return pjit_func(
             train_step,

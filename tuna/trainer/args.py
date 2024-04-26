@@ -31,14 +31,14 @@ class BaseTrainingArguments():
     eval_batch_limit: Optional[int] = None
 
     ## optimizer, lr decay
-    # optimizer: str = "adamw"
+    optimizer: str = "adamw"
     adam_beta1: float = 0.9
-    adam_beta2: float = 0.999
+    adam_beta2: float = 0.95
     weight_decay: float = 0
     learning_rate: float = 5e-5
     last_learning_rate: Optional[float] = None
     last_learning_rate_ratio: Optional[float] = None
-    gradient_clip: float = 1.0
+    gradient_clipping: float = 1.0
     lr_scheduler: Optional[str] = "linear"
     lr_decay_ratio: float = 1.0
     lr_decay_steps: Optional[int] = None # no_decay(none or -1)

@@ -170,7 +170,15 @@ class EvolInstructKorean(VicunaChatDataSource):
         if split != "train":
             return None
         ds = load_dataset("FreedomIntelligence/evol-instruct-korean", split=split)
+        # ds = ds.filter(lambda x: x[''])
         return ds
+
+    # def filter_item(self, item):
+    #     # find gpt output
+    #     has_response = False
+    #     for uttr in item['conversations']:
+    #         if uttr['from'] == 'gpt' and len(uttr['value'].strip()):
+    #             has_response
 
 @datasources("heegyu/glaive-function-calling-v2-ko")
 class GlaiveFunctionCallingV2Ko(ChatDataSource):

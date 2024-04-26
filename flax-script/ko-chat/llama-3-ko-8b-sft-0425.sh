@@ -16,9 +16,8 @@ python -m tuna.launcher.train_flax \
     --truncation \
     --model_name_or_path $model \
     --logging_steps 1 \
-    --total_epochs 5 \
+    --total_epochs 3 \
     --learning_rate 1e-5 \
-    --lr_decay_steps 1000 \
     --last_learning_rate_ratio 0.1 \
     --train_total_batch_size 32 \
     --train_batch_size_per_device 1 \

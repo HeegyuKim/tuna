@@ -43,6 +43,7 @@ from .utils.scheduler import AnnealingWarmupScheduler
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
+from .flax import optimizer_utils as opt_utils
 from ..common import Registry
 
 
@@ -51,7 +52,6 @@ class FlaxTrainingArguments(BaseTrainingArguments):
     mesh: str = "fsdp"
     fully_sharded: bool = False
     bf16_momentum: bool = False
-
 
 MESH_SHAPES = {
     "fsdp": (1, -1, 1, 1),
@@ -146,8 +146,10 @@ class FlaxBaseTrainer:
 
         if self.args.last_learning_rate or self.args.last_learning_rate_ratio:
             end_value=self.args.last_learning_rate or (self.args.learning_rate * self.args.last_learning_rate_ratio)
+            scheduler='linear'
         else:
             end_value = self.args.learning_rate
+            scheduler=None
         
         if self.args.lr_decay_steps:
             lr_decay_steps = self.args.lr_decay_steps
@@ -184,30 +186,39 @@ class FlaxBaseTrainer:
         #     optax.clip_by_global_norm(self.args.gradient_clip),
         #     opt
         # )
-        extra_optimizer_kwargs = {
-            "b1": self.args.adam_beta1,
-            "b2": self.args.adam_beta2,
-            "eps": 1e-8,
-            "weight_decay": self.args.weight_decay,
-        }
         
-        if lr_warmup_steps > 0:
-            tx, sc = fjformer.optimizers.get_adamw_with_warmup_linear_scheduler(
+        if self.args.optimizer == "adamw":
+            extra_optimizer_kwargs = {
+                "b1": self.args.adam_beta1,
+                "b2": self.args.adam_beta2,
+                "eps": 1e-8,
+                "weight_decay": self.args.weight_decay,
+            }
+            
+            tx, sc = opt_utils.get_adamw(
                 learning_rate_start=self.args.learning_rate,
                 steps=lr_decay_steps,
                 learning_rate_end=end_value,
                 gradient_accumulation_steps=gradient_accumulation_steps,
                 warmup_steps=lr_warmup_steps,
+                scheduler=scheduler,
+                gradient_clipping=self.args.gradient_clipping,
                 **extra_optimizer_kwargs
+            )
+
+        elif self.args.optimizer == "adafactor":
+            tx, sc = opt_utils.get_adafactor(
+                learning_rate_start=self.args.learning_rate,
+                steps=lr_decay_steps,
+                learning_rate_end=end_value,
+                gradient_accumulation_steps=gradient_accumulation_steps,
+                warmup_steps=lr_warmup_steps,
+                scheduler=scheduler,
+                gradient_clipping=self.args.gradient_clip,
             )
         else:
-            tx, sc = fjformer.optimizers.get_adamw_with_linear_scheduler(
-                learning_rate_start=self.args.learning_rate,
-                learning_rate_end=end_value,
-                steps=total_steps,
-                gradient_accumulation_steps=gradient_accumulation_steps,
-                **extra_optimizer_kwargs
-            )
+            raise ValueError("unknown optimizer!")
+
         self.optimizer = tx
         self.learning_rate_schedule = sc
 
@@ -415,6 +426,11 @@ class FlaxBaseTrainer:
                         loss = step_output['loss']
                     else:
                         loss = step_output
+                    if jnp.isnan(loss.mean()):
+                        pprint(batch)
+                        print("OMG it is NaN")
+                        print(self.task.tokenizer.batch_decode(batch['input_ids'], skip_special_tokens=False))
+                        return
                     step_outputs.append(step_output)
 
                     if (global_step + 1) % gradient_accumulation_steps == 0:
@@ -428,7 +444,7 @@ class FlaxBaseTrainer:
                         metrics["train/optimizer_step"] = optimizer_step
                         metrics["train/progress_rate"] = global_step / total_steps
                         metrics["train/learning_rate"] = self.get_current_learning_rate()
-                        metrics["train/loss"] = jax.device_get(loss)
+                        metrics["train/loss"] = jax.device_get(loss).tolist()
                         metrics["global_step"] = global_step
                         metrics["epoch"] = epoch_float
                         self.logger.log_metric(metrics)
