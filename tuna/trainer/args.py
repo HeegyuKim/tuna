@@ -34,7 +34,7 @@ class BaseTrainingArguments():
     # optimizer: str = "adamw"
     adam_beta1: float = 0.9
     adam_beta2: float = 0.999
-    weight_decay: float = 1e-2
+    weight_decay: float = 0
     learning_rate: float = 5e-5
     last_learning_rate: Optional[float] = None
     last_learning_rate_ratio: Optional[float] = None
