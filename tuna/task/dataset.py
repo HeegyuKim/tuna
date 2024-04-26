@@ -75,7 +75,9 @@ class DatasetLoader:
                 ds = source.load(args, split)
 
                 if ds is not None:
-                    if args.limit:
+                    if args.eval_limit and split in ["test", "eval"]:
+                        ds = ds.select(range(args.eval_limit))
+                    elif args.limit:
                         ds = ds.select(range(args.limit))
                     if args.add_source:
                         new_column = [name] * len(ds)
