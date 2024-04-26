@@ -25,7 +25,7 @@ pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com
 sudo docker run -it --name tuna \
     -d --privileged \
     -p 7860:7860 \
-    -e VM_NAME="TPUv3-A" \
+    -e VM_NAME="TPUv2-A" \
     -v $HOME:/workspace \
     heegyukim/tuna:0.0.1 \
     /bin/bash

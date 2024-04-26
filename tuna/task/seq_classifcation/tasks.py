@@ -121,19 +121,19 @@ class SeqClassificationTask(LMTask):
         preds = logits.argmax(dim=-1).numpy()
         labels = torch.cat([x["labels"] for x in outputs]).view(-1).cpu().numpy()
 
-        top3_acc = top_k_accuracy_score(labels, logits, k=3, labels=list(range(self.model.config.num_labels)))
-        _, top3_indices = logits.topk(3, dim=-1)
-        top3_preds = [gt if gt in idx else idx[0] for gt, idx in zip(labels, top3_indices)]
+        # top3_acc = top_k_accuracy_score(labels, logits, k=3, labels=list(range(self.model.config.num_labels)))
+        # _, top3_indices = logits.topk(3, dim=-1)
+        # top3_preds = [gt if gt in idx else idx[0] for gt, idx in zip(labels, top3_indices)]
 
         macro_f1 = f1_score(labels, preds, average="macro")
-        macro_f1_top3 = f1_score(labels, top3_preds, average="macro")
+        # macro_f1_top3 = f1_score(labels, top3_preds, average="macro")
 
         return {
             "loss": loss,
             "accuracy": acc,
-            "accuracy_top3": top3_acc,
+            # "accuracy_top3": top3_acc,
             "macro_f1": macro_f1,
-            "macro_f1_top3": macro_f1_top3
+            # "macro_f1_top3": macro_f1_top3
             }
 
     @property

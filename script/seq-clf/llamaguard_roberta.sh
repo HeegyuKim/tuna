@@ -1,5 +1,5 @@
 wandb online
-model="team-lucid/deberta-v3-base-korean"
+model="klue/roberta-base"
 
 python -m tuna.launcher.train \
     --mesh dp \
@@ -10,7 +10,7 @@ python -m tuna.launcher.train \
     --task sequence-classification \
     --model_arch sequence-classification \
     --project "KoSafeGuard-BERT" \
-    --run_name "deberta-v3-base-ko-0426" \
+    --run_name "KoSafeGuard-klue-roberta-base-0426" \
     --dataset="llamaguard-classification:heegyu/PKU-SafeRLHF-ko" \
     --max_length=512 \
     --model_name_or_path $model \
@@ -19,7 +19,7 @@ python -m tuna.launcher.train \
     --train_total_batch_size 128 \
     --train_batch_size_per_device 32 \
     --eval_batch_size_per_device 32 \
-    --limit 1024 \
+    --eval_limit 1024 \
     --save_strategy epoch \
     --save_epochs 1 \
     --push_to_hub \

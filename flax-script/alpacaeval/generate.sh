@@ -13,13 +13,22 @@ eval(){
         --input_path outputs/$model/alpacaeval.json
 }
 
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-1" "zephyr"
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-2" "zephyr"
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-3" "zephyr"
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-1" "zephyr"
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-2" "zephyr"
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-1" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-2" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-3" "zephyr"
 
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-1" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-2" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3" "zephyr"
+
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
+
+eval "heegyu/TinyLlama-1.1b-max-margin-0424-orpo@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0424-orpo@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0424-orpo@epoch-3" zephyr
+
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil@epoch-3" zephyr
