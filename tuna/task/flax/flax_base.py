@@ -187,7 +187,7 @@ class FlaxLMTask(FlaxTask):
         return datasets
 
     def check_dataset(self, split, dataset):
-        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC)
+        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=False, desc=f"Checking {split} set")
         if not isinstance(dataset, IterableDataset):
             original_size = len(dataset)
             filtered_len = len(filtered_dataset)
@@ -197,8 +197,8 @@ class FlaxLMTask(FlaxTask):
 
 
     def filter_item(self, item):
-        trainables = [x >= 0 for x in item["labels"]]
-        return trainables != 0
+        trainables = sum(x >= 0 for x in item["labels"])
+        return trainables > 0
 
     def _pack(self, items):
         outputs = dict(
