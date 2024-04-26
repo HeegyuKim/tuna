@@ -44,6 +44,7 @@ export USE_TORCH=True
 export LD_LIBRARY_PATH=$HOME/miniconda/lib/
 # or
 export LD_LIBRARY_PATH=$HOME/miniconda/envs/?/lib
+export LD_LIBRARY_PATH=$HOME/miniconda/envs/qax/lib
 ```
 
 </div>

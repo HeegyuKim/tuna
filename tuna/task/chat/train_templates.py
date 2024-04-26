@@ -185,13 +185,13 @@ class Llama3(BaseTrainTemplate):
     ]
 
     INITIAL_USER_FORMAT = "{bos}<start_of_turn>user\n{content}<end_of_turn>"
-    SYSTEM_FORMAT = "<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    SYSTEM_FORMAT = "{bos}<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>"
     USER_FORMAT = "<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>\n"
-    ASSISTANT_FORMAT = "<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    ASSISTANT_FORMAT = "<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>"
     GENERATION_PROMPT = "<|start_header_id|>assistant<|end_header_id|>\n\n"
 
-    FUNCTION_CALLING_FORMAT = "<|start_header_id|>function-call<|end_header_id|>\n\n{content}<|eot_id|>\n"
-    FUNCTION_RESPONSE_FORMAT = "<|start_header_id|>function-response<|end_header_id|>\n\n{content}<|eot_id|>\n"
+    FUNCTION_CALLING_FORMAT = "<|start_header_id|>function-call<|end_header_id|>\n\n{content}<|eot_id|>"
+    FUNCTION_RESPONSE_FORMAT = "<|start_header_id|>function-response<|end_header_id|>\n\n{content}<|eot_id|>"
 
     def __init__(self, tokenizer) -> None:
         super().__init__(tokenizer)

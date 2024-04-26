@@ -36,21 +36,20 @@ from ..base import BaseTrainer, BaseTrainingArguments, trainers
 
 def build_mesh_shape(mesh_str: str, device_count: int):
     if mesh_str == "fsdp":
-        mesh_str = "1,-1,1,1"
+        mesh = (1, device_count, 1, 1)
     elif mesh_str == "dp":
-        mesh_str = "-1,1,1,1"
+        mesh = (device_count, 1, 1, 1)
     elif mesh_str == "mp":
-        mesh_str = "1,1,-1,1"
-
-    mesh_str = mesh_str.replace("-1", str(device_count))
-    mesh = [int(x) for x in mesh_str.split(",")]
+        mesh = (1, 1, device_count, 1,)
+    else:
+        raise ValueError(f"Unknown mesh string: {mesh_str}")
 
     return tuple(mesh)
 
 
 @dataclass
 class SPMDArguments(BaseTrainingArguments):
-    mesh: str = "1,-1,1"
+    mesh: str = "fsdp"
     
 
 PARTITION_INPUTS = ["input_ids", "decoder_input_ids", "labels", "attention_mask", "decoder_attention_mask"]
@@ -101,6 +100,7 @@ class SPMDTrainer(BaseTrainer):
         device_count = xr.global_runtime_device_count()
         mesh_shape = build_mesh_shape(self.args.mesh, device_count)
         device_ids = np.array(range(device_count))
+        print(f"XLA Device count {device_count}, shape: {mesh_shape}")
         self.mesh = Mesh(device_ids, mesh_shape, ('dp', 'fsdp', 'mp', 'sp'))
 
         has_ref = hasattr(self.task, "ref_model")

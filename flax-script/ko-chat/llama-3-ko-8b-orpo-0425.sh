@@ -11,12 +11,14 @@ python -m tuna.launcher.train_flax \
     --dataset="dpo:SJ-Donald/orca-dpo-pairs-ko" \
     --packing False \
     --truncation \
-    --max_length=1024 \
+    --truncation_side left \
+    --max_length=2048 \
     --model_name_or_path $model \
     --total_epochs 3 \
     --logging_steps 1 \
-    --learning_rate 5e-6 \
+    --learning_rate 2e-5 \
     --last_learning_rate_ratio 0.1 \
+    --lr_warmup_ratio 0.1 \
     --train_template llama3 \
     --train_total_batch_size 32 \
     --train_batch_size_per_device 1 \

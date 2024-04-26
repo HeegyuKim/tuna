@@ -21,6 +21,7 @@ class BaseModelArguments:
 
     # LoRA
     use_lora: bool = False
+    use_dora: bool = False
     lora_r: int = 8
     lora_alpha: int = 32
     lora_dropout: float = 0.0
@@ -55,7 +56,7 @@ class BaseModel:
         #     print("Setting model pad token to eos token")
 
         # LoRA
-        if self.args.use_lora:
+        if self.args.use_lora or self.args.use_dora:
             model = self.apply_lora(self.args, model)
             
         return model
@@ -70,6 +71,7 @@ class BaseModel:
             task_type=TaskType.CAUSAL_LM, 
             inference_mode=False, 
             r=args.lora_r, 
+            use_dora=args.use_dora,
             lora_alpha=args.lora_alpha, 
             lora_dropout=args.lora_dropout, 
             target_modules=targets
@@ -96,7 +98,7 @@ class SequenceClassification(BaseModel):
         model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, num_labels=self.args.num_labels, revision=self.args.revision)
         
         # LoRA
-        if self.args.use_lora:
+        if self.args.use_lora or self.args.use_dora:
             model = self.apply_lora(self.args, model)
             
         return model
