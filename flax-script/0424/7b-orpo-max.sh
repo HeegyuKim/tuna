@@ -1,5 +1,5 @@
 wandb online
-model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+model="HuggingFaceH4/mistral-7b-sft-beta"
 
 python -m tuna.launcher.train_flax \
     --mesh fsdp \
@@ -7,12 +7,12 @@ python -m tuna.launcher.train_flax \
     --task orpo \
     --padding max_length \
     --project "DDFO-ORPO" \
-    --run_name "TinyLlama-1.1b-max-margin-0424-orpo" \
+    --run_name "mistral-7b-sft-beta-max-margin-0424-orpo" \
     --dataset="dpo:heegyu/UltraFeedback-max-margin" \
     --packing False \
     --truncation \
     --truncation_side left \
-    --max_length=2048 \
+    --max_length=1024 \
     --model_name_or_path $model \
     --total_epochs 3 \
     --logging_steps 1 \
@@ -21,8 +21,8 @@ python -m tuna.launcher.train_flax \
     --lr_warmup_ratio 0.1 \
     --train_template zephyr \
     --train_total_batch_size 32 \
-    --train_batch_size_per_device 2 \
-    --eval_batch_size_per_device 2 \
+    --train_batch_size_per_device 1 \
+    --eval_batch_size_per_device 1 \
     --save_strategy epoch \
     --push_to_hub \
     --output_dir ""

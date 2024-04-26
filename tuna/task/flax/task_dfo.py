@@ -21,7 +21,7 @@ def masked_mean(arr, mask):
     return (arr * mask).sum(-1) / mask.sum(-1)
 
 def get_logits(model, params, batch):
-    logits = model(batch, params=params, return_dict=True).logits
+    logits = model(**batch, params=params, return_dict=True).logits
     return logits
 
 def distil_loss(
@@ -32,13 +32,13 @@ def distil_loss(
 ):
     loss_mask = loss_mask[:, -response_length:]
     teacher_logits, student_logits = teacher_logits[:, -response_length-1:-1], student_logits[:, -response_length-1:-1]
-    teacher_logprobs = jax.nn.log_softmax(teacher_logits)
-    student_logprobs = jax.nn.log_softmax(student_logits)
+    target = jax.nn.softmax(teacher_logits)
+    preds = jax.nn.log_softmax(student_logits)
     
-    kl_div = (teacher_logprobs * (teacher_logprobs - student_logprobs)).sum(-1)
+    kl_div = (target * (jnp.log(target) - preds)).sum(-1)
     loss = masked_mean(kl_div, loss_mask)
 
-    return loss
+    return loss.mean()
     
 
 @dataclass
@@ -117,7 +117,7 @@ class DFOTask(FlaxLMTask):
         return self.truncate_dict({
             "input_ids": concat_inputs,
             "attention_mask": [1] * len(concat_inputs),
-            "labels": concat_labels
+            # "labels": concat_labels
         })
         
     
@@ -140,28 +140,21 @@ class DFOTask(FlaxLMTask):
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
-            chosen, rejected = batch["chosen"], batch["rejected"]
-            chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
+            teacher_chosen_logits = get_logits(self.model, state.ref_params, batch["full_chosen"])
+            teacher_rejected_logits = get_logits(self.model, state.ref_params, batch["full_chosen"])
 
-            chosen_loss_mask = chosen_labels >= 0 
-            rejected_loss_mask = rejected_labels >= 0
-
-            chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
-            rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
-
-            ref_chosen_logits, ref_rejected_logits = get_logits(self.model, state.ref_params, chosen), get_logits(self.model, state.ref_params, rejected)
-
-            def calculate_loss(params, ref_chosen_logits, ref_rejected_logits, alpha):
-                chosen_logits, rejected_logits = get_logits(self.model, params, chosen), get_logits(self.model, params, rejected)
+            def calculate_loss(params):
+                student_chosen_logits = get_logits(self.model, params, batch["chosen"])
+                student_rejected_logits = get_logits(self.model, params, batch["rejected"])
                 
-                chosen_loss = distil_loss(ref_chosen_logits, chosen_logits, response_length, chosen_loss_mask)
-                rejected_loss = distil_loss(ref_rejected_logits, rejected_logits, response_length, rejected_loss_mask)
+                chosen_loss = distil_loss(teacher_chosen_logits, student_chosen_logits, response_length, batch["chosen"]["attention_mask"])
+                rejected_loss = distil_loss(teacher_rejected_logits, student_rejected_logits, response_length, batch["rejected"]["attention_mask"])
                 
-                loss = chosen_loss + rejected_loss
+                loss = (chosen_loss + rejected_loss) / 2
                 return loss, dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
-            (loss, aux_output), grad = grad_fn(state.params, ref_chosen_logits, ref_rejected_logits, alpha)
+            (loss, aux_output), grad = grad_fn(state.params)
             state = state.apply_gradients(grads=grad)
             return state, aux_output
 
@@ -197,7 +190,7 @@ class DFOTask(FlaxLMTask):
             chosen_loss = distil_loss(ref_chosen_logits, chosen_logits, response_length, chosen_loss_mask)
             rejected_loss = distil_loss(ref_rejected_logits, rejected_logits, response_length, rejected_loss_mask)
             
-            loss = chosen_loss + rejected_loss
+            loss = (chosen_loss + rejected_loss) / 2
             return dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
 
         return pjit_func(
