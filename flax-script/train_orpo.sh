@@ -14,7 +14,6 @@ python -m tuna.launcher.train_flax \
     --max_length=2048 \
     --model_name_or_path $model \
     --total_epochs 3 \
-    --logging_steps 16 \
     --learning_rate 1e-5 \
     --last_learning_rate_ratio 0.1 \
     --train_template chatml \

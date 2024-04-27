@@ -34,7 +34,13 @@ def get_batch_logps(
     else:
         return (per_token_logps * loss_mask).sum(-1)
     
-def get_model_batch_logps(model, params, chosen_input, rejected_input, chosen_labels, rejected_labels, chosen_loss_mask, rejected_loss_mask):
+def get_model_batch_logps(model, params, chosen_input, rejected_input, chosen_labels, rejected_labels):
+
+    chosen_loss_mask = chosen_labels >= 0 
+    rejected_loss_mask = rejected_labels >= 0
+    
+    chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
+    rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
 
     chosen_output = model(params=params, **chosen_input)
     chosen = chosen_output.logits[:, :-1]
@@ -45,7 +51,7 @@ def get_model_batch_logps(model, params, chosen_input, rejected_input, chosen_la
     chosen_logprobs = get_batch_logps(chosen, chosen_labels, chosen_loss_mask)
     rejected_logprobs = get_batch_logps(rejected, rejected_labels, rejected_loss_mask)
 
-    return chosen_output.logits, chosen_logprobs, rejected_logprobs
+    return chosen, chosen_logprobs, rejected_logprobs
 
 def masked_mean(arr, mask):
     return (arr * mask).sum(-1) / mask.sum(-1)
@@ -71,7 +77,7 @@ def compute_sft_loss(batch, logits, labels, label_smoothing_factor, z_loss):
         weight_sum,
         accuracy,
     ) = compute_weighted_cross_entropy_and_accuracy(
-        logits=logits[:, :-1, :],
+        logits=logits,#[:, :-1, :],
         targets=labels,
         weights=weights,
         label_smoothing=label_smoothing_factor,
@@ -158,6 +164,10 @@ class ORPOTask(FlaxLMTask):
             "labels": concat_labels
         })
         
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+        return trainables > 0
     
     def collate_step_outputs(self, outputs):
         keys = list(outputs[0].keys())
@@ -180,15 +190,8 @@ class ORPOTask(FlaxLMTask):
                 chosen, rejected = batch["chosen"], batch["rejected"]
                 chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
 
-                chosen_loss_mask = chosen_labels >= 0 
-                rejected_loss_mask = rejected_labels >= 0
-                
-                chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
-                rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
-
                 chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                     self.model, params, chosen, rejected, chosen_labels, rejected_labels,
-                    chosen_loss_mask, rejected_loss_mask
                 )
                 sft_loss, sft_accuracy = compute_sft_loss(
                     chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
@@ -238,12 +241,6 @@ class ORPOTask(FlaxLMTask):
 
             chosen, rejected = batch["chosen"], batch["rejected"]
             chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
-
-            chosen_loss_mask = chosen_labels >= 0 
-            rejected_loss_mask = rejected_labels >= 0
-            
-            chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
-            rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
 
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                 self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,

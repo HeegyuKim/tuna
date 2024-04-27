@@ -65,7 +65,7 @@ def main(
     demo = gr.ChatInterface(
         chat_function, 
         additional_inputs=[
-            gr.Textbox("You are helpful AI.", label="System Prompt"), 
+            gr.Textbox("", label="System Prompt"), 
             # gr.Slider(10, 100)
             gr.Checkbox(False, label="Greedy")
         ],
