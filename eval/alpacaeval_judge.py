@@ -14,14 +14,15 @@ def main(
         input_path: str,
         output_path: str = None,
         reference: str = "gpt-4",
-        judge: str = "kaist-ai/prometheus-7b-v1.0",
+        judge: str = "kaist-ai/prometheus-13b-v1.0",
         prompt_length: int = 3072,
         max_new_tokens: int = 1024,
         ):
 
     if output_path is None:
         input_filename = os.path.basename(input_path)
-        output_path = os.path.join(os.path.dirname(input_path), "alpacaeval", input_filename)
+        judge_name = judge.split("/", 1)[-1]
+        output_path = os.path.join(os.path.dirname(input_path), judge_name, input_filename)
 
     # load input data
     eval_set = list(jsonlines.open(input_path))
