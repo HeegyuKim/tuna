@@ -144,17 +144,19 @@ class DFOTask(FlaxLMTask):
             batch = with_sharding_constraint(batch, partition_spec)
 
             teacher_chosen_logits = get_logits(self.model, state.ref_params, batch["full_chosen"])
-            teacher_rejected_logits = get_logits(self.model, state.ref_params, batch["full_chosen"])
+            # teacher_rejected_logits = get_logits(self.model, state.ref_params, batch["full_chosen"])
 
             def calculate_loss(params):
                 student_chosen_logits = get_logits(self.model, params, batch["chosen"])
-                student_rejected_logits = get_logits(self.model, params, batch["rejected"])
+                # student_rejected_logits = get_logits(self.model, params, batch["rejected"])
                 
                 chosen_loss = distil_loss(teacher_chosen_logits, student_chosen_logits, response_length, batch["chosen"]["attention_mask"])
-                rejected_loss = distil_loss(teacher_rejected_logits, student_rejected_logits, response_length, batch["rejected"]["attention_mask"])
+                # rejected_loss = distil_loss(teacher_rejected_logits, student_rejected_logits, response_length, batch["rejected"]["attention_mask"])
                 
-                loss = (chosen_loss + rejected_loss) / 2
-                return loss, dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
+                # loss = (chosen_loss + rejected_loss) / 2
+                loss = chosen_loss
+                # return loss, dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=rejected_loss)
+                return loss, dict(loss=loss, chosen_loss=chosen_loss, rejected_loss=0)
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
             (loss, aux_output), grad = grad_fn(state.params)

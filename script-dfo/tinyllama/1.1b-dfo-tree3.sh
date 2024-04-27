@@ -10,7 +10,7 @@ python -m tuna.launcher.train_flax \
     --trainer dpo \
     --padding max_length \
     --project "DDFO" \
-    --run_name "TinyLlama-1.1b-feedback-tree-3-epoch3-distil" \
+    --run_name "TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only" \
     --dataset="dfo:heegyu/UltraFeedback-feedback-tree-3" \
     --packing False \
     --truncation \
