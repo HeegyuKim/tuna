@@ -109,3 +109,28 @@ class UltraFeedbackUserFeedback(ChatDataSource):
             conversations=conversations
         )
     
+
+@datasources("promtheus:nayohan/feedback-collection-ko")
+class UltraFeedbackUserFeedback(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != 'train':
+            return None
+        
+        ds = load_dataset("nayohan/feedback-collection-ko", split=split)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = []
+        convs.append({
+            "role": "user",
+            "content": item["instruction"]
+        })
+        convs.append({
+            "role": "assistant",
+            "content": item["output"]
+        })
+        return {
+            "conversations": convs
+        }
+    
