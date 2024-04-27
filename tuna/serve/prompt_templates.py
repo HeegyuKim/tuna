@@ -53,6 +53,8 @@ PROMPT_TEMPLATES = {
     "Locutusque/TinyMistral-248M-v2-Instruct": TEMPLATE_CHATML,
     
     "llama": TEMPLATE_LLAMA,
+    "llama-3": TEMPLATE_LLAMA_3,
+    "llama3": TEMPLATE_LLAMA_3,
     "meta-llama/Llama-2-7b-chat-hf": TEMPLATE_LLAMA,
     
     "zephyr": TEMPLATE_ZEPHYR,
