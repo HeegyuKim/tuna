@@ -56,6 +56,7 @@ def cross_entropy_loss_and_accuracy(logits, labels):
 @dataclass
 class FlaxTaskArguments(TaskArguments):
     model_name_or_path: str = ""
+    check_dataset: bool = True
 
 class FlaxTask(BaseTask):
     ARG_CLASS = FlaxTaskArguments
@@ -181,8 +182,9 @@ class FlaxLMTask(FlaxTask):
                 for k in datasets:
                     datasets[k] = datasets[k].map(self._pack, batched=True)
         
-        for k in datasets:
-            datasets[k] = self.check_dataset(k, datasets[k])
+        if self.args.check_dataset:
+            for k in datasets:
+                datasets[k] = self.check_dataset(k, datasets[k])
             
         return datasets
 

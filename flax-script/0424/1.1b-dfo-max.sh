@@ -1,21 +1,25 @@
 wandb online
-model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+# model="Felladrin/TinyMistral-248M-Chat-v2"
+# model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+model="heegyu/TinyLlama-1.1b-max-margin@epoch-1"
 
 python -m tuna.launcher.train_flax \
     --mesh fsdp \
     --do_train \
-    --task orpo \
+    --task dfo \
+    --trainer dpo \
     --padding max_length \
-    --project "DDFO-ORPO" \
-    --run_name "TinyLlama-1.1b-max-margin-0424-orpo" \
-    --dataset="dpo:heegyu/UltraFeedback-max-margin" \
+    --project "DDFO" \
+    --run_name "TinyLlama-1.1b-feedback-tree-3-epoch1-distil" \
+    --dataset="dfo:heegyu/UltraFeedback-feedback-tree-3" \
     --packing False \
     --truncation \
     --truncation_side left \
     --max_length=2048 \
+    --prompt_length 1024 \
     --model_name_or_path $model \
     --total_epochs 3 \
-    --logging_steps 1 \
+    --logging_steps 128 \
     --learning_rate 5e-5 \
     --last_learning_rate_ratio 0.1 \
     --lr_warmup_ratio 0.1 \

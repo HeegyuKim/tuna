@@ -68,6 +68,9 @@ class DFOTask(FlaxLMTask):
             max_length=self.args.max_length,
             # decoder_max_length=self.args.decoder_max_length,
             return_tensors="np")
+    
+    def check_dataset(self, split, dataset):
+        return dataset
         
     def encode_item(self, item):
         conversation = item["conversations"]
