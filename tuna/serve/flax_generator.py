@@ -216,12 +216,14 @@ class FlaxHuggingfaceModel:
             max_length=fixed_pad,
             padding="max_length",
             truncation=True,
-            return_tensors="jax"
+            return_tensors="jax",
+            add_special_tokens=False
         )
 
         input_ids = tokens.input_ids
         attention_mask = tokens.attention_mask
 
+        
         with self.mesh:
             predicted_token = self.greedy_generate_function(
                 self.params,
@@ -234,7 +236,9 @@ class FlaxHuggingfaceModel:
                 attention_mask
             )
 
-        return self.tokenizer.decode(predicted_token[0], skip_special_tokens=True)
+        output = self.tokenizer.decode(predicted_token[0], skip_special_tokens=True)
+        print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False))
+        return output
 
     def generate(self,
                user_message: str,

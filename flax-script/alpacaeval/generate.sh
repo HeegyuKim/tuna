@@ -1,4 +1,4 @@
-# export HF_HOME=/data/hf-home
+# export HF_HOME=/data-plm/hf-home
 # export LD_LIBRARY_PATH=~/anaconda3/envs/easydel/lib/:$LD_LIBRARY_PATH
 
 eval(){
@@ -37,3 +37,7 @@ eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
 eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-51966 zephyr
 eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-103932 zephyr
 eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 zephyr
+
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-3" zephyr

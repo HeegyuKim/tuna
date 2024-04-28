@@ -65,7 +65,7 @@ Provide your safety assessment for assistant in the above conversation:
 """
 
 @datasources("llamaguard:heegyu/PKU-SafeRLHF-ko")
-class UltraFeedbackUserFeedback(ChatDataSource):
+class PKUSafeRLHFKoLlamaGuardDataSource(ChatDataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         ds = load_dataset("heegyu/PKU-SafeRLHF-ko", split=split)
@@ -111,7 +111,7 @@ class UltraFeedbackUserFeedback(ChatDataSource):
     
 
 @datasources("promtheus:nayohan/feedback-collection-ko")
-class UltraFeedbackUserFeedback(ChatDataSource):
+class FeedbackCollectionKo(ChatDataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != 'train':
@@ -133,4 +133,31 @@ class UltraFeedbackUserFeedback(ChatDataSource):
         return {
             "conversations": convs
         }
+@datasources("llamaguard:MrBananaHuman/kor_ethical_question_answer")
+class KorEthicalQALlamaGuardDataSource(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("MrBananaHuman/kor_ethical_question_answer", split=split)
+        ds = ds.map(self.make_llamaguard_dataset,
+                    batched=True,
+                    remove_columns=ds.column_names
+        )
+        return ds
+
+    def make_converation(self, prompt, response):
+        return f"User: {prompt}\n\nAssistant: {response}"
+    
+    def make_llamaguard_dataset(self, item):
+        return dict(
+            conversations=[
+                {
+                    "role": "user",
+                    "content": LLAMAGUARD_PROMPT.format(conversation=self.make_converation(item['question'], item['answer']))
+                },
+                {
+                    "role": "assistant",
+                    "content": "safe" if item['label'] == 0 else "unsafe"
+                }
+            ]
+        )
     
