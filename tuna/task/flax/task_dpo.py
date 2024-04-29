@@ -104,7 +104,11 @@ class DPOTask(FlaxLMTask):
             rejected=rejected
         )
 
-
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+        return trainables > 0
+    
     def _encode_prompt_response(self, conversation, response):
         concat_inputs, concat_labels = [], []
         
