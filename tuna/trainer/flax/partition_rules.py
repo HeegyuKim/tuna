@@ -108,20 +108,20 @@ def get_mistral(fully_sharded_data_parallel: bool = True):
     """
     return (
 
-        ("model/embed_tokens/embedding", PartitionSpec("dp", "fsdp")),
+        ("model/embed_tokens/embedding", PartitionSpec("tp", ("fsdp", "sp"))),
 
-        ("self_attn/(q_proj|k_proj|v_proj)/kernel", PartitionSpec("fsdp", "dp")),
-        ("self_attn/o_proj/kernel", PartitionSpec("dp", "fsdp")),
+        ("self_attn/(q_proj|k_proj|v_proj)/kernel", PartitionSpec(("fsdp", "sp"), "tp")),
+        ("self_attn/o_proj/kernel", PartitionSpec("tp", ("fsdp", "sp"))),
 
-        ("mlp/gate_proj/kernel", PartitionSpec("fsdp", "dp")),
-        ("mlp/down_proj/kernel", PartitionSpec("dp", "fsdp")),
-        ("mlp/up_proj/kernel", PartitionSpec("fsdp", "dp")),
+        ("mlp/gate_proj/kernel", PartitionSpec(("fsdp", "sp"), "tp")),
+        ("mlp/down_proj/kernel", PartitionSpec("tp", ("fsdp", "sp"))),
+        ("mlp/up_proj/kernel", PartitionSpec(("fsdp", "sp"), "tp")),
 
         ("input_layernorm/kernel", PartitionSpec(None)),
         ("post_attention_layernorm/kernel", PartitionSpec(None)),
 
         ("model/norm/kernel", PartitionSpec(None)),
-        ("lm_head/kernel", PartitionSpec("fsdp", "dp")),
+        ("lm_head/kernel", PartitionSpec(("fsdp", "sp"), "tp")),
         (".*", PartitionSpec(None)),
     ) if not fully_sharded_data_parallel else (
         ("model/embed_tokens/embedding", PartitionSpec(("fsdp", "sp"))),

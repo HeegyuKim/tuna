@@ -2,7 +2,7 @@ wandb online
 model="HuggingFaceH4/mistral-7b-sft-beta"
 
 python -m tuna.launcher.train_flax \
-    --mesh fsdp \
+    --mesh sp \
     --do_train \
     --task orpo \
     --padding max_length \
@@ -12,7 +12,7 @@ python -m tuna.launcher.train_flax \
     --packing False \
     --truncation \
     --truncation_side left \
-    --max_length=1024 \
+    --max_length=2048 \
     --model_name_or_path $model \
     --total_epochs 3 \
     --logging_steps 1 \

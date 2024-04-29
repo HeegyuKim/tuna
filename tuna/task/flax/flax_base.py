@@ -156,7 +156,7 @@ class FlaxLMTask(FlaxTask):
             import gc
             gc.collect()
 
-        self.model, self.params = flax_model, flax.core.freeze(params)
+            self.model, self.params = flax_model, flax.core.freeze(params)
 
     def _init_collator(self):
         self.collator = GenerativeLanguageModelCollator(
