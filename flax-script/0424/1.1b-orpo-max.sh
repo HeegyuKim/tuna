@@ -1,8 +1,8 @@
-wandb online
+wandb offline
 model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
 
 python -m tuna.launcher.train_flax \
-    --mesh fsdp \
+    --mesh sp \
     --do_train \
     --task orpo \
     --padding max_length \

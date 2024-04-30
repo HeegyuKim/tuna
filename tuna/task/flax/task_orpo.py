@@ -244,7 +244,6 @@ class ORPOTask(FlaxLMTask):
 
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                 self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
-                chosen_loss_mask, rejected_loss_mask
             )
             sft_loss, sft_accuracy = compute_sft_loss(
                 chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss

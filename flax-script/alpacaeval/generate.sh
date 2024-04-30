@@ -13,17 +13,22 @@ eval(){
         --input_path outputs/$model/alpacaeval.json
 }
 
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-1" "zephyr"
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-2" "zephyr"
-eval "heegyu/TinyLlama-1.1b-max-margin@epoch-3" "zephyr"
+## BASELINES (처음에 망함))
+# eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-51966 zephyr
+# eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-103932 zephyr
+# eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 zephyr
 
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-1" "zephyr"
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-2" "zephyr"
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-1" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-2" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-max-margin@epoch-3" "zephyr"
 
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-1" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-2" "zephyr"
+# eval "heegyu/TinyLlama-1.1b-feedback-tree-3-0422@epoch-3" "zephyr"
+
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
 
 # 얘네 망함
 # eval "heegyu/TinyLlama-1.1b-max-margin-0424-orpo@epoch-1" zephyr
@@ -34,10 +39,19 @@ eval "heegyu/TinyLlama-1.1b-feedback-all@epoch-3" zephyr
 # eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil@epoch-3" zephyr
 
 
-eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-51966 zephyr
-eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-103932 zephyr
-eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 zephyr
+# 0429 learning rate 조절실험
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-3" zephyr
 
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-feedback-tree-3-epoch3-distil-0427-chosen-only@epoch-3" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-3" zephyr
+
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-3" zephyr
+
+eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-1" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-2" zephyr
+eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-3" zephyr
