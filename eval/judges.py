@@ -1,4 +1,8 @@
 
+from llm_blender.pair_ranker.pairrm import DebertaV2PairRM
+from transformers import AutoTokenizer
+import torch
+
 
 class BaseJudge:
 
@@ -72,5 +76,53 @@ class PrometheusJudge:
         if reference is None:
             raise ValueError("Reference answer is required for PrometheusJudge")
         context, response = self.format_prompts(conversation)
+        return self.judge(context, response, reference)
+        
+
+
+class PairRMJudge(BaseJudge):
+    def __init__(self, device: str = "cuda:0", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pairrm = DebertaV2PairRM.from_pretrained("mightbe/Better-PairRM", device_map="cuda:0").eval().half()
+        self.tokenizer = AutoTokenizer.from_pretrained("mightbe/Better-PairRM")
+
+
+    def tokenize_pair(self, instruction, response, reference, source_max_length=2030, candidate_max_length=670):
+        ids = []
+        max_length = source_max_length + 2 * candidate_max_length
+        
+        source_prefix = "<|source|>"
+        cand1_prefix = "<|candidate1|>"
+        cand2_prefix = "<|candidate2|>"
+
+        source_ids = self.tokenizer.encode(source_prefix + instruction, max_length=source_max_length, truncation=True)
+        candidate_max_length = (max_length - len(source_ids)) // 2
+        candidate1_ids = self.tokenizer.encode(cand1_prefix + response, max_length=candidate_max_length, truncation=True)
+        candidate2_ids = self.tokenizer.encode(cand2_prefix + reference, max_length=candidate_max_length, truncation=True)
+        
+        ids.append(source_ids + candidate1_ids + candidate2_ids)
+
+        encodings = self.tokenizer.pad({"input_ids": ids}, return_tensors="pt", padding="max_length", max_length=max_length)
+        return encodings
+    
+    @torch.no_grad()
+    def judge(self, instruction, response, reference: str = None) -> dict:
+        if reference is None:
+            raise ValueError("Reference answer is required for PairRMJudge")
+        
+        encodings = self.tokenize_pair(instruction, response, reference)
+        encodings = {k:v.to(self.pairrm.device) for k,v in encodings.items()}
+        outputs = self.pairrm(**encodings)
+        return outputs.logits.tolist()[0]
+        # comparison_results = outputs.logits > 0
+        # print(logits)
+        # print(comparison_results)
+
+        
+    def judge_conversation(self, conversation: list[dict], reference: str = None) -> dict:
+        if len(conversation) > 2:
+            raise ValueError("PairRMJudge only supports a single-turn conversation")
+        
+        context, response = conversation[-2]['content'], conversation[-1]['content']
         return self.judge(context, response, reference)
         

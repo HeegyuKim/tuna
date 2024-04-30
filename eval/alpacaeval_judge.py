@@ -4,10 +4,10 @@ import os
 import fire
 import jsonlines
 from datasets import load_dataset
-from tuna.serve.flax_generator import FlaxHuggingfaceModel
+
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length
-from .judges import PrometheusJudge
+from .judges import PrometheusJudge, PairRMJudge
 
 
 def main(
@@ -30,8 +30,9 @@ def main(
     # load reference output
     if reference == "gpt-4":
         ref_split = "alpaca_eval_gpt4_baseline"
-    else:
+    else: # gpt-3
         ref_split = "alpaca_eval"
+
     reference_dataset = load_dataset("tatsu-lab/alpaca_eval", ref_split)["eval"]
     reference_map = {}
     for example in reference_dataset:
@@ -47,6 +48,7 @@ def main(
         print(f"Skipping {skip_length} examples")
 
     if "prometheus" in judge:
+        from tuna.serve.flax_generator import FlaxHuggingfaceModel
         model = FlaxHuggingfaceModel(
             judge,
             prompt_length=prompt_length,
@@ -54,6 +56,10 @@ def main(
             gen_args={"do_sample": False},
         )
         model = PrometheusJudge(model)
+    elif "pairrm" in judge:
+        model = PairRMJudge()
+    else:
+        raise ValueError(f"Unknown judge: {judge}")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
