@@ -133,6 +133,31 @@ class FeedbackCollectionKo(ChatDataSource):
         return {
             "conversations": convs
         }
+    
+@datasources("promtheus:heegyu/feedback-collection-ko-split")
+class FeedbackCollectionKo(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("heegyu/feedback-collection-ko-split", split=split)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = []
+        inst = item["instruction"]
+        inst = "\n".join([x.strip() for x in inst.split("\n")])
+
+        convs.append({
+            "role": "user",
+            "content": inst
+        })
+        convs.append({
+            "role": "assistant",
+            "content": item["output"]
+        })
+        return {
+            "conversations": convs
+        }
+        
 @datasources("llamaguard:MrBananaHuman/kor_ethical_question_answer")
 class KorEthicalQALlamaGuardDataSource(ChatDataSource):
 

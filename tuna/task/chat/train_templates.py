@@ -250,8 +250,6 @@ class LlamaGuardTemplate(BaseTrainTemplate):
     ASSISTANT_FORMAT = "{content}{eos}"
     GENERATION_PROMPT = ""
 
-
-
 if __name__ == "__main__":
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained("beomi/Llama-3-Open-Ko-8B")
