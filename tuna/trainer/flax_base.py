@@ -1,3 +1,4 @@
+
 from typing import List, Dict, Any, Optional, Iterable, Union
 from dataclasses import dataclass
 from tqdm.auto import tqdm
@@ -28,12 +29,15 @@ from transformers import (
     TrainingArguments,
 )
 from huggingface_hub import HfApi
+from ..model.flax.py_flax_utils import load_flax_weights_in_pytorch_model
 
 import fjformer
+from fjformer.xrapture import XRapTureConfig, XRapTure, LoraWeight
+import qax
 from fjformer import (
     match_partition_rules,
     make_shard_and_gather_fns,
-    with_sharding_constraint
+    with_sharding_constraint,
 )
 
 
@@ -53,6 +57,9 @@ class FlaxTrainingArguments(BaseTrainingArguments):
     mesh: str = "fsdp"
     fully_sharded: bool = False
     bf16_momentum: bool = False
+
+    use_lora: bool = False
+    lora_r: int = 8
 
 
 MESH_SHAPES = {
@@ -143,6 +150,33 @@ class FlaxBaseTrainer:
                 raise ValueError("total_steps must be provided for IterableDataset")
             return len(self.train_dataset) * self.args.total_epochs
 
+    def apply_lora_params(self, model, tx, params):
+        print("Applying LoRA!")
+
+        self.rapture = XRapTure(
+            XRapTureConfig(
+                lora_dim=8,
+                fully_fine_tune_parameters=["embed_tokens"],
+                lora_fine_tune_parameters=["q_proj", "v_proj", "k_proj", "o_proj"],
+                verbose=True
+            )
+        )
+        self.lora_modules = self.rapture.apply_lora(
+            module=model,
+            parameters=params,
+            tx=tx,
+        )
+
+        params = self.lora_modules.lora_parameters
+        if self.dtype == jnp.bfloat16:
+            params = self.task.model.to_bf16(params)
+        elif self.dtype == jnp.float16:
+            params = self.task.model.to_fp16(params)
+
+        self.task.params = params
+        self.task.use_lora = True
+        # self.task.model = self.lora_modules.lora_module
+
     def init_optimizer(self, total_steps):
         total_steps = total_steps // self.args.train_batch_size_per_device
 
@@ -165,29 +199,7 @@ class FlaxBaseTrainer:
         else:
             lr_warmup_steps = 0
 
-        # learning_rate_schedule = optax.warmup_cosine_decay_schedule(
-        #     init_value=0,
-        #     peak_value=self.args.learning_rate,
-        #     warmup_steps=lr_warmup_steps,
-        #     decay_steps=lr_decay_steps,
-        #     end_value=end_value
-        # )
-        # opt = optax.adamw(
-        #     learning_rate=learning_rate_schedule,
-        #     weight_decay=self.args.weight_decay,
-        #     b1=self.args.adam_beta1,
-        #     b2=self.args.adam_beta2,
-        #     mu_dtype=jnp.bfloat16 if self.args.bf16_momentum else jnp.float32,
-        # )
         gradient_accumulation_steps = self.args.train_total_batch_size // self.args.train_batch_size_per_device
-        # if gradient_accumulation_steps > 1:
-        #     opt = optax.MultiSteps(
-        #         opt, every_k_schedule=gradient_accumulation_steps,
-        #     )
-        # optimizer = optax.chain(
-        #     optax.clip_by_global_norm(self.args.gradient_clip),
-        #     opt
-        # )
         
         if self.args.optimizer == "adamw":
             extra_optimizer_kwargs = {
@@ -224,38 +236,6 @@ class FlaxBaseTrainer:
         self.optimizer = tx
         self.learning_rate_schedule = sc
 
-    # def create_sharded_functions(self):
-
-    #     def init_state():
-    #         params = self.task.init_weights()
-    #         if self.dtype == jnp.bfloat16:
-    #             params = self.task.model.to_bf16(params)
-    #         elif self.dtype == jnp.float16:
-    #             params = self.task.model.to_fp16(params)
-
-    #         state = TrainState.create(
-    #             apply_fn=None,
-    #             params=params,
-    #             tx=self.optimizer
-    #         )
-    #         return state
-
-        # def create_train_state(params):
-        #     state = TrainState.create(
-        #         apply_fn=None,
-        #         params=params,
-        #         tx=self.optimizer
-        #     )
-        #     return state
-        
-    #     state_shape = jax.eval_shape(init_state)
-    #     state_partition_spec = match_partition_rules(
-    #         get_partition_rules(self.task.model.config, self.args.fully_sharded),
-    #         state_shape
-    #     )
-
-    #     self.state_partition_spec = state_partition_spec
-
     def init_mesh(self):
         sharding_array = MESH_SHAPES[self.args.mesh]
         available_backends = len(jax.devices())
@@ -271,10 +251,19 @@ class FlaxBaseTrainer:
     def get_mesh_names():
         return "dp", "fsdp", "tp", "sp"
 
+    @qax.use_implicit_args
     def shard_params(self):
         self.init_mesh()
         self.task.init_model(self.dtype)
-        params=self.task.params
+        
+        with jax.default_device(jax.devices('cpu')[0]):
+            params=self.task.params
+
+            if self.args.use_lora:
+                self.apply_lora_params(self.task.model, self.optimizer, params)
+                params = self.task.params
+
+                self.optimizer = self.lora_modules.lora_tx
 
         def init_train_state():
             state = TrainState.create(
@@ -285,11 +274,20 @@ class FlaxBaseTrainer:
             return state
         
         def create_train_state(params):
-            state = TrainState.create(
-                apply_fn=None,
-                params=params,
-                tx=self.optimizer
-            )
+            if self.args.use_lora:
+                state = TrainState(
+                    step=0,
+                    apply_fn=None,
+                    params=params,
+                    tx=self.optimizer,
+                    opt_state=self.lora_modules.lora_opt_state
+                )
+            else:
+                state = TrainState.create(
+                    apply_fn=None,
+                    params=params,
+                    tx=self.optimizer
+                )
             return state
         
         state_shape = jax.eval_shape(init_train_state)
@@ -301,15 +299,28 @@ class FlaxBaseTrainer:
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
-            params = flax.traverse_util.flatten_dict(params)
-            shard_fns = flax.traverse_util.flatten_dict(shard_fns)
-            pbar = tqdm(params.keys())
-            for key in pbar:
-                key = tuple(key)
-                params[key] = shard_fns[key](params[key])
-                pbar.set_description("Sharding Params")
-            params = flax.traverse_util.unflatten_dict(params)
-            params = flax.core.freeze(params)
+            # params = flax.traverse_util.flatten_dict(params)
+            # shard_fns = flax.traverse_util.flatten_dict(shard_fns)
+
+            # print("params", params)
+            # print("shard_fns", shard_fns)
+
+            # pbar = tqdm(params.keys())
+            # for key in pbar:
+            #     key = tuple(key)
+            #     fn = shard_fns[key]
+            #     if isinstance(fn, LoraWeight):
+            #         params[key].w = fn.w(params[key].w)
+            #     else:
+            #         params[key] = shard_fns[key](params[key])
+            #     pbar.set_description("Sharding Params")
+            # params = flax.traverse_util.unflatten_dict(params)
+            # params = flax.core.freeze(params)
+            params = jax.tree_util.tree_map(
+                lambda f, x: f(x),
+                shard_fns,
+                params
+            )
 
             self.create_sharded_train_state = pjit(
                 create_train_state,
@@ -510,10 +521,16 @@ class FlaxBaseTrainer:
 
     def save_checkpoint_to_dir(self, folder_path, revision_name):
         state = self.sharded_state
+        if self.args.use_lora:
+            print("Merging LoRA parameters")
+            state = state.replace(
+                params=self.rapture.merge_parameters(state.params)
+            )
+
         with jax.default_device(jax.devices("cpu")[0]):
             model = self.task.model
             pt_model = transformers.AutoModelForCausalLM.from_config(model.config)
-            transformers.modeling_flax_pytorch_utils.load_flax_weights_in_pytorch_model(
+            load_flax_weights_in_pytorch_model(
                 pt_model, state.params
             )
 

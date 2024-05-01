@@ -1,3 +1,9 @@
+# promote_dtypes does not reconized the qax implicit array.
+# import flax.linen.dtypes
+# from ..model.flax.lora_util import promote_dtype_lora_compat
+# flax.linen.dtypes.promote_dtype = promote_dtype_lora_compat
+
+
 import torch
 from dataclasses import dataclass
 from typing import Optional

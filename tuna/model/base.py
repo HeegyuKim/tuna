@@ -63,7 +63,7 @@ class BaseModel:
     
     def apply_lora(self, args, model, targets=None):
         from peft import LoraConfig, TaskType, get_peft_model
-        from .lora_util import find_lora_targets
+        from .flax.lora_util import find_lora_targets
         targets = targets or find_lora_targets(model)
 
 

@@ -17,9 +17,11 @@ from fjformer.func.loss_func import (
 
 import transformers
 from datasets import IterableDataset
+import qax
 
 from ...common import Registry
 from ..dataset import NUM_PROC
+from ...model.flax.py_flax_utils import convert_pytorch_state_dict_to_flax
 
 flax_tasks = Registry("flax-tasks")
 
@@ -108,6 +110,7 @@ class FlaxLMTask(FlaxTask):
 
     def __init__(self, args) -> None:
         super().__init__(args)
+        self.use_lora = False
         self.init_tokenizer_collator()
 
     def init_tokenizer_collator(self):
@@ -149,7 +152,7 @@ class FlaxLMTask(FlaxTask):
             pt_state_dict = pt_model.state_dict()
 
             print("Converting Pytorch parameters to Flax")
-            params = transformers.modeling_flax_pytorch_utils.convert_pytorch_state_dict_to_flax(pt_state_dict, flax_model)
+            params = convert_pytorch_state_dict_to_flax(pt_state_dict, flax_model)
 
             if pt_model.config.tie_word_embeddings:
                 print("Tie word embeddings, delete lm_head from flax model!")
@@ -268,12 +271,14 @@ class FlaxLMTask(FlaxTask):
         label_smoothing_factor = self.args.label_smoothing_factor
         z_loss = self.args.z_loss
 
+        model_func = qax.use_implicit_args(self.model)
+
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
             def calculate_loss(params):
                 labels = batch.pop("labels")[:, 1:]
-                logits = self.model(params=params, **batch, return_dict=True).logits
+                logits = model_func(params=params, **batch, return_dict=True).logits
 
                 loss_normalizing_factor = (
                     SpecialLossNormalizingFactor.NUM_REAL_TARGET_TOKENS
