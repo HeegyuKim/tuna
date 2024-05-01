@@ -14,6 +14,7 @@ from fjformer.func.loss_func import (
     get_loss_normalizing_factor_and_weights,
     compute_weighted_cross_entropy_and_accuracy,
 )
+from fjformer.xrapture import use_implicit_args
 
 import transformers
 from datasets import IterableDataset
@@ -271,7 +272,7 @@ class FlaxLMTask(FlaxTask):
         label_smoothing_factor = self.args.label_smoothing_factor
         z_loss = self.args.z_loss
 
-        model_func = qax.use_implicit_args(self.model)
+        model_func = use_implicit_args(self.model)
 
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -330,11 +331,12 @@ class FlaxLMTask(FlaxTask):
         partition_spec = PartitionSpec(("dp", "fsdp"), "sp")
         label_smoothing_factor = self.args.label_smoothing_factor
         z_loss = self.args.z_loss
+        model_func = use_implicit_args(self.model)
 
         def eval_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
             labels = batch.pop("labels")[:, 1:]
-            logits = self.model(params=state.params, **batch, return_dict=True).logits
+            logits = model_func(params=state.params, **batch, return_dict=True).logits
             loss_normalizing_factor = (
                 SpecialLossNormalizingFactor.NUM_REAL_TARGET_TOKENS
             )

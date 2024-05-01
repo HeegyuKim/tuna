@@ -40,6 +40,7 @@ from fjformer import (
     with_sharding_constraint,
 )
 
+from fjformer.xrapture import use_implicit_args
 
 from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger
 from ..task.collator import DefaultCollator
@@ -251,7 +252,7 @@ class FlaxBaseTrainer:
     def get_mesh_names():
         return "dp", "fsdp", "tp", "sp"
 
-    @qax.use_implicit_args
+    @use_implicit_args
     def shard_params(self):
         self.init_mesh()
         self.task.init_model(self.dtype)
@@ -524,7 +525,7 @@ class FlaxBaseTrainer:
         if self.args.use_lora:
             print("Merging LoRA parameters")
             state = state.replace(
-                params=self.rapture.merge_parameters(state.params)
+                params=self.rapture.merge_parameters(state.params, False)
             )
 
         with jax.default_device(jax.devices("cpu")[0]):
