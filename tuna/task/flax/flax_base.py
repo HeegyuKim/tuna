@@ -18,7 +18,6 @@ from fjformer.xrapture import use_implicit_args
 
 import transformers
 from datasets import IterableDataset
-import qax
 
 from ...common import Registry
 from ..dataset import NUM_PROC

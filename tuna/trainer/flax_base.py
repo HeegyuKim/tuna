@@ -33,7 +33,6 @@ from ..model.flax.py_flax_utils import load_flax_weights_in_pytorch_model
 
 import fjformer
 from fjformer.xrapture import XRapTureConfig, XRapTure, LoraWeight
-import qax
 from fjformer import (
     match_partition_rules,
     make_shard_and_gather_fns,
@@ -300,23 +299,6 @@ class FlaxBaseTrainer:
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
-            # params = flax.traverse_util.flatten_dict(params)
-            # shard_fns = flax.traverse_util.flatten_dict(shard_fns)
-
-            # print("params", params)
-            # print("shard_fns", shard_fns)
-
-            # pbar = tqdm(params.keys())
-            # for key in pbar:
-            #     key = tuple(key)
-            #     fn = shard_fns[key]
-            #     if isinstance(fn, LoraWeight):
-            #         params[key].w = fn.w(params[key].w)
-            #     else:
-            #         params[key] = shard_fns[key](params[key])
-            #     pbar.set_description("Sharding Params")
-            # params = flax.traverse_util.unflatten_dict(params)
-            # params = flax.core.freeze(params)
             params = jax.tree_util.tree_map(
                 lambda f, x: f(x),
                 shard_fns,

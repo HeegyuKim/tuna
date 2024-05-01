@@ -12,6 +12,7 @@ import flax
 import optax
 from flax.training.train_state import TrainState
 import fjformer
+from fjformer.xrapture import use_implicit_args
 from fjformer import (
     match_partition_rules,
     make_shard_and_gather_fns,
@@ -33,12 +34,18 @@ class DPOTrainState(TrainState):
 @trainers.register("dpo")
 class FlaxDPOTrainer(FlaxBaseTrainer):
     
+    @use_implicit_args
     def shard_params(self):
         self.init_mesh()
         self.task.init_model(self.dtype)
         with jax.default_device(jax.devices("cpu")[0]):
             params=self.task.params
             ref_params = copy.deepcopy(params)
+            
+            if self.args.use_lora:
+                self.apply_lora_params(self.task.model, self.optimizer, params)
+                params = self.task.params
+                self.optimizer = self.lora_modules.lora_tx
 
         def init_train_state():
             state = DPOTrainState.create(
@@ -50,12 +57,22 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
             return state
         
         def create_train_state(params, ref_params):
-            state = DPOTrainState.create(
-                apply_fn=None,
-                params=params,
-                ref_params=ref_params,
-                tx=self.optimizer
-            )
+            if self.args.use_lora:
+                state = DPOTrainState(
+                    step=0,
+                    apply_fn=None,
+                    params=params,
+                    ref_params=ref_params,
+                    tx=self.optimizer,
+                    opt_state=self.lora_modules.lora_opt_state
+                )
+            else:
+                state = DPOTrainState.create(
+                    apply_fn=None,
+                    params=params,
+                    ref_params=ref_params,
+                    tx=self.optimizer
+                )
             return state
         
         state_shape = jax.eval_shape(init_train_state)
@@ -67,23 +84,23 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
-            def shard_params(params, shard_fns, desc="Sharding Params"):
-                params = flax.traverse_util.flatten_dict(params)
-                shard_fns = flax.traverse_util.flatten_dict(shard_fns)
-                pbar = tqdm(params.keys(), desc=desc)
-                for key in pbar:
-                    key = tuple(key)
-                    params[key] = shard_fns[key](params[key])
-                params = flax.traverse_util.unflatten_dict(params)
-                params = flax.core.freeze(params)
-                return params
 
-            params = shard_params(params, shard_fns)
-            ref_params = shard_params(ref_params, shard_fns, "Sharding Reference Params")
+            params = jax.tree_util.tree_map(
+                lambda f, x: f(x),
+                shard_fns,
+                params
+            )
+
+            ref_shard_fns, ref_gather_fns = make_shard_and_gather_fns(partition_specs.ref_params, self.dtype)
+            ref_params = jax.tree_util.tree_map(
+                lambda f, x: f(x),
+                ref_shard_fns,
+                ref_params
+            )
 
             self.create_sharded_train_state = pjit(
                 create_train_state,
-                in_shardings=(partition_specs.params, partition_specs.params),
+                in_shardings=(partition_specs.params, partition_specs.ref_params),
                 out_shardings=partition_specs,
                 donate_argnums=(0,)
             )

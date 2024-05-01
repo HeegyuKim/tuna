@@ -8,6 +8,7 @@ import jax, flax
 import jax.numpy as jnp
 
 from fjformer import with_sharding_constraint
+from fjformer.xrapture import use_implicit_args, LoraWeight
 from fjformer.func.loss_func import (
     cross_entropy_loss_and_accuracy,
     SpecialLossNormalizingFactor,
@@ -147,6 +148,9 @@ class DPOTask(FlaxLMTask):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.dpo_beta
 
+        model_func = use_implicit_args(self.model)
+        ref_model_func = self.model
+
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
@@ -160,13 +164,13 @@ class DPOTask(FlaxLMTask):
             rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
 
             ref_chosen_logps, ref_rejected_logps = get_model_batch_logps(
-                self.model, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
+                ref_model_func, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
                 chosen_loss_mask, rejected_loss_mask
             )
 
             def calculate_loss(params, ref_chosen_logps, ref_rejected_logps, beta):
                 policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
-                    self.model, params, chosen, rejected, chosen_labels, rejected_labels,
+                    model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
                 )
                 
@@ -198,7 +202,11 @@ class DPOTask(FlaxLMTask):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.dpo_beta
 
+        model_func = use_implicit_args(self.model)
+        ref_model_func = self.model
+
         def eval_step(state, batch):
+            batch = with_sharding_constraint(batch, partition_spec)
 
             chosen, rejected = batch["chosen"], batch["rejected"]
             chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
@@ -210,12 +218,12 @@ class DPOTask(FlaxLMTask):
             rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
 
             ref_chosen_logps, ref_rejected_logps = get_model_batch_logps(
-                self.model, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
+                ref_model_func, state.ref_params or state.params, chosen, rejected, chosen_labels, rejected_labels,
                 chosen_loss_mask, rejected_loss_mask
             )
 
             policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
-                self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
+                model_func, state.params, chosen, rejected, chosen_labels, rejected_labels,
                 chosen_loss_mask, rejected_loss_mask
             )
             
