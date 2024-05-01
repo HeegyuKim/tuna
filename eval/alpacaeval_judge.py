@@ -14,7 +14,7 @@ def main(
         input_path: str,
         output_path: str = None,
         reference: str = "gpt-4",
-        judge: str = "kaist-ai/prometheus-13b-v1.0",
+        judge: str = "prometheus-eval/prometheus-13b-v1.0",
         prompt_length: int = 3072,
         max_new_tokens: int = 1024,
         ):
