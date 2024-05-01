@@ -199,17 +199,24 @@ class DPOTask(FlaxLMTask):
         beta = self.args.dpo_beta
 
         def eval_step(state, batch):
-            batch = with_sharding_constraint(batch, partition_spec)
 
             chosen, rejected = batch["chosen"], batch["rejected"]
-            chosen_labels, rejected_labels = chosen.pop("labels"), rejected.pop("labels")
+            chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
+
+            chosen_loss_mask = chosen_labels >= 0 
+            rejected_loss_mask = rejected_labels >= 0
+
+            chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
+            rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
 
             ref_chosen_logps, ref_rejected_logps = get_model_batch_logps(
-                self.model, state.ref_params, chosen, rejected, chosen_labels, rejected_labels
+                self.model, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
+                chosen_loss_mask, rejected_loss_mask
             )
 
             policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
-                self.model, state.params, chosen, rejected, chosen_labels, rejected_labels
+                self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
+                chosen_loss_mask, rejected_loss_mask
             )
             
             losses, chosen_rewards, rejected_rewards = dpo_loss(

@@ -1,4 +1,4 @@
-wandb online
+wandb offline
 model="HuggingFaceH4/mistral-7b-sft-beta"
 
 python -m tuna.launcher.train_flax \
@@ -15,6 +15,7 @@ python -m tuna.launcher.train_flax \
     --truncation_side left \
     --max_length=2048 \
     --limit 1024 \
+    --gradient_checkpointing everything_saveable \
     --model_name_or_path $model \
     --total_epochs 3 \
     --logging_steps 128 \

@@ -139,18 +139,16 @@ class UltraFeedbackDataSource(DPODataSource):
         return load_dataset("heegyu/UltraFeedback-max-margin", split=split)
         
 
-@datasources("pushpdeep/UltraFeedback-paired")
-class UltraFeedbackPaired(DPODataSource):
+@datasources("dpo:heegyu/Ultrafeedback-split-dpo-max-margin")
+class UltraFeedback0430MaxMargin(DPODataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("pushpdeep/UltraFeedback-paired", split=split)
+        return load_dataset("heegyu/Ultrafeedback-split-dpo-max-margin", split=split)
     
     def map_conversations(self, item):
-        convs = [{'role': 'user', 'content': item['question']}]
-        chosen = item["response_j"]
-        rejected = item["response_k"]
+        convs = [{'role': 'user', 'content': item['instruction']}]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
         
         return {
             "conversations": convs,

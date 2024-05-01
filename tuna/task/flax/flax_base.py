@@ -57,6 +57,7 @@ def cross_entropy_loss_and_accuracy(logits, labels):
 class FlaxTaskArguments(TaskArguments):
     model_name_or_path: str = ""
     check_dataset: bool = True
+    gradient_checkpointing: str = ""
 
 class FlaxTask(BaseTask):
     ARG_CLASS = FlaxTaskArguments
@@ -132,6 +133,9 @@ class FlaxLMTask(FlaxTask):
 
         with jax.default_device(jax.devices('cpu')[0]):
             config = transformers.AutoConfig.from_pretrained(model_name, revision=revision)
+            if self.args.gradient_checkpointing:
+                config.gradient_checkpointing = self.args.gradient_checkpointing
+
             flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
                 config,
                 _do_init=True,

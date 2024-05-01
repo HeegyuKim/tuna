@@ -45,6 +45,7 @@ from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
 from .flax import optimizer_utils as opt_utils
 from ..common import Registry
+from .. import flax_model
 
 
 @dataclass
@@ -52,6 +53,7 @@ class FlaxTrainingArguments(BaseTrainingArguments):
     mesh: str = "fsdp"
     fully_sharded: bool = False
     bf16_momentum: bool = False
+
 
 MESH_SHAPES = {
     "fsdp": (1, -1, 1, 1),
