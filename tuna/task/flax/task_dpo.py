@@ -160,8 +160,11 @@ class DPOTask(FlaxLMTask):
             chosen_loss_mask = chosen_labels >= 0 
             rejected_loss_mask = rejected_labels >= 0
 
-            chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
-            rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
+            # chosen_labels = jnp.where(chosen_loss_mask, 0, chosen_labels)
+            # rejected_labels = jnp.where(rejected_loss_mask, 0, rejected_labels)
+            chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
+            rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
+
 
             ref_chosen_logps, ref_rejected_logps = get_model_batch_logps(
                 ref_model_func, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
