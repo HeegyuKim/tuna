@@ -58,7 +58,14 @@ def get_batch_logps(
     else:
         return (per_token_logps * loss_mask).sum(-1)
     
-def get_model_batch_logps(model, params, chosen_input, rejected_input, chosen_labels, rejected_labels, chosen_loss_mask, rejected_loss_mask):
+def get_model_batch_logps(model, params, inputs, labels, loss_mask):
+    output = model(params=params, **inputs)
+    logits = output.logits[:, :-1]
+    logprobs = get_batch_logps(logits, labels, loss_mask)
+
+    return logprobs
+
+def get_model_batch_logps_pair(model, params, chosen_input, rejected_input, chosen_labels, rejected_labels, chosen_loss_mask, rejected_loss_mask):
 
     chosen_output = model(params=params, **chosen_input)
     chosen = chosen_output.logits[:, :-1]
@@ -87,6 +94,24 @@ def dpo_loss(
     losses = -jax.nn.log_sigmoid(chosen_rewards - rejected_rewards)
 
     return losses, chosen_rewards, rejected_rewards
+    
+def dpo_loss_v2(
+    policy_chosen_logps: chex.Array,
+    policy_rejected_logps: chex.Array,
+    reference_chosen_logps: chex.Array,
+    reference_rejected_logps: chex.Array,
+    policy_rejected_improved_logps: chex.Array,
+    reference_chosen_declined_logps: chex.Array,
+    beta: float,
+    gamma: float
+):
+    chosen_rewards = beta * (policy_chosen_logps - reference_chosen_logps)
+    rejected_rewards = beta * (policy_rejected_logps - reference_rejected_logps)
+    rejected_improved_rewards = beta * (policy_rejected_improved_logps - reference_chosen_declined_logps)
+
+    losses = -jax.nn.log_sigmoid(gamma * chosen_rewards + (1 - gamma) * rejected_improved_rewards - rejected_rewards)
+
+    return losses, chosen_rewards, rejected_rewards, rejected_improved_rewards
     
 
 @dataclass
@@ -190,6 +215,7 @@ class DCOTask(FlaxLMTask):
     def create_train_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.dpo_beta
+        gamma = self.args.dco_gamma
 
         model_func = use_implicit_args(self.model)
         ref_model_func = self.model
@@ -218,17 +244,17 @@ class DCOTask(FlaxLMTask):
             rejected_improved_labels = jnp.where(rejected_improved_loss_mask, rejected_improved_labels, 0)
 
 
-            ref_chosen_logps, ref_rejected_logps = get_model_batch_logps(
+            ref_chosen_logps, ref_rejected_logps = get_model_batch_logps_pair(
                 ref_model_func, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
                 chosen_loss_mask, rejected_loss_mask
             )
-            ref_chosen_logps_declined, ref_rejected_logps_improved = get_model_batch_logps(
+            ref_chosen_logps_declined, ref_rejected_logps_improved = get_model_batch_logps_pair(
                 ref_model_func, state.ref_params, chosen_declined, rejected_improved, chosen_declined_labels, rejected_improved_labels,
                 chosen_declined_loss_mask, rejected_improved_loss_mask
             )
 
             def calculate_loss(params, ref_chosen_logps, ref_rejected_logps, beta):
-                policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
+                policy_chosen_logps, policy_rejected_logps = get_model_batch_logps_pair(
                     model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
                 )
@@ -241,7 +267,7 @@ class DCOTask(FlaxLMTask):
                     beta
                 )
 
-                policy_chosen_declined_logps, policy_rejected_improved_logps = get_model_batch_logps(
+                policy_chosen_declined_logps, policy_rejected_improved_logps = get_model_batch_logps_pair(
                     model_func, params, chosen_declined, rejected_improved, chosen_declined_labels, rejected_improved_labels,
                     chosen_declined_loss_mask, rejected_improved_loss_mask
                 )
@@ -254,10 +280,12 @@ class DCOTask(FlaxLMTask):
                     beta
                 )
 
-                loss = losses.mean() + losses_declined.mean()
+                losses, losses_declined = losses.mean(), losses_declined.mean()
+                loss = losses + gamma * losses_declined
                 accuracy = (chosen_rewards > rejected_rewards).mean()
 
-                return loss, dict(loss=loss, accuracy=accuracy, chosen_rewards=chosen_rewards, rejected_rewards=rejected_rewards,
+                return loss, dict(loss=loss, losses_decline=losses_declined,
+                                  accuracy=accuracy, chosen_rewards=chosen_rewards, rejected_rewards=rejected_rewards,
                                   chosen_rewards_declined=chosen_rewards_declined, rejected_rewards_improved=rejected_rewards_improved)
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
@@ -321,3 +349,97 @@ class DCOTask(FlaxLMTask):
             donate_argnums=(0, 0),
         )
     
+
+
+@flax_tasks.register("dco-v2")
+class DCOTaskV2(DCOTask):
+    def create_train_step(self, pjit_func, state_ps, PS):
+        partition_spec = PS(("dp", "fsdp"), "sp")
+        beta = self.args.dpo_beta
+        gamma = self.args.dco_gamma
+
+        model_func = use_implicit_args(self.model)
+        ref_model_func = self.model
+
+        def train_step(state, batch):
+            batch = with_sharding_constraint(batch, partition_spec)
+
+            # Preference
+            chosen, rejected = batch["chosen"], batch["rejected"]
+            chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
+
+            chosen_loss_mask = chosen_labels >= 0 
+            rejected_loss_mask = rejected_labels >= 0
+
+            chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
+            rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
+
+            # Critique
+            chosen_declined, rejected_improved = batch["chosen_declined"], batch["rejected_improved"]
+            chosen_declined_labels, rejected_improved_labels = chosen_declined.pop("labels")[:, 1:], rejected_improved.pop("labels")[:, 1:]
+
+            chosen_declined_loss_mask = chosen_declined_labels >= 0
+            rejected_improved_loss_mask = rejected_improved_labels >= 0
+
+            chosen_declined_labels = jnp.where(chosen_declined_loss_mask, chosen_declined_labels, 0)
+            rejected_improved_labels = jnp.where(rejected_improved_loss_mask, rejected_improved_labels, 0)
+
+
+            ref_chosen_logps, ref_rejected_logps = get_model_batch_logps_pair(
+                ref_model_func, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
+                chosen_loss_mask, rejected_loss_mask
+            )
+            ref_rejected_logps_improved = get_model_batch_logps(
+                ref_model_func, state.ref_params, 
+                rejected_improved, 
+                rejected_improved_labels,
+                rejected_improved_loss_mask
+            )
+
+            def calculate_loss(params, ref_chosen_logps, ref_rejected_logps, beta):
+                policy_chosen_logps, policy_rejected_logps = get_model_batch_logps_pair(
+                    model_func, params, chosen, rejected, chosen_labels, rejected_labels,
+                    chosen_loss_mask, rejected_loss_mask
+                )
+                
+                ref_chosen_logps, ref_rejected_logps = get_model_batch_logps_pair(
+                    ref_model_func, state.ref_params or state.params, chosen, rejected, chosen_labels, rejected_labels,
+                    chosen_loss_mask, rejected_loss_mask
+                )
+
+                policy_rejected_logps_improved = get_model_batch_logps(
+                    model_func, state.params, 
+                    rejected_improved, 
+                    rejected_improved_labels,
+                    rejected_improved_loss_mask
+                )
+
+                losses, chosen_rewards, rejected_rewards, rejected_rewards_improved = dpo_loss_v2(
+                    policy_chosen_logps,
+                    policy_rejected_logps,
+                    ref_chosen_logps, 
+                    ref_rejected_logps,
+                    policy_rejected_logps_improved,
+                    ref_rejected_logps_improved,
+                    beta,
+                    gamma
+                )
+
+                loss = losses.mean()
+                accuracy = (chosen_rewards > rejected_rewards).mean()
+
+                return loss, dict(loss=loss,
+                                  accuracy=accuracy, chosen_rewards=chosen_rewards, rejected_rewards=rejected_rewards,
+                                  rejected_rewards_improved=rejected_rewards_improved)
+            
+            grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
+            (loss, aux_output), grad = grad_fn(state.params, ref_chosen_logps, ref_rejected_logps, beta)
+            state = state.apply_gradients(grads=grad)
+            return state, aux_output
+
+        return pjit_func(
+            train_step,
+            in_shardings=(state_ps, PS()),
+            out_shardings=(state_ps, PS()),
+            donate_argnums=(0, 0),
+        )
