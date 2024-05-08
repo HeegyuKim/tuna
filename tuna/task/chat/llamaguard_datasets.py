@@ -110,7 +110,7 @@ class PKUSafeRLHFKoLlamaGuardDataSource(ChatDataSource):
         )
     
 
-@datasources("promtheus:nayohan/feedback-collection-ko")
+@datasources("prometheus:nayohan/feedback-collection-ko")
 class FeedbackCollectionKo(ChatDataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
@@ -134,7 +134,7 @@ class FeedbackCollectionKo(ChatDataSource):
             "conversations": convs
         }
     
-@datasources("promtheus:heegyu/feedback-collection-ko-split")
+@datasources("prometheus:heegyu/feedback-collection-ko-split")
 class FeedbackCollectionKo(ChatDataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
@@ -145,6 +145,10 @@ class FeedbackCollectionKo(ChatDataSource):
         convs = []
         inst = item["instruction"]
         inst = "\n".join([x.strip() for x in inst.split("\n")])
+        output = item["output"].strip()
+        if "[RESULT]" in output:
+            output, score = output.split("[RESULT]")
+            output = f"{output.strip()} [RESULT] {score.strip()}"
 
         convs.append({
             "role": "user",
@@ -152,8 +156,57 @@ class FeedbackCollectionKo(ChatDataSource):
         })
         convs.append({
             "role": "assistant",
-            "content": item["output"]
+            "content": output
         })
+        return {
+            "conversations": convs
+        }
+
+PROMETHEUS_SYSTEM="""An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing a evaluation criteria are given.
+1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: \"Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\"
+4. Please do not generate any other opening, closing, and explanations."""
+PROMETHEUS_FORMAT_INSTRUCTION = """###The instruction to evaluate:
+{instruction}
+
+###Response to evaluate:
+{response}
+
+###Reference Answer (Score 5):
+{reference}
+
+###Score Rubrics:
+[{criteria}]
+Score 1: {score1}
+Score 2: {score2}
+Score 3: {score3}
+Score 4: {score4}
+Score 5: {score5}"""
+PROMETHEUS_FORMAT_RESPONSE = "Feedback: {feedback} [RESULT] {score}"
+
+@datasources("prometheus:heegyu/K2-Feedback-splited")
+class FeedbackCollectionKo(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("heegyu/K2-Feedback-splited", split=split)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = [
+            {
+                "role": "system",
+                "content": PROMETHEUS_SYSTEM
+            },
+            {
+                "role": "user",
+                "content": PROMETHEUS_FORMAT_INSTRUCTION.format(**item)
+            },
+            {
+                "role": "assistant",
+                "content": PROMETHEUS_FORMAT_RESPONSE.format(**item)
+            },
+        ]
         return {
             "conversations": convs
         }

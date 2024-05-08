@@ -104,6 +104,19 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}{eos}"
     FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}"
 
+@train_templates.register("eeve")
+class EEVETemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "yanolja/EEVE-Korean-Instruct-10.8B-v1.0",
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = None
+
+    SYSTEM_FORMAT = "{content}{eos}"
+    USER_FORMAT = "Human: {content}"
+    ASSISTANT_FORMAT = "Assistant:\n{content}{eos}"
+    GENERATION_PROMPT = "Assistant:"
+
 
 @train_templates.register("llama")
 class LlamaTemplate(BaseTrainTemplate):
@@ -240,11 +253,9 @@ class VisionGemmaTemplate(BaseTrainTemplate):
     FUNCTION_CALLING_FORMAT = "<start_of_turn>function-call\n{content}<eos>\n"
     FUNCTION_RESPONSE_FORMAT = "<start_of_turn>function-response\n{content}<eos>\n"
 
-@train_templates.register("llamaguard")
-class LlamaGuardTemplate(BaseTrainTemplate):
-    # for the first user message without system instruction (\eg Llama-2)
+@train_templates.register("no")
+class NoTemplate(BaseTrainTemplate):
     INITIAL_USER_FORMAT = "{bos}{content}"
-
     SYSTEM_FORMAT = "{bos}{content}"
     USER_FORMAT = "{content}"
     ASSISTANT_FORMAT = "{content}{eos}"
