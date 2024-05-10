@@ -6,7 +6,6 @@ import jsonlines
 from tuna.serve.flax_generator import FlaxHuggingfaceModel
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length
-from instruction_following_eval import default_examples
 
 
 mt_bench_temperature_config = {

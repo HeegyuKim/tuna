@@ -109,7 +109,7 @@ def dpo_loss_v2(
     rejected_rewards = beta * (policy_rejected_logps - reference_rejected_logps)
     rejected_improved_rewards = beta * (policy_rejected_improved_logps - reference_chosen_declined_logps)
 
-    losses = -jax.nn.log_sigmoid(gamma * chosen_rewards + (1 - gamma) * rejected_improved_rewards - rejected_rewards)
+    losses = -jax.nn.log_sigmoid(chosen_rewards + gamma * rejected_improved_rewards - rejected_rewards)
 
     return losses, chosen_rewards, rejected_rewards, rejected_improved_rewards
     
@@ -422,7 +422,7 @@ class DCOTaskV2(DCOTask):
                     model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
                 )
-                
+
                 policy_rejected_logps_improved = get_model_batch_logps(
                     model_func, state.params, 
                     rejected_improved, 

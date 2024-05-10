@@ -11,7 +11,7 @@ fi
 
 train() {
     lr=$1
-    name="0507-DCO-v3-1.1b-max-margin-gamma$gamma-$lr"
+    name="0509-DCO-v2-1.1b-max-margin-gamma$gamma-$lr"
     
     python -m tuna.launcher.train_flax \
         --mesh sp \
