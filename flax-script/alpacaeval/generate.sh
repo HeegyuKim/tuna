@@ -16,7 +16,7 @@ eval(){
 ## BASELINES (처음에 망함))
 # eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-51966 zephyr
 # eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-103932 zephyr
-# eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 zephyr
+eval heegyu/TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T-tinyllama-1.1b-sft@steps-155897 zephyr
 
 # eval "heegyu/TinyLlama-1.1b-max-margin@epoch-1" "zephyr"
 # eval "heegyu/TinyLlama-1.1b-max-margin@epoch-2" "zephyr"
@@ -40,18 +40,18 @@ eval(){
 
 
 # 0429 learning rate 조절실험
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-2e-5@epoch-3" zephyr
 
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-1e-5@epoch-3" zephyr
 
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0429-5e-6@epoch-3" zephyr
 
-eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-1" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-2" zephyr
-eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-3" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-1" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-2" zephyr
+# eval "heegyu/TinyLlama-1.1b-max-margin-0427-orpo@epoch-3" zephyr

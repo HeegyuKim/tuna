@@ -1,5 +1,4 @@
 
-from llm_blender.pair_ranker.pairrm import DebertaV2PairRM
 from transformers import AutoTokenizer
 import torch
 
@@ -83,6 +82,7 @@ class PrometheusJudge:
 class PairRMJudge(BaseJudge):
     def __init__(self, device: str = "cuda:0", *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from llm_blender.pair_ranker.pairrm import DebertaV2PairRM
         self.pairrm = DebertaV2PairRM.from_pretrained("mightbe/Better-PairRM", device_map="cuda:0").eval().half()
         self.tokenizer = AutoTokenizer.from_pretrained("mightbe/Better-PairRM")
 

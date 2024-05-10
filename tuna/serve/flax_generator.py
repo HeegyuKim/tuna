@@ -237,7 +237,8 @@ class FlaxHuggingfaceModel:
             )
 
         output = self.tokenizer.decode(predicted_token[0], skip_special_tokens=True)
-        print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False))
+        print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False).replace(self.tokenizer.pad_token, ""))
+        print(output)
         return output
 
     def generate(self,
