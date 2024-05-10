@@ -55,6 +55,7 @@ class BaseTrainingArguments():
     output_dir: Optional[str] = "./checkpoint"
     push_to_hub: bool = False
     push_to_hub_id: Optional[str] = None
+    revision_prefix: Optional[str] = None
 
     def setup_logger(self):
         if self.config.logger == "wandb":

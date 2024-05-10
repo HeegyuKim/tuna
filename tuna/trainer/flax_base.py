@@ -529,6 +529,9 @@ class FlaxBaseTrainer:
                     name = api.whoami()['name']
                     repo_id = f"{name}/{repo_id}"
 
+                if self.args.revision_prefix:
+                    revision_name = self.args.revision_prefix + revision_name
+                    
                 print(f"Start uploading to huggingface model hub {repo_id}:{revision_name}")
                 api.create_repo(repo_id, private=True, repo_type="model", exist_ok=True)
                 api.create_branch(repo_id, branch=revision_name)
