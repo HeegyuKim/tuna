@@ -75,6 +75,9 @@ class FlaxHuggingfaceModel:
 
         with jax.default_device(jax.devices("cpu")[0]):
             config = transformers.AutoConfig.from_pretrained(model_name, revision=revision)
+            if isinstance(config, transformers.MistralConfig):
+                config.sliding_window=4096
+
             flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
                 config,
                 _do_init=True,
