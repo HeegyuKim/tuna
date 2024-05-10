@@ -6,6 +6,7 @@ model="alignment-handbook/zephyr-7b-sft-full"
 train() {
     dataset=$1
     lr=$2
+    beta=$3
     
     python -m tuna.launcher.train_flax \
         --mesh sp \
@@ -14,14 +15,15 @@ train() {
         --trainer dpo \
         --padding max_length \
         --project "DDFO-DPO" \
-        --run_name "0504-mistral-7b-sft-beta-$dataset-$lr" \
+        --dpo_beta $beta \
+        --run_name "0507-zephyr-7b-sft-full-$dataset-$lr-b$beta" \
         --dataset="dpo:heegyu/UltraFeedback-$dataset" \
         --packing False \
         --truncation \
         --max_length=2048 \
         --use_lora \
         --model_name_or_path $model \
-        --total_epochs 3 \
+        --total_epochs 1 \
         --learning_rate $lr \
         --last_learning_rate_ratio 0.1 \
         --lr_warmup_ratio 0.1 \
@@ -34,7 +36,6 @@ train() {
         --output_dir ""
 }
 
-train "max-margin" 5e-5
-train "max-margin" 1e-5
-train "feedback-tree-3" 5e-5
-train "feedback-tree-3" 1e-5
+for beta in 0.01 0.1 0.5; do
+    train "max-margin" 1e-4 $beta
+done

@@ -7,7 +7,7 @@ train() {
     beta=$2
 
     python -m tuna.launcher.train_flax \
-        --mesh fsdp \
+        --mesh sp \
         --do_train \
         --task orpo \
         --padding max_length \
