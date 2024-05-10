@@ -112,8 +112,11 @@ def main(
                                     "role": "user",
                                     "content": example['prompt'][1]
                                 },
+                                {
+                                    "role": "assistant",
+                                    "content": example['outputs'][1],
+                                },
                             ],
-                            example['outputs'][1],
                             reference=reference[1] if reference else None,
                             rubric=rubric
                             )
