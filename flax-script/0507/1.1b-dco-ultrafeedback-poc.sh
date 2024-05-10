@@ -11,12 +11,12 @@ fi
 
 train() {
     lr=$1
-    name="0507-DCO-v2-1.1b-max-margin-gamma$gamma-$lr"
+    name="0507-DCO-v3-1.1b-max-margin-gamma$gamma-$lr"
     
     python -m tuna.launcher.train_flax \
         --mesh sp \
         --do_train \
-        --task dco-v2 \
+        --task dco-v3 \
         --trainer dpo \
         --padding max_length \
         --project "DDFO-DCO" \
@@ -26,7 +26,7 @@ train() {
         --truncation \
         --max_length=2048 \
         --model_name_or_path $model \
-        --total_epochs 3 \
+        --total_epochs 1 \
         --learning_rate $lr \
         --last_learning_rate_ratio 0.1 \
         --lr_warmup_ratio 0.1 \
