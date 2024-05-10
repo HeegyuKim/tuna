@@ -3,34 +3,35 @@ import datasets
 import os
 import fire
 import jsonlines
+from glob import glob
 from datasets import load_dataset
+from typing import Union
 
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length
 from .judges import PrometheusJudge, PairRMJudge
-from tuna.serve.flax_generator import FlaxHuggingfaceModel
+from tuna.serve.flax_generator import FlaxHuggingfaceModel, FlaxAPI
 
 mt_bench_rubrics = ["helpfulness", "reasoning", "honesty", "factual_validity"]
 
 def main(
-        input_path: str,
+        input_files: Union[list, str],
         dataset: str,
-        output_path: str = None,
         reference: str = "gpt-4",
         judge: str = "prometheus-eval/prometheus-7b-v2.0",
         prompt_length: int = 3072,
         max_new_tokens: int = 1024,
         ):
 
-    if output_path is None:
-        input_filename = os.path.basename(input_path)
-        judge_name = judge.split("/", 1)[-1]
-        output_path = os.path.join(os.path.dirname(input_path), judge_name, input_filename)
+    model = None
+    judge_name = judge.split("/")[-1]
+
+    if isinstance(input_files, str):
+        input_files = [input_files]
 
     # load input data
-    eval_set = list(jsonlines.open(input_path))
 
-    if dataset == "alpacaeval":
+    if dataset == "alpaca-eval":
         # load reference output
         if reference == "gpt-4":
             ref_split = "alpaca_eval_gpt4_baseline"
@@ -43,69 +44,86 @@ def main(
             reference_map[example["instruction"]] = example["output"]
 
 
-    # skip examples that have already been processed
-    skip_length = estimate_skip_length(output_path)
-    if skip_length == len(eval_set):
-        print(f"Already evaluated. skip this model {judge}")
-        return
-    if skip_length > 0:
-        print(f"Skipping {skip_length} examples")
+    for input_path in input_files:
+        input_filename = os.path.basename(input_path)
+        output_path = os.path.join(os.path.dirname(input_path), judge_name, input_filename)
 
-    model = FlaxHuggingfaceModel(
-        judge,
-        prompt_length=prompt_length,
-        max_new_tokens=max_new_tokens,
-        gen_args={"do_sample": False},
-    )
-    model = PrometheusJudge(model)
+        eval_set = list(jsonlines.open(input_path))
+        # skip examples that have already been processed
+        skip_length = estimate_skip_length(output_path)
+        if skip_length == len(eval_set):
+            print(f"Already evaluated. skip this model {judge}")
+            return
+        if skip_length > 0:
+            print(f"Skipping {skip_length} examples")
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        if model is None:
+            if judge.startswith("http://") or judge.startswith("https://"):
+                host = "/".join(judge.split("/")[:-1])
+                print(f"Connecting {host}")
+                model = FlaxAPI(host)
+            else:
+                model = FlaxHuggingfaceModel(
+                    judge,
+                    prompt_length=prompt_length,
+                    max_new_tokens=max_new_tokens,
+                    gen_args={"do_sample": False},
+                )
+            model = PrometheusJudge(model)
 
-    # judge examples
-    with jsonlines.open(output_path, "a") as f:
-        for example in tqdm(eval_set[skip_length:], desc=f"Judge {output_path}"):
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            if dataset == "alpacaeval":
-                example["judge"] = model.judge(
-                    example['instruction'],
-                    example['output'],
-                    reference_map[example['instruction']],
-                    )
-            elif dataset == "mt-bench":
-                reference = example['reference']
-                judge1, judge2 = {}, {}
+        if os.path.exists(output_path) and not os.access(output_path, os.W_OK):
+            print(f"File '{output_path}' is not writable. (Maybe it is evaluating in the other process)") 
+            continue
 
-                for rubric in mt_bench_rubrics:
-                    judge1[rubric] = model.judge(
-                        example['prompt'][0],
-                        example['outputs'][0],
-                        reference=reference[0] if reference else None,
-                        rubric=rubric
+        # judge examples
+        with jsonlines.open(output_path, "a") as f:
+            for example in tqdm(eval_set[skip_length:], desc=f"Judge {output_path}"):
+
+                if dataset == "alpaca-eval":
+                    example["judge"] = model.judge(
+                        example['instruction'],
+                        example['output'],
+                        reference_map[example['instruction']],
                         )
-                    judge2[rubric] = model.judge_conversation(
-                        [
-                            {
-                                "role": "user",
-                                "content": example['prompt'][0]
-                            },
-                            {
-                                "role": "assistant",
-                                "content": example['outputs'][0]
-                            },
-                            {
-                                "role": "user",
-                                "content": example['prompt'][1]
-                            },
-                        ],
-                        example['outputs'][1],
-                        reference=reference[1] if reference else None,
-                        rubric=rubric
-                        )
-                example["judge1"] = judge1
-                example["judge2"] = judge2
+                elif dataset == "mt-bench":
+                    reference = example['reference']
+                    judge1, judge2 = {}, {}
 
-            example["judge_model"] = judge
-            f.write(example)
+                    for rubric in mt_bench_rubrics:
+                        judge1[rubric] = model.judge(
+                            example['prompt'][0],
+                            example['outputs'][0],
+                            reference=reference[0] if reference else None,
+                            rubric=rubric
+                            )
+                        judge2[rubric] = model.judge_conversation(
+                            [
+                                {
+                                    "role": "user",
+                                    "content": example['prompt'][0]
+                                },
+                                {
+                                    "role": "assistant",
+                                    "content": example['outputs'][0]
+                                },
+                                {
+                                    "role": "user",
+                                    "content": example['prompt'][1]
+                                },
+                            ],
+                            example['outputs'][1],
+                            reference=reference[1] if reference else None,
+                            rubric=rubric
+                            )
+                    example["judge1"] = judge1
+                    example["judge2"] = judge2
+                else:
+                    raise Exception(f"Unknown dataset: {dataset}")
+
+                example["judge_model"] = judge
+                f.write(example)
 
 if __name__ == "__main__":
     fire.Fire(main)

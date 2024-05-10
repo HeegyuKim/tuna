@@ -30,7 +30,7 @@ class PrometheusJudge:
     def judge(self, instruction, response, reference: str = None, rubric: str = "helpfulness") -> dict:
         include_reference = True if reference else False
         rubric = load_rubric(rubric, "absolute")
-        prompt = get_prompt_template("absolute", include_reference).format(instruction=instruction, response=response, reference=reference, rubric=rubric)
+        prompt = get_prompt_template("absolute", include_reference).format(instruction=instruction, response=response, reference_answer=reference, rubric=rubric)
 
         critic = self.model.generate(ABS_SYSTEM_PROMPT + "\n\n" + prompt, greedy=True)
 

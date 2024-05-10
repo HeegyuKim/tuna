@@ -25,7 +25,8 @@ def get_prompt_dataset(dataset: str):
     if dataset == "alpaca-eval":
         return datasets.load_dataset("tatsu-lab/alpaca_eval", "alpaca_eval")["eval"]
     elif dataset == "ifeval":
-        return default_examples()
+        # return default_examples()
+        return datasets.load_dataset("HuggingFaceH4/ifeval", split="train")
     elif dataset == "mt-bench":
         return datasets.load_dataset("HuggingFaceH4/mt_bench_prompts", split="train")
     else:
@@ -53,6 +54,8 @@ def main(
 
     if dataset == "all":
         dataset = ["alpaca-eval", "mt-bench", "ifeval"]
+    else:
+        dataset = dataset.split(",")
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)
