@@ -239,3 +239,101 @@ class KorEthicalQALlamaGuardDataSource(ChatDataSource):
             ]
         )
     
+PROMPT_GUARD_INST=""""You are a safety detector to detect harmful content. Look at the prompt and classify it into one of two categories: Safe and Unsafe.
+Before classifying, say what you think first, explain your reasoning process as in the example below. The classification result should be in the brackets, such as [[safe]], [[unsafe]] or [[caution]].
+
+[Instruction]
+{prompt}
+[End of Instruction]"""
+PROMPT_GUARD_COT_RESP="""[Thought]
+{thought} 
+My conclusion is [[{label}]]
+[End of Thought]"""
+PROMPT_GUARD_RESP="[[{label}]]"
+
+@datasources("llamaguard:heegyu/prompt_safety_6k_cot")
+class PromptSafety6kCoT(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/prompt_safety_6k", split=split)
+        return ds
+    
+    def map_conversations(self, item):
+        return dict(
+            conversations=[
+                {
+                    "role": "user",
+                    "content": PROMPT_GUARD_INST.format(**item)
+                },
+                {
+                    "role": "assistant",
+                    "content": PROMPT_GUARD_COT_RESP.format(**item)
+                }
+            ]
+        )
+
+@datasources("llamaguard:heegyu/prompt_safety_6k")
+class PromptSafety6k(PromptSafety6kCoT):
+
+    def map_conversations(self, item):
+        return dict(
+            conversations=[
+                {
+                    "role": "user",
+                    "content": PROMPT_GUARD_INST.format(**item)
+                },
+                {
+                    "role": "assistant",
+                    "content": PROMPT_GUARD_RESP.format(**item)
+                }
+            ]
+        )
+
+NEW_PROMPT_GUARD_COT_RESP="""[Thought]
+{cot} 
+My conclusion is [[{prompt_label}]]
+[End of Thought]"""
+NEW_PROMPT_GUARD_RESP="[[{prompt_label}]]"
+
+NEW_PROMPT_GUARD_DATASETS = ["iknow-lab/GTA3-promptguard-v0507"]
+for dataset in NEW_PROMPT_GUARD_DATASETS:
+    @datasources(f"llamaguard-cot:{dataset}")
+    class NewPromptGuardCot(ChatDataSource):
+
+        def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+            if split != "train":
+                return None
+            ds = load_dataset(dataset, split=split)
+            return ds
+
+        def map_conversations(self, item):
+            return dict(
+                conversations=[
+                    {
+                        "role": "user",
+                        "content": PROMPT_GUARD_INST.format(**item)
+                    },
+                    {
+                        "role": "assistant",
+                        "content": NEW_PROMPT_GUARD_COT_RESP.format(**item)
+                    }
+                ]
+            )
+    
+    @datasources(f"llamaguard:{dataset}")
+    class NewPromptGuard(NewPromptGuardCot):
+        def map_conversations(self, item):
+            return dict(
+                conversations=[
+                    {
+                        "role": "user",
+                        "content": PROMPT_GUARD_INST.format(**item)
+                    },
+                    {
+                        "role": "assistant",
+                        "content": NEW_PROMPT_GUARD_RESP.format(**item)
+                    }
+                ]
+            )

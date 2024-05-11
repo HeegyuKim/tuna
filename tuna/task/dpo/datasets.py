@@ -155,49 +155,32 @@ class UltraFeedback0430MaxMargin(DPODataSource):
             "chosen": chosen,
             "rejected": rejected
         }
-    
-class DCODataSource(DPODataSource):
-
-    def load(self, args: DatasetArguments, split: str) -> Dataset:
-        ds = self.load_dataset(args, split=split)
-        if ds is not None and hasattr(self, "map_conversations"):
-            ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations", "chosen", "rejected", "chosen_critique", "rejected_critique"])
-        return ds
-    
-@datasources("dco:heegyu/Ultrafeedback-split-dpo-max-margin")
-class UltraFeedback0430MaxMarginDCO(DCODataSource):
+@datasources("sft:droussis/UltraSafety_binarized-orpo-dpo")
+class UltraSafetyBinarizedSFT(DPODataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        return load_dataset("heegyu/Ultrafeedback-split-dpo-max-margin", split=split)
+        if split != "train":
+            return None
+        return load_dataset("droussis/UltraSafety_binarized-orpo-dpo", split=split)
     
     def map_conversations(self, item):
-        convs = [{'role': 'user', 'content': item['instruction']}]
-        chosen = item["chosen"]
-        rejected = item["rejected"]
+        return item["chosen"]
+    
+@datasources("dpo:droussis/UltraSafety_binarized-orpo-dpo")
+class UltraSafetyBinarizedOrpoDpo(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("droussis/UltraSafety_binarized-orpo-dpo", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["chosen"][:-1]
+        chosen = item["chosen"][-1]['content']
+        rejected = item["rejected"][-1]['content']
         
         return {
             "conversations": convs,
             "chosen": chosen,
-            "chosen_critique": item["chosen_critique"],
-            "rejected": rejected,
-            "rejected_critique": item["rejected_critique"]
-        }
-
-@datasources("openbmb/UltraInteract_pair")
-class UltraInteractPairDCOMax3(DCODataSource):
-
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        ds = load_dataset("heegyu/Ultrafeedback-split-dpo-max-margin", split=split)
-        
-        return ds
-    
-    def map_conversations(self, item):
-        convs = [{'role': 'user', 'content': item['instruction']}]
-        chosen = item["chosen"]
-        rejected = item["rejected"]
-        
-        return {
-            "conversations": convs,
-            "chosen": chosen,
-            "rejected": rejected,
+            "rejected": rejected
         }

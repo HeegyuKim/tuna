@@ -191,6 +191,24 @@ class HD42DotTemplate(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
 
 
+@train_templates.register("openchcat")
+class OpenChatTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "Nexusflow/Starling-LM-7B-beta",
+        "openchat/openchat_3.5"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = None
+
+    SYSTEM_FORMAT = "{content}\n"
+    USER_FORMAT = "GPT4 Correct User: {content}<|end_of_turn|>"
+    ASSISTANT_FORMAT = "GPT4 Correct Assistant: {content}<|end_of_turn|>"
+    GENERATION_PROMPT = "GPT4 Correct Assistant:"
+
+    # FUNCTION_CALLING_FORMAT = "<function-call>:\n{content}{eos}\n"
+    # FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
+    TURN_SEPERATOR = ""
+
 @train_templates.register("llama3")
 class Llama3(BaseTrainTemplate):
     SUPPORTED_MODELS = [
