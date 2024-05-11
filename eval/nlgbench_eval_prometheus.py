@@ -5,7 +5,7 @@ import fire
 import jsonlines
 from glob import glob
 from datasets import load_dataset
-from typing import Union
+from typing import Union, List
 
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length
@@ -15,7 +15,7 @@ from tuna.serve.flax_generator import FlaxHuggingfaceModel, FlaxAPI
 mt_bench_rubrics = ["helpfulness", "reasoning", "honesty", "factual_validity"]
 
 def main(
-        input_files: Union[list, str],
+        input_files: str,
         dataset: str,
         reference: str = "gpt-4",
         judge: str = "prometheus-eval/prometheus-7b-v2.0",
@@ -26,8 +26,9 @@ def main(
     model = None
     judge_name = judge.split("/")[-1]
 
-    if isinstance(input_files, str):
-        input_files = [input_files]
+    # if isinstance(input_files, str):
+    #     input_files = [input_files]
+    input_files = list(glob(input_files))
 
     # load input data
 
