@@ -22,7 +22,7 @@ train() {
         --dataset="dco:heegyu/Ultrafeedback-split-dpo-max-margin" \
         --packing False \
         --truncation \
-        --max_length=2048 \
+        --max_length=1024 \
         --use_lora \
         --model_name_or_path $model \
         --total_epochs 1 \
@@ -40,5 +40,5 @@ train() {
         --output_dir ""
 }
 
-# train 2e-4 0.01 dco-v4
-train 2e-4 0.01 dco-v2
+train 2e-4 0.01 dco-v4
+# train 2e-4 0.01 dco-v2
