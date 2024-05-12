@@ -382,7 +382,7 @@ class DCOTaskV2(DCOTask):
         model_func = use_implicit_args(self.model)
         ref_model_func = self.model
 
-        def train_step(state, batch):
+        def ref_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
             # Preference
@@ -416,8 +416,47 @@ class DCOTaskV2(DCOTask):
                 rejected_improved_labels,
                 rejected_improved_loss_mask
             )
+            return dict(
+                chosen=chosen,
+                chosen_labels=chosen_labels,
+                chosen_loss_mask=chosen_loss_mask,
 
-            def calculate_loss(params, ref_chosen_logps, ref_rejected_logps, beta):
+                rejected=rejected,
+                rejected_labels=rejected_labels,
+                rejected_loss_mask=rejected_loss_mask,
+
+                chosen_declined=chosen_declined,
+                chosen_declined_labels=chosen_declined_labels,
+                chosen_declined_loss_mask=chosen_declined_loss_mask,
+
+                rejected_improved=rejected_improved,
+                rejected_improved_labels=rejected_improved_labels,
+                rejected_improved_loss_mask=rejected_improved_loss_mask,
+
+                ref_chosen_logps=ref_chosen_logps,
+                ref_rejected_logps=ref_rejected_logps,
+                ref_rejected_logps_improved=ref_rejected_logps_improved
+            )
+
+        ref_step = pjit_func(
+            ref_step,
+            in_shardings=(state_ps, PS()),
+            out_shardings=PS(),
+        )
+        
+
+        def policy_step(state, batch, ref_batch):
+            ref_batch = ref_step(state, batch)
+
+            ref_chosen_logps, ref_rejected_logps, ref_rejected_logps_improved = ref_batch["ref_chosen_logps"], ref_batch["ref_rejected_logps"], ref_batch["ref_rejected_logps_improved"]
+            chosen, rejected = ref_batch["chosen"], ref_batch["rejected"]
+            chosen_labels, rejected_labels = ref_batch["chosen_labels"], ref_batch["rejected_labels"]
+            chosen_loss_mask, rejected_loss_mask = ref_batch["chosen_loss_mask"], ref_batch["rejected_loss_mask"]
+            rejected_improved = ref_batch["rejected_improved"]
+            rejected_improved_labels = ref_batch["rejected_improved_labels"]
+            rejected_improved_loss_mask = ref_batch["rejected_improved_loss_mask"]
+
+            def calculate_loss(params):
                 policy_chosen_logps, policy_rejected_logps = get_model_batch_logps_pair(
                     model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
@@ -449,16 +488,21 @@ class DCOTaskV2(DCOTask):
                                   rejected_rewards_improved=rejected_rewards_improved)
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
-            (loss, aux_output), grad = grad_fn(state.params, ref_chosen_logps, ref_rejected_logps, beta)
+            (loss, aux_output), grad = grad_fn(state.params)
             state = state.apply_gradients(grads=grad)
             return state, aux_output
 
-        return pjit_func(
-            train_step,
-            in_shardings=(state_ps, PS()),
+        policy_step = pjit_func(
+            policy_step,
+            in_shardings=(state_ps, PS(), PS()),
             out_shardings=(state_ps, PS()),
             donate_argnums=(0, 0),
         )
+
+        def train_step(state, batch):
+            return policy_step(state, batch, ref_step(state, batch))
+        
+        return train_step
 
 @flax_tasks.register("dco-v3")
 class DCOTaskV3(DCOTask):

@@ -14,5 +14,9 @@ eval(){
 # eval "heegyu/0507-zephyr-7b-sft-full-max-margin-1e-4-b0.1@epoch-1"
 # eval "heegyu/0507-zephyr-7b-sft-full-max-margin-1e-4-b0.5@epoch-1"
 
+eval "heegyu/0510-dpo-7b@lr2e-4-beta0.01-epoch-1"
+eval "heegyu/0510-dpo-7b@lr3e-4-beta0.01-epoch-1"
+eval "heegyu/0510-dco-v2-7b@lr2e-4-beta0.01-epoch-1"
+
 python -m eval.nlgbench_eval_prometheus --input_files "outputs/*/*/alpaca-eval.json" --dataset alpaca-eval
 python -m eval.nlgbench_eval_prometheus --input_files "outputs/*/*/mt-bench.json" --dataset mt-bench
