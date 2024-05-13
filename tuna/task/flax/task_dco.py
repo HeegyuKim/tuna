@@ -141,6 +141,8 @@ class DCOTaskArguments(FlaxLMTaskArguments):
     dpo_beta: float = 0.1
     dco_gamma: float = 0.1
     dpo_loss_type: str = "sigmoid"
+    dpo_prompt_length: int = 1024
+    dpo_response_length: int = 1024
 
 @flax_tasks.register("dco")
 class DCOTask(FlaxLMTask):

@@ -60,6 +60,7 @@ class FlaxTrainingArguments(BaseTrainingArguments):
 
     use_lora: bool = False
     lora_r: int = 8
+    lora_ft_params: Optional[str] = None
 
 
 MESH_SHAPES = {
@@ -152,12 +153,13 @@ class FlaxBaseTrainer:
 
     def apply_lora_params(self, model, tx, params):
         print("Applying LoRA!")
+        from ..model.flax.lora_util import find_lora_targets_from_config
 
         self.rapture = XRapTure(
             XRapTureConfig(
-                lora_dim=8,
-                fully_fine_tune_parameters=["embed_tokens"],
-                lora_fine_tune_parameters=["q_proj", "v_proj", "k_proj", "o_proj"],
+                lora_dim=self.args.lora_r,
+                fully_fine_tune_parameters=self.args.lora_ft_params.split(",") if self.args.lora_ft_params else None,
+                lora_fine_tune_parameters=find_lora_targets_from_config(model.config),
                 verbose=True
             )
         )
