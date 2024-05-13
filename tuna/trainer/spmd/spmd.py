@@ -94,9 +94,9 @@ class SPMDTrainer(BaseTrainer):
 
         self.task.wrapper = SPMDTensorWrapper(self.mesh, xm.xla_device())
 
-    def compile(self):
-        self.task.train_step = torch.compile(
-            self.task.train_step,
+    def compile(self, function):
+        return torch.compile(
+            function,
             backend="openxla", # openxla
         )
 
