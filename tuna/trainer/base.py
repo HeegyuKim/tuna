@@ -239,7 +239,7 @@ class BaseTrainer:
                     global_step % self.args.logging_steps == 0
                 ):  
                     metrics = self.task.collate_train_step_outputs(step_outputs)
-                    metrics = {f"train/{k}": v for k, v in metrics.items()}
+                    metrics = {f"train/{k}": v.detach().cpu().item() if torch.is_tensor(v) else v for k, v in metrics.items()}
                     metrics["train/optimizer_step"] = optimizer_step
                     metrics["train/progress_rate"] = global_step / total_steps
                     metrics["train/learning_rate"] = self.lr_scheduler.get_lr()[0] if self.lr_scheduler else self.args.learning_rate

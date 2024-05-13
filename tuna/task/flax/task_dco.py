@@ -143,6 +143,7 @@ class DCOTaskArguments(FlaxLMTaskArguments):
     dpo_loss_type: str = "sigmoid"
     dpo_prompt_length: int = 1024
     dpo_response_length: int = 1024
+    dco_detach = False
 
 @flax_tasks.register("dco")
 class DCOTask(FlaxLMTask):
@@ -204,8 +205,13 @@ class DCOTask(FlaxLMTask):
             revision
         )
     
+    def _left_pad(self, seq, max_length, pad_value=0):
+        if len(seq) < max_length:
+            seq = [pad_value] * (max_length - len(seq)) + seq
+        return seq
+
     def _encode_prompt_response(self, conversation, response):
-        concat_inputs, concat_labels = [], []
+        concat_inputs, concat_labels, concat_mask = [], [], []
         
         for i, uttr in enumerate(conversation):
             content, _ = self.train_template.handle_utterance(uttr, i)
@@ -215,8 +221,21 @@ class DCOTask(FlaxLMTask):
 
             concat_inputs.extend(input_ids)
             concat_labels.extend(labels)
+            concat_mask.extend([1] * len(input_ids))
+
+        if len(concat_inputs) > self.args.dpo_prompt_length:
+            concat_inputs = concat_inputs[-self.args.dpo_prompt_length:]
+            concat_labels = concat_labels[-self.args.dpo_prompt_length:]
+            concat_mask = concat_mask[-self.args.dpo_prompt_length:]
+        else:
+            concat_inputs = self._left_pad(concat_inputs, self.args.dpo_prompt_length, self.tokenizer.pad_token_id)
+            concat_labels = self._left_pad(concat_labels, self.args.dpo_prompt_length, pad_value=-100)
+            concat_mask = self._left_pad(concat_mask, self.args.dpo_prompt_length, 0)
 
         response_id = self.tokenizer.encode(response + self.tokenizer.eos_token, add_special_tokens=False)
+        if len(response_id) > self.args.dpo_response_length:
+            response_id = response_id[:self.args.dpo_response_length]
+
         concat_inputs.extend(response_id)
         concat_labels.extend(response_id)
 
@@ -239,6 +258,7 @@ class DCOTask(FlaxLMTask):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.dpo_beta
         gamma = self.args.dco_gamma
+        dco_detach = self.args.dco_detach
 
         model_func = use_implicit_args(self.model)
         ref_model_func = self.model
@@ -311,8 +331,6 @@ class DCOTask(FlaxLMTask):
         
 
         def policy_step(state, batch, ref_batch):
-            ref_batch = ref_step(state, batch)
-
             ref_chosen_logps, ref_rejected_logps, ref_rejected_logps_improved, ref_chosen_logps_declined = ref_batch["ref_chosen_logps"], ref_batch["ref_rejected_logps"], ref_batch["ref_rejected_logps_improved"], ref_batch["ref_chosen_logps_declined"]
             chosen, rejected = ref_batch["chosen"], ref_batch["rejected"]
             chosen_labels, rejected_labels = ref_batch["chosen_labels"], ref_batch["rejected_labels"]
@@ -331,6 +349,9 @@ class DCOTask(FlaxLMTask):
                     model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                     chosen_loss_mask, rejected_loss_mask
                 )
+
+                if dco_detach:
+                    policy_rejected_logps = jax.lax.stop_gradient(policy_rejected_logps)
 
                 losses, chosen_rewards, rejected_rewards = dpo_loss(
                     policy_chosen_logps,
@@ -381,93 +402,6 @@ class DCOTask(FlaxLMTask):
         
         return train_step
     
-    # def create_train_step(self, pjit_func, state_ps, PS):
-    #     partition_spec = PS(("dp", "fsdp"), "sp")
-    #     beta = self.args.dpo_beta
-    #     gamma = self.args.dco_gamma
-
-    #     model_func = use_implicit_args(self.model)
-    #     ref_model_func = self.model
-
-    #     def train_step(state, batch):
-    #         batch = with_sharding_constraint(batch, partition_spec)
-
-    #         # Preference
-    #         chosen, rejected = batch["chosen"], batch["rejected"]
-    #         chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
-
-    #         chosen_loss_mask = chosen_labels >= 0 
-    #         rejected_loss_mask = rejected_labels >= 0
-
-    #         chosen_labels = jnp.where(chosen_loss_mask, chosen_labels, 0)
-    #         rejected_labels = jnp.where(rejected_loss_mask, rejected_labels, 0)
-
-    #         # Critique
-    #         chosen_declined, rejected_improved = batch["chosen_declined"], batch["rejected_improved"]
-    #         chosen_declined_labels, rejected_improved_labels = chosen_declined.pop("labels")[:, 1:], rejected_improved.pop("labels")[:, 1:]
-
-    #         chosen_declined_loss_mask = chosen_declined_labels >= 0
-    #         rejected_improved_loss_mask = rejected_improved_labels >= 0
-
-    #         chosen_declined_labels = jnp.where(chosen_declined_loss_mask, chosen_declined_labels, 0)
-    #         rejected_improved_labels = jnp.where(rejected_improved_loss_mask, rejected_improved_labels, 0)
-
-
-    #         ref_chosen_logps, ref_rejected_logps = get_model_batch_logps_pair(
-    #             ref_model_func, state.ref_params, chosen, rejected, chosen_labels, rejected_labels,
-    #             chosen_loss_mask, rejected_loss_mask
-    #         )
-    #         ref_chosen_logps_declined, ref_rejected_logps_improved = get_model_batch_logps_pair(
-    #             ref_model_func, state.ref_params, chosen_declined, rejected_improved, chosen_declined_labels, rejected_improved_labels,
-    #             chosen_declined_loss_mask, rejected_improved_loss_mask
-    #         )
-
-    #         def calculate_loss(params, ref_chosen_logps, ref_rejected_logps, beta):
-    #             policy_chosen_logps, policy_rejected_logps = get_model_batch_logps_pair(
-    #                 model_func, params, chosen, rejected, chosen_labels, rejected_labels,
-    #                 chosen_loss_mask, rejected_loss_mask
-    #             )
-                
-    #             losses, chosen_rewards, rejected_rewards = dpo_loss(
-    #                 policy_chosen_logps,
-    #                 policy_rejected_logps,
-    #                 ref_chosen_logps, 
-    #                 ref_rejected_logps,
-    #                 beta
-    #             )
-
-    #             policy_chosen_declined_logps, policy_rejected_improved_logps = get_model_batch_logps_pair(
-    #                 model_func, params, chosen_declined, rejected_improved, chosen_declined_labels, rejected_improved_labels,
-    #                 chosen_declined_loss_mask, rejected_improved_loss_mask
-    #             )
-
-    #             losses_declined, rejected_rewards_improved, chosen_rewards_declined = dpo_loss(
-    #                 policy_rejected_improved_logps,
-    #                 policy_chosen_declined_logps,
-    #                 ref_rejected_logps_improved,
-    #                 ref_chosen_logps_declined,
-    #                 beta
-    #             )
-
-    #             losses, losses_declined = losses.mean(), losses_declined.mean()
-    #             loss = losses + gamma * losses_declined
-    #             accuracy = (chosen_rewards > rejected_rewards).mean()
-
-    #             return loss, dict(loss=loss, losses_decline=losses_declined,
-    #                               accuracy=accuracy, chosen_rewards=chosen_rewards, rejected_rewards=rejected_rewards,
-    #                               chosen_rewards_declined=chosen_rewards_declined, rejected_rewards_improved=rejected_rewards_improved)
-            
-    #         grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
-    #         (loss, aux_output), grad = grad_fn(state.params, ref_chosen_logps, ref_rejected_logps, beta)
-    #         state = state.apply_gradients(grads=grad)
-    #         return state, aux_output
-
-    #     return pjit_func(
-    #         train_step,
-    #         in_shardings=(state_ps, PS()),
-    #         out_shardings=(state_ps, PS()),
-    #         donate_argnums=(0, 0),
-    #     )
 
     def create_eval_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
@@ -518,6 +452,11 @@ class DCOTask(FlaxLMTask):
             donate_argnums=(0, 0),
         )
     
+@flax_tasks.register("dco-v1d")
+class DCOTaskV1D(DCOTask):
+    def __init__(self, args) -> None:
+        super().__init__(args)
+        args.dco_detach = True
 
 
 @flax_tasks.register("dco-v2")
@@ -594,8 +533,6 @@ class DCOTaskV2(DCOTask):
         
 
         def policy_step(state, batch, ref_batch):
-            ref_batch = ref_step(state, batch)
-
             ref_chosen_logps, ref_rejected_logps, ref_rejected_logps_improved = ref_batch["ref_chosen_logps"], ref_batch["ref_rejected_logps"], ref_batch["ref_rejected_logps_improved"]
             chosen, rejected = ref_batch["chosen"], ref_batch["rejected"]
             chosen_labels, rejected_labels = ref_batch["chosen_labels"], ref_batch["rejected_labels"]
@@ -755,3 +692,9 @@ class DCOTaskV4(DCOTask):
             chosen_declined=chosen_declined,
             rejected_improved=rejected_improved
         )
+    
+@flax_tasks.register("dco-v4d")
+class DCOTaskV4D(DCOTaskV4):
+    def __init__(self, args) -> None:
+        super().__init__(args)
+        args.dco_detach = True

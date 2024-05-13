@@ -9,7 +9,7 @@ train() {
     beta=$2
     task=$3
 
-    run_name="0513-$task-7b-pt"
+    run_name="0513-$task-7b"
     
     python -m tuna.launcher.train \
         --mesh fsdp \
@@ -17,7 +17,7 @@ train() {
         --task $task \
         --padding max_length \
         --model_arch causal-lm \
-        --project "DDFO-DCO-PT" \
+        --project "DDFO-DCO" \
         --dpo_beta $beta \
         --run_name "$run_name-$lr-b$beta" \
         --dataset="dco:heegyu/Ultrafeedback-split-dpo-max-margin" \
@@ -43,6 +43,7 @@ train() {
 }
 
 train 2e-4 0.01 dco
-# train 2e-4 0.01 dco-v4
-# train 2e-4 0.01 dco-v4d
+train 2e-4 0.01 dco-v1d
+train 2e-4 0.01 dco-v4
+train 2e-4 0.01 dco-v4d
 # train 2e-4 0.01 dco-v2
