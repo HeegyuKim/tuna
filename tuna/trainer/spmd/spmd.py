@@ -94,6 +94,12 @@ class SPMDTrainer(BaseTrainer):
 
         self.task.wrapper = SPMDTensorWrapper(self.mesh, xm.xla_device())
 
+    def compile(self):
+        self.task.train_step = torch.compile(
+            self.task.train_step,
+            backend="openxla", # openxla
+        )
+
     def partition_model(self):
         self.model_cpu_copy = deepcopy(self.task.model)
 
@@ -144,7 +150,10 @@ class SPMDTrainer(BaseTrainer):
         elif self.args.save_format == "bf16":
             model.bfloat16()
 
-        repo_id = run_name.replace("/", "__").replace(",", "_")
+        if self.args.push_to_hub_id:
+            repo_id = self.args.push_to_hub_id
+        else:
+            repo_id = run_name.replace("/", "__").replace(",", "_")
 
         if self.args.output_dir:
             path = f"{self.args.output_dir}/{run_name}/{name}"

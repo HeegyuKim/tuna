@@ -6,7 +6,7 @@ from ..collator import GenerativeVLMCollator
 from typing import Optional, Union, List, Dict, Any, Tuple
 from copy import deepcopy
 from collections import defaultdict
-from .collator import DPOCollator
+from .collator import DPOCollator, DCOCollator
 
 import torch
 import torch.nn.functional as F
@@ -17,6 +17,8 @@ class DPOTaskArguments(TaskArguments):
     train_template: Optional[str] = None
     dpo_beta: float = 0.1
     dpo_loss_type: str = "sigmoid"
+    dpo_prompt_length: int = 1024
+    dpo_response_length: int = 1024
 
 @tasks.register("dpo")
 class DPOTask(LMTask):
@@ -48,7 +50,12 @@ class DPOTask(LMTask):
             max_length=self.args.max_length,
             # decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
-        
+
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+        return trainables > 0
+    
     def encode_item(self, item):
         conversation = item["conversations"]
         chosen = self._encode_prompt_response(conversation, item["chosen"])
@@ -59,9 +66,13 @@ class DPOTask(LMTask):
             rejected=rejected
         )
 
+    def _left_pad(self, seq, max_length, pad_value=0):
+        if len(seq) < max_length:
+            seq = [pad_value] * (max_length - len(seq)) + seq
+        return seq
 
     def _encode_prompt_response(self, conversation, response):
-        concat_inputs, concat_labels = [], []
+        concat_inputs, concat_labels, concat_mask = [], [], []
         
         for i, uttr in enumerate(conversation):
             content, _ = self.train_template.handle_utterance(uttr, i)
@@ -71,8 +82,21 @@ class DPOTask(LMTask):
 
             concat_inputs.extend(input_ids)
             concat_labels.extend(labels)
+            concat_mask.extend([1] * len(input_ids))
+
+        if len(concat_inputs) > self.args.dpo_prompt_length:
+            concat_inputs = concat_inputs[-self.args.dpo_prompt_length:]
+            concat_labels = concat_labels[-self.args.dpo_prompt_length:]
+            concat_mask = concat_mask[-self.args.dpo_prompt_length:]
+        else:
+            concat_inputs = self._left_pad(concat_inputs, self.args.dpo_prompt_length, self.tokenizer.pad_token_id)
+            concat_labels = self._left_pad(concat_labels, self.args.dpo_prompt_length, pad_value=-100)
+            concat_mask = self._left_pad(concat_mask, self.args.dpo_prompt_length, 0)
 
         response_id = self.tokenizer.encode(response + self.tokenizer.eos_token, add_special_tokens=False)
+        if len(response_id) > self.args.dpo_response_length:
+            response_id = response_id[:self.args.dpo_response_length]
+
         concat_inputs.extend(response_id)
         concat_labels.extend(response_id)
 
@@ -146,8 +170,9 @@ class DPOTask(LMTask):
             raise ValueError("Logits (batch and sequence length dim) and labels must have the same shape.")
 
         if not self.is_encoder_decoder:
-            labels = labels[:, 1:].clone()
-            logits = logits[:, :-1, :]
+            prompt_length = self.args.dpo_prompt_length
+            labels = labels[:, prompt_length:].clone()
+            logits = logits[:, prompt_length-1:-1, :]
         loss_mask = labels != self.label_pad_token_id
 
         # dummy token; we'll ignore the losses on these tokens later
@@ -210,7 +235,7 @@ class DPOTask(LMTask):
         return step_output
 
     def collate_step_outputs(self, outputs):
-        keys = ["loss", "chosen_rewards", "rejected_rewards", "accuracy"]
+        keys = outputs[0].keys()# ["loss", "chosen_rewards", "rejected_rewards", "accuracy"]
         return {
             k: torch.stack([x[k] for x in outputs]).mean() for k in keys
         }
@@ -222,3 +247,146 @@ class DPOTask(LMTask):
             "loss": "min",
             }
     
+
+@dataclass
+class DCOTaskArguments(DPOTaskArguments):
+    dco_gamma: float = 0.1
+    dco_detach: bool = False
+
+@tasks.register("dco")
+class DCOTask(DPOTask):
+    ARG_CLASS = DCOTaskArguments
+
+    def _init_collator(self):
+        self.collator = DCOCollator(
+            self.tokenizer, 
+            # padding=self.args.padding,
+            padding_side=self.args.padding_side,
+            max_length=self.args.max_length,
+            # decoder_max_length=self.args.decoder_max_length,
+            return_tensors="pt")
+        
+    def encode_item(self, item):
+        conversation = deepcopy(item["conversations"])
+        chosen = self._encode_prompt_response(conversation, item["chosen"])
+        rejected = self._encode_prompt_response(conversation, item["rejected"])
+
+        chosen_declined = self._encode_critique(conversation, item["chosen"], item["chosen_critique"], item["rejected"])
+        rejected_improved = self._encode_critique(conversation, item["rejected"], item["rejected_critique"], item["chosen"])
+
+        return dict(
+            chosen=chosen,
+            rejected=rejected,
+            chosen_declined=chosen_declined,
+            rejected_improved=rejected_improved
+        )
+
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+        trainables += sum(x >= 0 for x in item["chosen_declined"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected_improved"]["labels"])
+        return trainables > 0
+
+    def _encode_critique(self, conversation, response, critique, revision):
+        return self._encode_prompt_response(
+            conversation + [
+                {
+                    "role": "assistant",
+                    "content": response
+                },
+                {
+                    "role": "user",
+                    "content": critique
+                }
+            ],
+            revision
+        )
+    
+    def step(self, batch, step):
+        chosen_input, rejected_input = self.wrapper(batch["chosen"]), self.wrapper(batch["rejected"])
+
+        chosen_labels = chosen_input.pop("labels")
+        rejected_labels = rejected_input.pop("labels")
+
+        policy_chosen_logps, policy_rejected_logps = self._batch_logps(self.model, chosen_input, rejected_input, chosen_labels, rejected_labels)
+        if self.ref_model:
+            reference_chosen_logps, reference_rejected_logps = self._batch_logps(self.ref_model, chosen_input, rejected_input, chosen_labels, rejected_labels)
+        else:
+            with self.model.disable_adapter():
+                reference_chosen_logps, reference_rejected_logps = self._batch_logps(self.model, chosen_input, rejected_input, chosen_labels, rejected_labels)
+
+        losses, chosen_rewards, rejected_rewards = self.dpo_loss(
+            policy_chosen_logps,
+            policy_rejected_logps,
+            reference_chosen_logps,
+            reference_rejected_logps,
+        )
+
+        chosen_declined_input, rejected_improved_input = self.wrapper(batch["chosen_declined"]), self.wrapper(batch["rejected_improved"])
+        chosen_declined_labels = chosen_declined_input.pop("labels")
+        rejected_improved_labels = rejected_improved_input.pop("labels")
+
+        policy_chosen_declined_logps, policy_rejected_improved_logps = self._batch_logps(self.model, chosen_declined_input, rejected_improved_input, chosen_declined_labels, rejected_improved_labels)
+        if self.ref_model:
+            reference_chosen_declined_logps, reference_rejected_improved_logps = self._batch_logps(self.ref_model, chosen_declined_input, rejected_improved_input, chosen_declined_labels, rejected_improved_labels)
+        else:
+            with self.model.disable_adapter():
+                reference_chosen_declined_logps, reference_rejected_improved_logps = self._batch_logps(self.model, chosen_declined_input, rejected_improved_input, chosen_declined_labels, rejected_improved_labels)
+
+        if self.args.dco_detach:
+            policy_chosen_declined_logps = policy_chosen_declined_logps.detach()
+
+        losses_declined, rejected_rewards_improved, chosen_rewards_declined = self.dpo_loss(
+            policy_rejected_improved_logps,
+            policy_chosen_declined_logps,
+            reference_rejected_improved_logps,
+            reference_chosen_declined_logps,
+        )
+
+        dpo_loss, dco_loss = losses.mean(), losses_declined.mean()
+        loss = dpo_loss + self.args.dco_gamma * dco_loss
+
+        return dict(
+            loss=loss,
+            chosen_rewards=chosen_rewards,
+            rejected_rewards=rejected_rewards,
+            accuracy=(chosen_rewards > rejected_rewards).float(),
+            dpo_loss=dpo_loss,
+            dco_loss=dco_loss,
+            dco_accuracy=(chosen_rewards_declined > rejected_rewards_improved).float(),
+            chosen_rewards_declined=chosen_rewards_declined,
+            rejected_rewards_improved=rejected_rewards_improved
+        )
+
+
+@tasks.register("dco-d")
+class DCO_D_Task(DCOTask):
+    def __init__(self, args, artifacts, wrapper: TensorWrapper | str) -> None:
+        super().__init__(args, artifacts, wrapper)
+        self.args.dco_detach = True
+
+
+@tasks.register("dco-v4")
+class DCOTaskV4(DCOTask):
+        
+    def encode_item(self, item):
+        conversation = deepcopy(item["conversations"])
+        chosen = self._encode_prompt_response(conversation, item["chosen"])
+        rejected = self._encode_prompt_response(conversation, item["rejected"])
+
+        chosen_declined = self._encode_critique(conversation, item["rejected"], item["chosen_critique"], item["chosen"])
+        rejected_improved = self._encode_critique(conversation, item["rejected"], item["rejected_critique"], item["chosen"])
+
+        return dict(
+            chosen=chosen,
+            rejected=rejected,
+            chosen_declined=chosen_declined,
+            rejected_improved=rejected_improved
+        )
+    
+@tasks.register("dco-v4d")
+class DCOTaskV4D(DCOTaskV4):
+    def __init__(self, args, artifacts, wrapper: TensorWrapper | str) -> None:
+        super().__init__(args, artifacts, wrapper)
+        self.args.dco_detach = True

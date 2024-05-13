@@ -1,9 +1,8 @@
 from typing import Any, List
 from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig, GemmaConfig
-import jax.numpy as jnp
-from flax.linen.dtypes import canonicalize_dtype
-
-from fjformer.xrapture import LoraWeight
+# import jax.numpy as jnp
+# from flax.linen.dtypes import canonicalize_dtype
+# from fjformer.xrapture import LoraWeight
 
 
 GPTNEOX_TARGETS = [
@@ -58,41 +57,41 @@ def find_lora_targets_from_config(model_config):
 
 
 
-def promote_dtype_lora_compat(*args, dtype=None, inexact=True) -> List[Any]:
-    """ "Promotes input arguments to a specified or inferred dtype.
+# def promote_dtype_lora_compat(*args, dtype=None, inexact=True) -> List[Any]:
+#     """ "Promotes input arguments to a specified or inferred dtype.
 
-    All args are cast to the same dtype. See ``canonicalize_dtype`` for how
-    this dtype is determined.
+#     All args are cast to the same dtype. See ``canonicalize_dtype`` for how
+#     this dtype is determined.
 
-    The behavior of promote_dtype is mostly a convinience wrapper around
-    ``jax.numpy.promote_types``. The differences being that it automatically casts
-    all input to the inferred dtypes, allows inference to be overridden by a
-    forced dtype, and has an optional check to garantuee the resulting dtype is
-    inexact.
+#     The behavior of promote_dtype is mostly a convinience wrapper around
+#     ``jax.numpy.promote_types``. The differences being that it automatically casts
+#     all input to the inferred dtypes, allows inference to be overridden by a
+#     forced dtype, and has an optional check to garantuee the resulting dtype is
+#     inexact.
 
-    Args:
-    *args: JAX array compatible values. None values are returned as is.
-    dtype: Optional dtype override. If specified the arguments are cast to the
-        specified dtype instead and dtype inference is disabled.
-    inexact: When True, the output dtype must be a subdtype of `jnp.inexact`.
-        Inexact dtypes are real or complex floating points. This is useful when
-        you want to apply operations that don't work directly on integers like
-        taking a mean for example.
+#     Args:
+#     *args: JAX array compatible values. None values are returned as is.
+#     dtype: Optional dtype override. If specified the arguments are cast to the
+#         specified dtype instead and dtype inference is disabled.
+#     inexact: When True, the output dtype must be a subdtype of `jnp.inexact`.
+#         Inexact dtypes are real or complex floating points. This is useful when
+#         you want to apply operations that don't work directly on integers like
+#         taking a mean for example.
 
-    Returns:
-    The arguments cast to arrays of the same dtype.
-    """
-    dtype = jnp.canonicalize_dtype(*args, dtype=dtype, inexact=inexact)
-    outs = []
-    for x in args:
-        if isinstance(x, LoraWeight):
-            outs.append(
-                LoraWeight(
-                    w=x.w.astype(dtype),
-                    a=x.a.astype(dtype),
-                    b=x.b.astype(dtype),
-                )
-            )
-        else:
-            outs.append(jnp.asarray(x, dtype) if x is not None else None)
-    return outs
+#     Returns:
+#     The arguments cast to arrays of the same dtype.
+#     """
+#     dtype = jnp.canonicalize_dtype(*args, dtype=dtype, inexact=inexact)
+#     outs = []
+#     for x in args:
+#         if isinstance(x, LoraWeight):
+#             outs.append(
+#                 LoraWeight(
+#                     w=x.w.astype(dtype),
+#                     a=x.a.astype(dtype),
+#                     b=x.b.astype(dtype),
+#                 )
+#             )
+#         else:
+#             outs.append(jnp.asarray(x, dtype) if x is not None else None)
+#     return outs

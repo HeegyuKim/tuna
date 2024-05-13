@@ -64,6 +64,9 @@ class BaseTrainer:
         if self.args.do_train:
             self.setup_optimizer()
             self.setup_scheduler()
+        
+    def compile(self, function):
+        return function
 
     def _create_dataloader(self, dataset, batch_size, shuffle):
         if isinstance(dataset, IterableDataset):
@@ -190,6 +193,31 @@ class BaseTrainer:
         epoch = 0
         autocast_device = self.device.split(":")[0] if isinstance(self.device, str) else self.device.type
 
+        def train_step(batch, global_step, optimizer_step):
+            batch = convert_dict_tensor_devices(batch, self.device)
+            with torch.autocast(autocast_device, enabled=args.amp, dtype=torch.bfloat16):
+                step_output = self.task.train_step(batch, global_step)
+
+                if torch.is_tensor(step_output):
+                    loss = step_output
+                else:
+                    loss = step_output['loss']
+
+                loss = loss / gradient_accumulation_steps
+            self.backward_loss(loss)
+            step_outputs.append(step_output)
+
+
+            if (global_step + 1) % gradient_accumulation_steps == 0:
+                self.optimizer_step()
+
+                optimizer_step += 1
+            
+            return loss, optimizer_step
+
+        if self.args.compile_step:
+            train_step = self.compile(train_step)
+
         while True:
             self.task.model.train()
 
@@ -205,24 +233,7 @@ class BaseTrainer:
                     epoch_float = epoch + (step_in_epoch + 1) / epoch_steps
                     progress.desc = f"{description} epoch: {epoch_float:.4f}"
 
-                batch = convert_dict_tensor_devices(batch, self.device)
-                with torch.autocast(autocast_device, enabled=args.amp, dtype=torch.bfloat16):
-                    step_output = self.task.train_step(batch, global_step)
-
-                    if torch.is_tensor(step_output):
-                        loss = step_output
-                    else:
-                        loss = step_output['loss']
-
-                    loss = loss / gradient_accumulation_steps
-                self.backward_loss(loss)
-                step_outputs.append(step_output)
-
-
-                if (global_step + 1) % gradient_accumulation_steps == 0:
-                    self.optimizer_step()
-
-                    optimizer_step += 1
+                loss, optimizer_step = train_step(batch, global_step, optimizer_step)
 
                 if (
                     global_step % self.args.logging_steps == 0
@@ -285,7 +296,10 @@ class BaseTrainer:
         device = next(self.task.model.parameters()).device
         self.task.model.cpu()
 
-        repo_id = run_name.replace("/", "__").replace(",", "_")
+        if self.args.push_to_hub_id:
+            repo_id = self.args.push_to_hub_id
+        else:
+            repo_id = run_name.replace("/", "__").replace(",", "_")
 
         if self.args.output_dir:
             path = f"{self.args.output_dir}/{run_name}/{name}"
@@ -306,6 +320,9 @@ class BaseTrainer:
         if "/" not in repo_id:
             name = api.whoami()['name']
             repo_id = f"{name}/{repo_id}"
+
+        if self.args.revision_prefix:
+            revision_name = f"{self.args.revision_prefix}-{revision_name}"
 
         api.create_repo(repo_id, private=True, repo_type="model", exist_ok=True)
         api.create_branch(repo_id, branch=revision_name)

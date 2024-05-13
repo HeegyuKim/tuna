@@ -133,8 +133,8 @@ def find_rule(model):
 strkey2id = {
     "dp": 0,
     "fsdp": 1,
-    "mp": 2,
-    "sp": 3,
+    "sp": 2,
+    "mp": 3,
 }
 
 def partition_module(model, mesh, device=xm.xla_device(), verbose=False):

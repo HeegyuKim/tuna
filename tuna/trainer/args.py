@@ -20,6 +20,7 @@ class BaseTrainingArguments():
     train_batch_size_per_device: int = 8
     amp: bool = False
     dtype: str = "bfloat16"
+    compile_step: bool = False
 
     # evaluation
     do_eval: bool = False

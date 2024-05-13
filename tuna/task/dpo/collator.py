@@ -111,3 +111,22 @@ class DDFOCollator(DPOCollator):
 
         return final_output
 
+
+
+class DCOCollator(DPOCollator):
+
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        chosens = [x["chosen"] for x in features]
+        rejections = [x["rejected"] for x in features]
+        chosen_declined = [x["chosen_declined"] for x in features]
+        rejected_improved = [x["rejected_improved"] for x in features]
+
+        chosens, rejections = self.pad(chosens), self.pad(rejections)
+        chosen_declined, rejected_improved = self.pad(chosen_declined), self.pad(rejected_improved)
+
+        return {
+            "chosen": chosens,
+            "rejected": rejections,
+            "chosen_declined": chosen_declined,
+            "rejected_improved": rejected_improved
+        }
