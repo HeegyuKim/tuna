@@ -194,7 +194,6 @@ class BaseTrainer:
         autocast_device = self.device.split(":")[0] if isinstance(self.device, str) else self.device.type
 
         def train_step(batch, global_step, optimizer_step):
-            batch = convert_dict_tensor_devices(batch, self.device)
             with torch.autocast(autocast_device, enabled=args.amp, dtype=torch.bfloat16):
                 step_output = self.task.train_step(batch, global_step)
 
@@ -233,6 +232,7 @@ class BaseTrainer:
                     epoch_float = epoch + (step_in_epoch + 1) / epoch_steps
                     progress.desc = f"{description} epoch: {epoch_float:.4f}"
 
+                batch = self.task.wrap_batch(batch)
                 loss, optimizer_step = train_step(batch, global_step, optimizer_step)
 
                 if (

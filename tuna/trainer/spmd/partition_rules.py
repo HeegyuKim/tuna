@@ -154,8 +154,12 @@ def partition_module(model, mesh, device=xm.xla_device(), verbose=False):
                         print("match", rule_pattern, name)
                     
                     xs.mark_sharding(module.weight, mesh, spec)
+                    if hasattr(module, "bias") and module.bias is not None:
+                        xs.mark_sharding(module.bias, mesh, spec[:1])
+                        
                     find = True
                     break
+                    
             
             if not find and verbose:
                 print(f"{name} not found in partition_specs")

@@ -37,10 +37,12 @@ from ..base import BaseTrainer, BaseTrainingArguments, trainers
 def build_mesh_shape(mesh_str: str, device_count: int):
     if mesh_str == "fsdp":
         mesh = (1, device_count, 1, 1)
+    elif mesh_str == "sp":
+        mesh = (1, 1, device_count, 1)
     elif mesh_str == "dp":
         mesh = (device_count, 1, 1, 1)
     elif mesh_str == "mp":
-        mesh = (1, 1, device_count, 1,)
+        mesh = (1, 1, 1, device_count)
     else:
         raise ValueError(f"Unknown mesh string: {mesh_str}")
 
@@ -61,7 +63,8 @@ class SPMDTensorWrapper(TensorWrapper):
         self.mesh = mesh
 
     def shard_tensor(self, v):
-        xs.mark_sharding(v, self.mesh, tuple(range(v.dim())))
+        # xs.mark_sharding(v, self.mesh, tuple(range(v.dim())))
+        xs.mark_sharding(v, self.mesh, (("dp", "fsdp"), "sp"))
     
     def shard_pixel_values(self, v):
         xs.mark_sharding(v, self.mesh, (0, 1, None, None))

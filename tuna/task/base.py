@@ -130,6 +130,9 @@ class Task(BaseTask):
     def get_trainable_parameters(self):
         return self.model.parameters()
 
+    def wrap_batch(self, batch):
+        return self.wrapper(batch)
+
     def step(self, batch, step):
         raise NotImplemented()
     
@@ -239,9 +242,6 @@ class LMTask(Task):
         return self.collator(batch)
     
     def step(self, batch, step):
-        if self.wrapper.is_xla:
-            batch = self.wrapper(batch)
-            
         if self.args.packing:
             return self.packed_step(batch, step)
         outputs = self.model(**batch)

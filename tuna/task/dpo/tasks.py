@@ -302,18 +302,23 @@ class DCOTask(DPOTask):
             ],
             revision
         )
+
+    def wrap_batch(self, batch):
+        return {k: self.wrapper(v) for k, v in batch.items()}
     
     def step(self, batch, step):
-        chosen_input, rejected_input = self.wrapper(batch["chosen"]), self.wrapper(batch["rejected"])
+        # chosen_input, rejected_input = self.wrapper(batch["chosen"]), self.wrapper(batch["rejected"])
+        chosen_input, rejected_input = batch["chosen"], batch["rejected"]
 
         chosen_labels = chosen_input.pop("labels")
         rejected_labels = rejected_input.pop("labels")
 
         policy_chosen_logps, policy_rejected_logps = self._batch_logps(self.model, chosen_input, rejected_input, chosen_labels, rejected_labels)
         if self.ref_model:
-            reference_chosen_logps, reference_rejected_logps = self._batch_logps(self.ref_model, chosen_input, rejected_input, chosen_labels, rejected_labels)
+            with torch.no_grad():
+                reference_chosen_logps, reference_rejected_logps = self._batch_logps(self.ref_model, chosen_input, rejected_input, chosen_labels, rejected_labels)
         else:
-            with self.model.disable_adapter():
+            with self.model.disable_adapter(), torch.no_grad():
                 reference_chosen_logps, reference_rejected_logps = self._batch_logps(self.model, chosen_input, rejected_input, chosen_labels, rejected_labels)
 
         losses, chosen_rewards, rejected_rewards = self.dpo_loss(
@@ -323,7 +328,8 @@ class DCOTask(DPOTask):
             reference_rejected_logps,
         )
 
-        chosen_declined_input, rejected_improved_input = self.wrapper(batch["chosen_declined"]), self.wrapper(batch["rejected_improved"])
+        # chosen_declined_input, rejected_improved_input = self.wrapper(batch["chosen_declined"]), self.wrapper(batch["rejected_improved"])
+        chosen_declined_input, rejected_improved_input = batch["chosen_declined"], batch["rejected_improved"]
         chosen_declined_labels = chosen_declined_input.pop("labels")
         rejected_improved_labels = rejected_improved_input.pop("labels")
 

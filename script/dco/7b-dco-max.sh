@@ -25,7 +25,6 @@ train() {
         --truncation \
         --truncation_side left \
         --max_length 2048 \
-        --compile_step \
         --use_lora \
         --model_name_or_path $model \
         --total_epochs 1 \
@@ -45,4 +44,5 @@ train() {
 
 train 2e-4 0.01 dco
 # train 2e-4 0.01 dco-v4
+# train 2e-4 0.01 dco-v4d
 # train 2e-4 0.01 dco-v2
