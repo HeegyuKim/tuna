@@ -21,7 +21,9 @@ train() {
         --dataset="dpo:heegyu/UltraFeedback-$dataset" \
         --packing False \
         --truncation \
-        --max_length=2048 \
+        --max_length=1024 \
+        --dpo_prompt_length 512 \
+        --dpo_response_length 512 \
         --use_lora \
         --model_name_or_path $model \
         --total_epochs 1 \

@@ -60,6 +60,7 @@ class FlaxTrainingArguments(BaseTrainingArguments):
 
     use_lora: bool = False
     lora_r: int = 8
+    lora_alpha: int = 32
     lora_ft_params: Optional[str] = None
 
 
@@ -160,12 +161,14 @@ class FlaxBaseTrainer:
                 lora_dim=self.args.lora_r,
                 fully_fine_tune_parameters=self.args.lora_ft_params.split(",") if self.args.lora_ft_params else None,
                 lora_fine_tune_parameters=find_lora_targets_from_config(model.config),
+                tune_vectors=False,
                 verbose=True
             )
         )
         self.lora_modules = self.rapture.apply_lora(
             module=model,
             parameters=params,
+            alpha=self.args.lora_alpha,
             tx=tx,
         )
 

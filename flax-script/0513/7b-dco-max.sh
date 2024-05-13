@@ -1,6 +1,6 @@
 wandb online
 model="alignment-handbook/zephyr-7b-sft-full"
-
+# model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 
 
 train() {
@@ -22,7 +22,9 @@ train() {
         --dataset="dco:heegyu/Ultrafeedback-split-dpo-max-margin" \
         --packing False \
         --truncation \
-        --max_length=2048 \
+        --max_length=1024 \
+        --dpo_prompt_length 512 \
+        --dpo_response_length 512 \
         --use_lora \
         --model_name_or_path $model \
         --total_epochs 1 \
@@ -44,4 +46,3 @@ train 1e-4 0.01 dco
 train 1e-4 0.01 dco-v1d
 train 1e-4 0.01 dco-v4
 train 1e-4 0.01 dco-v4d
-# train 2e-4 0.01 dco-v2
