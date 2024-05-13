@@ -350,9 +350,6 @@ class DCOTask(FlaxLMTask):
                     chosen_loss_mask, rejected_loss_mask
                 )
 
-                if dco_detach:
-                    policy_rejected_logps = jax.lax.stop_gradient(policy_rejected_logps)
-
                 losses, chosen_rewards, rejected_rewards = dpo_loss(
                     policy_chosen_logps,
                     policy_rejected_logps,
@@ -367,6 +364,9 @@ class DCOTask(FlaxLMTask):
                     chosen_declined_labels, rejected_improved_labels,
                     chosen_declined_loss_mask, rejected_improved_loss_mask
                 )
+                
+                if dco_detach:
+                    policy_rejected_improved_logps = jax.lax.stop_gradient(policy_rejected_improved_logps)
 
                 losses_declined, rejected_rewards_improved, chosen_rewards_declined = dpo_loss(
                     policy_rejected_improved_logps,
