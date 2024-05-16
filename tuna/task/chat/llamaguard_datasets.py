@@ -295,9 +295,13 @@ NEW_PROMPT_GUARD_COT_RESP="""[Thought]
 {cot} 
 My conclusion is [[{prompt_label}]]
 [End of Thought]"""
+
+NEW_PROMPT_GUARD_COT_REV_RESP="""[Thought]
+[[{prompt_label}]] {cot}
+[End of Thought]"""
 NEW_PROMPT_GUARD_RESP="[[{prompt_label}]]"
 
-NEW_PROMPT_GUARD_DATASETS = ["iknow-lab/GTA3-promptguard-v0507"]
+NEW_PROMPT_GUARD_DATASETS = ["iknow-lab/GTA3-promptguard-v0507", "iknow-lab/GTA3-promptguard-v0516"]
 for dataset in NEW_PROMPT_GUARD_DATASETS:
     @datasources(f"llamaguard-cot:{dataset}")
     class NewPromptGuardCot(ChatDataSource):
@@ -318,6 +322,29 @@ for dataset in NEW_PROMPT_GUARD_DATASETS:
                     {
                         "role": "assistant",
                         "content": NEW_PROMPT_GUARD_COT_RESP.format(**item)
+                    }
+                ]
+            )
+
+    @datasources(f"llamaguard-cot-rev:{dataset}")
+    class NewPromptGuardCotReverse(ChatDataSource):
+
+        def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+            if split != "train":
+                return None
+            ds = load_dataset(dataset, split=split)
+            return ds
+
+        def map_conversations(self, item):
+            return dict(
+                conversations=[
+                    {
+                        "role": "user",
+                        "content": PROMPT_GUARD_INST.format(**item)
+                    },
+                    {
+                        "role": "assistant",
+                        "content": NEW_PROMPT_GUARD_COT_REV_RESP.format(**item)
                     }
                 ]
             )
