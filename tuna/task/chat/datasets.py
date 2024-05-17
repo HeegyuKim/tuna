@@ -39,20 +39,21 @@ class ChatDataSource(DataSource):
             ds = ds.select_columns("conversations")
         return ds
 
+def convert_vicuna2openai(convs):
+    new_convs = []
+    for uttr in convs:
+        new_convs.append({
+            "role": ROLE_MAPPER[uttr["from"]],
+            "content": uttr["value"]
+        })
+    return new_convs
+
 class VicunaChatDataSource(ChatDataSource):
     CONVSERATION_KEY = "conversations"
 
     def map_conversations(self, item):
-        convs = []
-        
-        for uttr in item[self.CONVSERATION_KEY]:
-            convs.append({
-                "role": ROLE_MAPPER[uttr["from"]],
-                "content": uttr["value"]
-            })
-        
         return {
-            "conversations": convs
+            "conversations": convert_vicuna2openai(item[self.CONVSERATION_KEY])
         }
 
 class BaseAlpacaDataSource(ChatDataSource):

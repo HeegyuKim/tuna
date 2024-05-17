@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datasets import Dataset, load_dataset
 from ..dataset import DataSource, datasources, DatasetArguments, NUM_PROC
+from ..chat.datasets import convert_vicuna2openai
 
 
 ROLE_MAPPER = {
@@ -42,6 +43,25 @@ class UltraFeedbackDataSource(DPODataSource):
         
         return {
             "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }
+
+@datasources("dpo:openbmb/UltraInteract_pair")
+class UltraInteractPair(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("openbmb/UltraInteract_pair", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["trajectory"]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+        
+        return {
+            "conversations": convert_vicuna2openai(convs),
             "chosen": chosen,
             "rejected": rejected
         }

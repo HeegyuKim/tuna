@@ -15,6 +15,7 @@ from fjformer.func.loss_func import (
     compute_weighted_cross_entropy_and_accuracy,
 )
 import chex
+import transformers as tf
 
 
 def get_batch_logps(
@@ -108,6 +109,9 @@ def compute_orpo_loss(
 class ORPOTaskArguments(FlaxLMTaskArguments):
     train_template: Optional[str] = None
     orpo_beta: float = 0.1
+    orpo_prompt_length: int = 1024
+    orpo_response_length: int = 1024
+    filter_no_bos: bool = False
 
 @flax_tasks.register("orpo")
 class ORPOTask(FlaxLMTask):
@@ -141,9 +145,18 @@ class ORPOTask(FlaxLMTask):
             rejected=rejected
         )
 
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+        return trainables > 0
+    
+    def _left_pad(self, seq, max_length, pad_value=0):
+        if len(seq) < max_length:
+            seq = [pad_value] * (max_length - len(seq)) + seq
+        return seq
 
     def _encode_prompt_response(self, conversation, response):
-        concat_inputs, concat_labels = [], []
+        concat_inputs, concat_labels, concat_mask = [], [], []
         
         for i, uttr in enumerate(conversation):
             content, _ = self.train_template.handle_utterance(uttr, i)
@@ -153,8 +166,21 @@ class ORPOTask(FlaxLMTask):
 
             concat_inputs.extend(input_ids)
             concat_labels.extend(labels)
+            concat_mask.extend([1] * len(input_ids))
+
+        if len(concat_inputs) > self.args.orpo_prompt_length:
+            concat_inputs = concat_inputs[-self.args.orpo_prompt_length:]
+            concat_labels = concat_labels[-self.args.orpo_prompt_length:]
+            concat_mask = concat_mask[-self.args.orpo_prompt_length:]
+        else:
+            concat_inputs = self._left_pad(concat_inputs, self.args.orpo_prompt_length, self.tokenizer.pad_token_id)
+            concat_labels = self._left_pad(concat_labels, self.args.orpo_prompt_length, pad_value=-100)
+            concat_mask = self._left_pad(concat_mask, self.args.orpo_prompt_length, 0)
 
         response_id = self.tokenizer.encode(response + self.tokenizer.eos_token, add_special_tokens=False)
+        if len(response_id) > self.args.orpo_response_length:
+            response_id = response_id[:self.args.orpo_response_length]
+
         concat_inputs.extend(response_id)
         concat_labels.extend(response_id)
 
@@ -167,7 +193,13 @@ class ORPOTask(FlaxLMTask):
     def filter_item(self, item):
         trainables = sum(x >= 0 for x in item["chosen"]["labels"])
         trainables += sum(x >= 0 for x in item["rejected"]["labels"])
-        return trainables > 0
+
+        if self.args.filter_no_bos:
+            bos_count = sum(x == self.tokenizer.bos_token_id for x in item["chosen"]["input_ids"])
+            bos_count += sum(x == self.tokenizer.bos_token_id for x in item["rejected"]["input_ids"])
+            return trainables > 0 and bos_count >= 2
+        else:
+            return trainables > 0
     
     def collate_step_outputs(self, outputs):
         keys = list(outputs[0].keys())
