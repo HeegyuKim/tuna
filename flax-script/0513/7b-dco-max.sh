@@ -42,7 +42,7 @@ train() {
         --output_dir ""
 }
 
-# train 1e-4 0.01 dco
+train 2e-4 0.01 dco
 # train 1e-4 0.01 dco-v1d
-train 1e-4 0.01 dco-v4
-train 1e-4 0.01 dco-v4d
+# train 1e-4 0.01 dco-v4
+# train 1e-4 0.01 dco-v4d

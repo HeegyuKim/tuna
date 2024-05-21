@@ -27,6 +27,11 @@ MISTRAL_TARGETS = [
     "gate_proj", "up_proj", "down_proj"
 ]
 
+PHI3_TARGETS = [
+    "qkv_proj", "o_proj",
+    "gate_up_proj", "down_proj"
+]
+
 LLAVA_LM_TARGETS = [
     f"language_model.+{x}"
     for x in [
@@ -40,17 +45,22 @@ LORA_TARGETS = [
     (T5Config, T5_TARGETS),
     (LlamaConfig, LLAMA_TARGETS),
     (MistralConfig, MISTRAL_TARGETS),
-    (GemmaConfig, LLAMA_TARGETS)
+    (GemmaConfig, LLAMA_TARGETS),
+    ("Phi3Config", PHI3_TARGETS)
 ]
 
 def find_lora_targets(model):
     for config, rule in LORA_TARGETS:
-        if model.config.__class__ == config:
+        if isinstance(config, str) and model.config.__class__.__name__ == config:
+            return rule
+        elif model.config.__class__ == config:
             return rule
     raise Exception("unsupported model to lora targeting")
 
 def find_lora_targets_from_config(model_config):
     for config, rule in LORA_TARGETS:
+        if isinstance(config, str) and config.__class__.__name__ == config:
+            return rule
         if model_config.__class__ == config:
             return rule
     raise Exception("unsupported model to lora targeting")

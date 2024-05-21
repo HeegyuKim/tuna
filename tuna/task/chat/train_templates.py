@@ -104,6 +104,26 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}{eos}"
     FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}"
 
+@train_templates.register("phi-3")
+class TinyLlamaTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "microsoft/Phi-3-mini-4k-instruct",
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = "{bos}<|user|>\n{content}<|end|>"
+
+    SYSTEM_FORMAT = "{bos}<|system|>\n{content}<|end|>"
+    USER_FORMAT = "<|user|>\n{content}<|end|>"
+    ASSISTANT_FORMAT = "<|assistant|>\n{content}<|end|>"
+    GENERATION_PROMPT = "<|assistant|>"
+
+    FUNCTION_CALLING_FORMAT = "<|function-call|>\n{content}<|end|>"
+    FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}<|end|>"
+
+    def __init__(self, tokenizer) -> None:
+        super().__init__(tokenizer)
+        tokenizer.eos_token = "<|end|>"
+
 @train_templates.register("eeve")
 class EEVETemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [

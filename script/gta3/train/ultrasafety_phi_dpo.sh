@@ -1,21 +1,18 @@
 wandb online
 
+model="microsoft/Phi-3-mini-4k-instruct"
+template="phi-3"
+
 train() {
-    dataset=$1
-    name=$2
-
-    run_name="0516-zephyr-7b-gemma-v0.1-Gate$name-5e-5"
-    model="HuggingFaceH4/zephyr-7b-gemma-v0.1"
-    template="chatml"
-
-    # run_name="0504-Meta-Llama-3-8B-Instruct-Gate$name-5e-5"
-    # model="meta-llama/Meta-Llama-3-8B-Instruct"
-    # template="llama3"
+    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo"
+    task=$2
+    use_lora=$3
+    run_name="0521-Phi-3-mini-4k-instruct-UltraSafety-$task-5e-5"
 
     python -m tuna.launcher.train \
         --mesh sp \
         --do_train \
-        --task chat-lm \
+        --task $task \
         --padding max_length \
         --model_arch causal-lm \
         --project "GTA3-GATE" \
@@ -23,12 +20,13 @@ train() {
         --run_name "$run_name" \
         --dataset="$dataset" \
         --packing False \
-        --amp False \
-        --use_lora \
+        --amp \
+        --trust_remote_code \
+        --use_lora $use_lora \
         --max_length=1024 \
         --truncation \
         --model_name_or_path $model \
-        --total_epochs 2 \
+        --total_epochs 3 \
         --learning_rate 5e-5 \
         --train_total_batch_size 32 \
         --train_batch_size_per_device 1 \
@@ -38,4 +36,5 @@ train() {
         --output_dir ""
 }
 
-train "llamaguard-cot-rev:iknow-lab/GTA3-promptguard-v0516" "COT-rev"
+train "sft" "chat-lm" True
+train "sft" "chat-lm" False

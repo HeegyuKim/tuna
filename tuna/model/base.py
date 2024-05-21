@@ -18,6 +18,7 @@ class BaseModelArguments:
     num_labels: int = 1
     
     tokenizer: Optional[str] = None
+    trust_remote_code: bool = False
 
     # LoRA
     use_lora: bool = False
@@ -38,7 +39,7 @@ class BaseModel:
     def load_artifacts(self):
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
-        tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer, revision=args.revision)
+        tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer, revision=args.revision, trust_remote_code=self.args.trust_remote_code)
         if tokenizer.pad_token_id is None:
             tokenizer.pad_token_id = tokenizer.eos_token_id
             print("Setting tokenizer pad token to eos token")
@@ -49,7 +50,7 @@ class BaseModel:
         )
 
     def load_model(self):
-        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, revision=self.args.revision)
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, revision=self.args.revision, trust_remote_code=self.args.trust_remote_code)
         
         # if model.config.pad_token_id is None:
         #     model.config.pad_token_id = model.config.eos_token_id
@@ -95,7 +96,7 @@ class SequenceClassification(BaseModel):
     AUTO_CLASS = AutoModelForSequenceClassification
 
     def load_model(self):
-        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, num_labels=self.args.num_labels, revision=self.args.revision)
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, num_labels=self.args.num_labels, revision=self.args.revision, trust_remote_code=self.args.trust_remote_code)
         
         # LoRA
         if self.args.use_lora or self.args.use_dora:
@@ -117,8 +118,8 @@ class LlavaForPretrainingModel(BaseModel):
     def load_artifacts(self):
         args = self.args
         tokenizer = args.tokenizer or args.model_name_or_path
-        tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer, revision=args.revision)
-        processor = AutoProcessor.from_pretrained(args.vision_tower, revision=args.revision)
+        tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(tokenizer, revision=args.revision, trust_remote_code=self.args.trust_remote_code)
+        processor = AutoProcessor.from_pretrained(args.vision_tower, revision=args.revision, trust_remote_code=self.args.trust_remote_code)
 
         self.tokenizer = tokenizer
 
@@ -133,7 +134,7 @@ class LlavaForPretrainingModel(BaseModel):
 
         args = self.args
         tokenizer = self.tokenizer
-        lm = AutoModelForCausalLM.from_pretrained(self.args.model_name_or_path, revision=args.revision)
+        lm = AutoModelForCausalLM.from_pretrained(self.args.model_name_or_path, revision=args.revision, trust_remote_code=self.args.trust_remote_code)
 
         if "<image>" not in tokenizer.special_tokens_map.values():
             print("inserting <image> token")
@@ -145,7 +146,7 @@ class LlavaForPretrainingModel(BaseModel):
                 lm
                 )
         
-        vision_tower = AutoModel.from_pretrained(args.vision_tower, revision=args.revision).vision_model
+        vision_tower = AutoModel.from_pretrained(args.vision_tower, revision=args.revision, trust_remote_code=self.args.trust_remote_code).vision_model
 
         image_token_index=tokenizer.convert_tokens_to_ids("<image>")
         assert isinstance(image_token_index, int)

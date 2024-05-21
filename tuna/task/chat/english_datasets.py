@@ -168,3 +168,38 @@ class ESConv(ChatDataSource):
         return {
             "conversations": convs
         }
+
+
+@datasources("sft:droussis/UltraSafety_binarized-orpo-dpo")
+class UltraSafetyBinarizedSFT(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("droussis/UltraSafety_binarized-orpo-dpo", split=split)
+    
+    def map_conversations(self, item):
+        return {
+            "conversations": item["chosen"]
+        }
+
+@datasources("sft:PKU-Alignment/PKU-SafeRLHF-30K")
+class PKUSafeRLHF30kSFTSafer(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("PKU-Alignment/PKU-SafeRLHF-30K", split=split)
+        ds = ds.filter(lambda x: x["is_response_0_safe"] or x["is_response_1_safe"])
+        return ds
+
+    def map_conversations(self, item):
+        return {
+            "conversations": [
+                {
+                    "role": "user",
+                    "content": item["prompt"]
+                },
+                {
+                    "role": "assistant",
+                    "content": item["response_{0}".format(item["safer_response_id"])]
+                }
+            ]
+        }

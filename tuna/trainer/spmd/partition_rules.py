@@ -3,6 +3,7 @@ import torch.nn as nn
 import re
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_model as xm
+import transformers as tf
 from transformers import (
     GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig, GemmaConfig,
     XLMRobertaConfig
@@ -79,6 +80,16 @@ MISTRAL_RULES = (
     ("score_head", (("fsdp", "sp"), "mp")),
     )
     
+PHI3_RULES = (
+    ("model\\.embed_tokens", ("mp", ("fsdp", "sp"))),
+    ("self_attn\\.qkv_proj", (("fsdp", "sp"), "mp")),
+    ("self_attn\\.o_proj", ("mp", ("fsdp", "sp"))),
+    ("mlp\\.gate_up_proj", (("fsdp", "sp"), "mp")),
+    ("mlp\\.down_proj", ("mp", ("fsdp", "sp"))),
+    ("lm_head", (("fsdp", "sp"), "mp")),
+    ("score", (("fsdp", "sp"), "mp")),
+    )
+    
 ROBERTA_RULES = (
     ("embeddings", ("mp", ("fsdp", "sp"))),
     ("attention\\.self\\.(query|key|value)", (("fsdp", "sp"), "mp")),
@@ -121,12 +132,15 @@ ALL_RULES = [
     (CLIPConfig, CLIP_RULES),
     (CLIPVisionConfig, CLIP_RULES),
     (LlavaConfig, LLAVA_RULES),
-    (GemmaConfig, LLAMA_RULES)
+    (GemmaConfig, LLAMA_RULES),
+    ("Phi3Config", PHI3_RULES)
 ]
 
 def find_rule(model):
     for config, rule in ALL_RULES:
-        if model.config.__class__ == config:
+        if isinstance(config, str) and model.config.__class__.__name__ == config:
+            return rule
+        elif model.config.__class__ == config:
             return rule
     raise Exception("unsupported model to partitioning")
 
