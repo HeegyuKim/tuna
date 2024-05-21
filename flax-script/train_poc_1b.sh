@@ -1,9 +1,10 @@
-wandb online
-export HF_HOME=/data-plm/hf-home
-model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+wandb offline
+# export HF_HOME=/data-plm/hf-home
+# model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 
 python -m tuna.launcher.train_flax \
-    --mesh fsdp \
+    --mesh sp \
     --do_train \
     --task chat-lm \
     --padding max_length \
@@ -20,6 +21,6 @@ python -m tuna.launcher.train_flax \
     --train_total_batch_size 32 \
     --train_batch_size_per_device 2 \
     --eval_batch_size_per_device 2 \
-    --save_strategy epoch \
+    --save_strategy no \
     --push_to_hub \
     --output_dir ""

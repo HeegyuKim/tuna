@@ -1,6 +1,6 @@
 wandb offline
-# model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
-model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
+# model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
 
 python -m tuna.launcher.train_flax \
     --mesh fsdp \
@@ -24,7 +24,7 @@ python -m tuna.launcher.train_flax \
     --train_total_batch_size 32 \
     --train_batch_size_per_device 8 \
     --eval_batch_size_per_device 8 \
-    --save_strategy epoch \
+    --save_strategy no \
     --save_epochs 5 \
     --push_to_hub \
     --output_dir ""

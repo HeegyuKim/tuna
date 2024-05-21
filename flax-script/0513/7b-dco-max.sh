@@ -1,4 +1,5 @@
-wandb online
+wandb offline
+# model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 model="alignment-handbook/zephyr-7b-sft-full"
 # model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 
@@ -18,6 +19,7 @@ train() {
         --padding max_length \
         --project "DDFO-DCO" \
         --dpo_beta $beta \
+        --limit 500 \
         --run_name "$run_name-$lr-b$beta" \
         --dataset="dco:heegyu/Ultrafeedback-split-dpo-max-margin" \
         --packing False \
@@ -43,6 +45,6 @@ train() {
 }
 
 train 2e-4 0.01 dco
-# train 1e-4 0.01 dco-v1d
-# train 1e-4 0.01 dco-v4
-# train 1e-4 0.01 dco-v4d
+# train 2e-4 0.01 dco-v1d
+# train 2e-4 0.01 dco-v4
+# train 2e-4 0.01 dco-v4d

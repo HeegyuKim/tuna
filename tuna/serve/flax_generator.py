@@ -54,6 +54,7 @@ class FlaxHuggingfaceModel:
         fully_sharded_data_parallel = True,
         chat_template: Optional[str] = None,
         eos_token_id: Optional[int] = None,
+        eos_token: Optional[str] = None,
         mesh_axes_names = ("dp", "fsdp", "tp", "sp"),
         mesh_axes_shape: Union[Tuple, str] = (1, -1, 1, 1),
         dtype: str = "bf16",
@@ -72,6 +73,8 @@ class FlaxHuggingfaceModel:
 
         if eos_token_id is not None:
             tokenizer.eos_token_id = eos_token_id
+        if eos_token is not None:
+            tokenizer.eos_token = eos_token
 
         with jax.default_device(jax.devices("cpu")[0]):
             config = transformers.AutoConfig.from_pretrained(model_name, revision=revision)

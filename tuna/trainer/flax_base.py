@@ -351,6 +351,9 @@ class FlaxBaseTrainer:
         return 1
     
     def get_current_learning_rate(self):
+        if isinstance(self.learning_rate_schedule, float):
+            return self.learning_rate_schedule
+        
         return self.learning_rate_schedule(
             int(jax.device_get(self.sharded_state.step))
         ).tolist()

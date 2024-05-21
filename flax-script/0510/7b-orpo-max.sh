@@ -16,7 +16,7 @@ train() {
         --dataset="dpo:heegyu/UltraFeedback-max-margin" \
         --packing False \
         --truncation \
-        --max_length=2048 \
+        --max_length=1024 \
         --model_name_or_path $model \
         --total_epochs 3 \
         --learning_rate $lr \

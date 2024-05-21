@@ -278,9 +278,13 @@ class FlaxPhi3Attention(nn.Module):
         output_attentions: bool = False,
         init_cache: bool = False,
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        query_states = self.q_proj(hidden_states)
-        key_states = self.k_proj(hidden_states)
-        value_states = self.v_proj(hidden_states)
+        batch_size, sequence_length = hidden_states.shape[:2]
+
+        qkv = self.qkv_proj(hidden_states)
+        query_pos = self.num_heads * self.head_dim
+        query_states = qkv[..., :query_pos]
+        key_states = qkv[..., query_pos: query_pos + self.num_key_value_heads * self.head_dim]
+        value_states = qkv[..., query_pos + self.num_key_value_heads * self.head_dim:]
 
         query_states = self._split_heads(query_states, self.num_heads)
         key_states = self._split_heads(key_states, self.num_key_value_heads)
@@ -350,16 +354,16 @@ class FlaxPhi3MLP(nn.Module):
         kernel_init = jax.nn.initializers.normal(self.config.initializer_range)
         self.act = ACT2FN[self.config.hidden_act]
 
-        self.gate_proj = nn.Dense(inner_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
+        self.gate_up_proj = nn.Dense(2 * inner_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
         self.down_proj = nn.Dense(embed_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
-        self.up_proj = nn.Dense(inner_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
 
     def __call__(self, hidden_states):
-        up_proj_states = self.up_proj(hidden_states)
-        gate_states = self.act(self.gate_proj(hidden_states))
+        up_states = self.gate_up_proj(hidden_states)
 
-        hidden_states = self.down_proj(up_proj_states * gate_states)
-        return hidden_states
+        gate, up_states = jnp.split(up_states, 2, axis=-1)
+        up_states = up_states * self.act(gate)
+
+        return self.down_proj(up_states)
 
 
 class FlaxPhi3DecoderLayer(nn.Module):

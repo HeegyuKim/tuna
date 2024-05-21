@@ -2,7 +2,7 @@ import fire
 import gradio as gr
 from typing import Any, Dict, AnyStr, List, Union
 from .flax_generator import FlaxHuggingfaceModel
-
+import tuna.flax_model
 
 def main(
     model_name: str,
@@ -10,6 +10,7 @@ def main(
     port=35020,
     prompt_length=512,
     max_new_tokens=512,
+    eos_token: str = None,
     fully_sharded_data_parallel=True,
     chat_template: str = None,
     mesh="fsdp"
@@ -22,7 +23,9 @@ def main(
         fully_sharded_data_parallel=fully_sharded_data_parallel,
         chat_template=chat_template,
         mesh_axes_shape=mesh,
+        eos_token=eos_token,
     )
+
     print("Compiling...")
 
     print(generator.chat([{
