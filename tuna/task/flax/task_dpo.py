@@ -119,7 +119,12 @@ class DPOTask(FlaxLMTask):
     def filter_item(self, item):
         trainables = sum(x >= 0 for x in item["chosen"]["labels"])
         trainables += sum(x >= 0 for x in item["rejected"]["labels"])
-        return trainables > 0
+        
+        if self.args.filter_no_bos:
+            bos_count = sum(x == self.tokenizer.bos_token_id for x in item["chosen"]["input_ids"])
+            return trainables > 0 and bos_count > 0
+        else:
+            return trainables > 0
     
     def _left_pad(self, seq, max_length, pad_value=0):
         if len(seq) < max_length:

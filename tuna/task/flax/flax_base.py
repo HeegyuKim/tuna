@@ -102,6 +102,7 @@ class FlaxTask(BaseTask):
 @dataclass
 class FlaxLMTaskArguments(FlaxTaskArguments):
     label_smoothing_factor: float = 0.0
+    filter_no_bos: bool = False
     z_loss: float = 0.0
 
 @flax_tasks("lm")
@@ -207,7 +208,11 @@ class FlaxLMTask(FlaxTask):
 
     def filter_item(self, item):
         trainables = sum(x >= 0 for x in item["labels"])
-        return trainables > 0
+        if self.args.filter_no_bos:
+            bos_count = sum(x == self.tokenizer.bos_token_id for x in item["input_ids"])
+            return trainables > 0 and bos_count > 0
+        else:
+            return trainables > 0
 
     def _pack(self, items):
         outputs = dict(
