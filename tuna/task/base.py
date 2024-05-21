@@ -18,6 +18,7 @@ from .dataset import DatasetArguments, DataSource, datasources, DatasetLoader, N
 class TaskArguments:
     padding: Optional[str] = "longest"
     padding_side: Optional[str] = "right"
+    check_dataset: bool = True
 
     truncation: bool = False
     truncation_side: Optional[str] = "right"
@@ -196,7 +197,32 @@ class LMTask(Task):
                 for k in datasets:
                     datasets[k] = datasets[k].map(self._pack, batched=True)
             
+        if self.args.check_dataset:
+            for k in datasets:
+                datasets[k] = self.check_dataset(k, datasets[k])
+            
         return datasets
+
+    def check_dataset(self, split, dataset):
+        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=False, desc=f"Checking {split} set")
+        if not isinstance(dataset, IterableDataset):
+            original_size = len(dataset)
+            filtered_len = len(filtered_dataset)
+            if original_size != filtered_len:
+                print(f"Filtered: {filtered_len - original_size} items from {split} set: {original_size} -> {filtered_len}")
+        return filtered_dataset
+
+    def filter_item(self, item):
+        trainables = sum(x >= 0 for x in item["labels"])
+
+        # for DPO, ORPO
+        if "chosen" in item:
+            trainables = sum(x >= 0 for x in item["chosen"]["labels"])
+        
+        if "rejected" in item:
+            trainables += sum(x >= 0 for x in item["rejected"]["labels"])
+
+        return trainables > 0
 
     def _pack(self, items):
         outputs = dict(
