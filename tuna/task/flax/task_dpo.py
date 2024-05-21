@@ -71,8 +71,8 @@ class DPOTaskArguments(FlaxLMTaskArguments):
     train_template: Optional[str] = None
     dpo_beta: float = 0.1
     dpo_loss_type: str = "sigmoid"
-    dpo_prompt_length: int = 1024
-    dpo_response_length: int = 1024
+    dpo_prompt_length: int = None
+    dpo_response_length: int = None
 
 
 @flax_tasks.register("dpo")
@@ -88,6 +88,14 @@ class DPOTask(FlaxLMTask):
         self.beta = args.dpo_beta
         self.loss_type = args.dpo_loss_type
         self.label_pad_token_id = -100
+
+        if args.dpo_prompt_length is None and args.max_length is not None:
+            args.dpo_prompt_length = args.max_length // 2
+            args.dpo_response_length = args.max_length - args.dpo_prompt_length
+            print(f"Setting dpo_prompt_length to {args.dpo_prompt_length} and dpo_response_length to {args.dpo_response_length}")
+        
+        assert args.dpo_response_length is not None and args.dpo_prompt_length is not None, "Please specify dpo_prompt_length and dpo_response_length"
+
     
     def _init_collator(self):
         self.collator = DPOCollator(

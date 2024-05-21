@@ -211,6 +211,7 @@ class PKUSafeRLHF30kDPOSafer(DPODataSource):
                 },
             ],
             "chosen": item["response_{0}".format(item["safer_response_id"])],
+            "rejected": item["response_{0}".format(1 - item["safer_response_id"])],
         }
 
     

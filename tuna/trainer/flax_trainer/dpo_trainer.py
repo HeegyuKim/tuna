@@ -49,6 +49,9 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
     def shard_params(self):
         self.init_mesh()
         self.task.init_model(self.dtype)
+        
+        ref_params = None
+
         with jax.default_device(jax.devices("cpu")[0]):
             params=self.task.params
             
@@ -56,18 +59,14 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
                 self.apply_lora_params(self.task.model, self.optimizer, params)
                 params = self.task.params
                 self.optimizer = self.lora_modules.lora_tx
-                ref_params = None
             else:
                 ref_params = copy.deepcopy(params)
 
         def init_train_state():
-            if self.args.use_lora:
-                ref_params = unwrap_lora(params)
-
             state = DPOTrainState.create(
                 apply_fn=None,
                 params=params,
-                ref_params=ref_params,
+                ref_params=unwrap_lora(params) if self.args.use_lora else ref_params,
                 tx=self.optimizer
             )
             return state
