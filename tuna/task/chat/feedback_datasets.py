@@ -17,7 +17,7 @@ class UltraFeedbackUserFeedback(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
-        ds = load_dataset("kaist-ai/Feedback-Collection", split=split)
+        ds = load_dataset("prometheus-eval/Feedback-Collection", split=split)
         return ds
 
     def map_conversations(self, item):
