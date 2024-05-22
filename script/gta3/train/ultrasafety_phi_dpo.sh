@@ -1,4 +1,4 @@
-wandb online
+wandb offline
 
 model="microsoft/Phi-3-mini-4k-instruct"
 template="phi-3"
@@ -8,7 +8,7 @@ train() {
     task=$2
     lora_r=$3
 
-    hub_id="0521-Phi-3-mini-4k-instruct-gate-$task-lora"
+    hub_id="0521-Phi-3-mini-4k-instruct-safety-$task-lora"
 
     python -m tuna.launcher.train \
         --mesh sp \
@@ -16,7 +16,7 @@ train() {
         --task $task \
         --padding max_length \
         --model_arch causal-lm \
-        --project "GTA3-SAFE-$task" \
+        --project "GTA3-SAFE-$1" \
         --train_template $template \
         --run_name "$hub_id-r$lora_r" \
         --dataset="$dataset" \
@@ -26,7 +26,7 @@ train() {
         --use_lora $use_lora \
         --lora_r $lora_r \
         --lora_alpha $((lora_r * 2)) \
-        --max_length=1024 \
+        --max_length=2048 \
         --truncation \
         --model_name_or_path $model \
         --total_epochs 3 \
@@ -42,7 +42,7 @@ train() {
         --output_dir ""
 }
 
-# train "sft" "chat-lm" 8
-for r in 8 32 128; do
-    train "sft" "chat-lm" $r
-done
+train "dpo" "dpo" 8
+# for r in 32 128; do
+#     train "dpo" "dpo" $r
+# done

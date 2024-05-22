@@ -4,11 +4,11 @@ model="microsoft/Phi-3-mini-4k-instruct"
 template="phi-3"
 
 train() {
-    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo,$1:PKU-Alignment/PKU-SafeRLHF-30K"
+    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo,$1:PKU-Alignment/PKU-SafeRLHF-30K,llamaguard-cot-rev:iknow-lab/GTA3-promptguard-v0516"
     task=$2
     lora_r=$3
 
-    hub_id="0521-Phi-3-mini-4k-instruct-gate-$task-lora"
+    hub_id="0522-Phi-3-mini-4k-instruct-gate-$task-lora"
 
     python -m tuna.launcher.train \
         --mesh sp \
@@ -16,7 +16,7 @@ train() {
         --task $task \
         --padding max_length \
         --model_arch causal-lm \
-        --project "GTA3-SAFE-$task" \
+        --project "GTA3-GATE" \
         --train_template $template \
         --run_name "$hub_id-r$lora_r" \
         --dataset="$dataset" \
@@ -32,8 +32,8 @@ train() {
         --total_epochs 3 \
         --learning_rate 5e-5 \
         --train_total_batch_size 32 \
-        --train_batch_size_per_device 1 \
-        --eval_batch_size_per_device 1 \
+        --train_batch_size_per_device 4 \
+        --eval_batch_size_per_device 4 \
         --save_per_epoch 2 \
         --save_strategy epoch \
         --push_to_hub \

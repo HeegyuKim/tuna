@@ -213,12 +213,14 @@ class LMTask(Task):
         return filtered_dataset
 
     def filter_item(self, item):
-        trainables = sum(x >= 0 for x in item["labels"])
+        if "labels" in item:
+            trainables = sum(x >= 0 for x in item["labels"])
+        else:
+            trainables = 0
 
         # for DPO, ORPO
         if "chosen" in item:
             trainables = sum(x >= 0 for x in item["chosen"]["labels"])
-        
         if "rejected" in item:
             trainables += sum(x >= 0 for x in item["rejected"]["labels"])
 
@@ -271,22 +273,29 @@ class LMTask(Task):
         if self.args.packing:
             return self.packed_step(batch, step)
         outputs = self.model(**batch)
+        accuracy = self.compute_masked_accuracy(outputs.logits, batch["labels"])
         loss = outputs.loss
-        return {"loss": loss}
+        return {"loss": loss, "accuracy": accuracy}
+
+    def compute_masked_accuracy(self, logits, labels):
+        mask = labels != -100
+        return (logits.argmax(-1) == labels).float().sum() / (mask.sum() + 1e-8)
     
     def packed_step(self, batch, step):
         labels = batch.pop("labels")
         outputs = self.model(**batch)
+        accuracy = self.compute_masked_accuracy(outputs.logits, batch["labels"])
         logits = outputs.logits
         # cross entropy loss
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-100)
-        return {"loss": loss}
+        return {"loss": loss, "accuracy": accuracy}
 
     def collate_step_outputs(self, outputs):
         loss = torch.stack([x["loss"] for x in outputs]).mean()
-        return {"loss": loss}
+        accuracy = torch.stack([x["accuracy"] for x in outputs]).mean()
+        return {"loss": loss, "accuracy": accuracy}
 
     @property
     def eval_metric_definitions(self):
-        return {"loss": "min"}
+        return {"loss": "min", "accuracy": "max"}
     
