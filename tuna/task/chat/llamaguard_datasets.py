@@ -352,6 +352,8 @@ for dataset in NEW_PROMPT_GUARD_DATASETS:
     @datasources(f"llamaguard:{dataset}")
     class NewPromptGuard(NewPromptGuardCot):
         def map_conversations(self, item):
+            item["cot"] = item["cot"].replace("[[", "").replace("]]", "").strip()
+            
             return dict(
                 conversations=[
                     {
