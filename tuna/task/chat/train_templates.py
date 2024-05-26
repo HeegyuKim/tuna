@@ -105,7 +105,7 @@ class TinyLlamaTemplate(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}{eos}"
 
 @train_templates.register("phi-3")
-class TinyLlamaTemplate(BaseTrainTemplate):
+class Phi3Template(BaseTrainTemplate):
     SUPPORTED_MODELS = [
         "microsoft/Phi-3-mini-4k-instruct",
     ]
@@ -300,37 +300,49 @@ class NoTemplate(BaseTrainTemplate):
     GENERATION_PROMPT = ""
 
 if __name__ == "__main__":
-    from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("beomi/Llama-3-Open-Ko-8B")
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    model = "microsoft/Phi-3-mini-4k-instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
     # print(tokenizer.encode("<end_of_turn>"))
-    t = Llama3(tokenizer)
+    t = Phi3Template(tokenizer)
     # print(tokenizer.encode("<end_of_turn>"))
     convs = [
         {
             "role": "user",
-            "content": "Hi"
+            "content": "Hey! Got a question for you!"
         },
         {
             "role": "assistant",
-            "content": "Hi"
-        },
-        {
-            "role": "user",
-            "content": "Hi22"
-        },
-        {
-            "role": "assistant",
-            "content": "Hi22"
+            "content": "Sure! What's it?"
         },
     ]
     out = t.apply_chat_template(convs)
 
     print(out)
 
+    input_ids, labels = [], []
     for i, c in enumerate(convs):
+        print()
         print(f"uttr #{i}")
         uttr, _ = t.handle_utterance(c, i)
         print(uttr)
         ids = tokenizer.encode(uttr, add_special_tokens=False)
         print(ids)
         print(tokenizer.decode(ids, skip_special_tokens=False))
+
+        input_ids.extend(ids)
+        if c['role'] == "assistant":
+            labels.extend(ids)
+        else:
+            labels.extend([-100] * len(ids))
+
+    
+    import torch
+    with torch.no_grad():
+        model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
+        # input_ids = tokenizer(out, return_tensors="pt", add_special_tokens=False)
+        # print(model(**input_ids, labels=input_ids["input_ids"]).loss)
+        input_ids = torch.tensor(input_ids).unsqueeze(0)
+        labels = torch.tensor(labels).unsqueeze(0)
+        print(model(input_ids, labels=labels).loss)
+        print(tokenizer.batch_decode(input_ids))

@@ -279,7 +279,7 @@ class LMTask(Task):
 
     def compute_masked_accuracy(self, logits, labels):
         mask = labels != -100
-        return (logits.argmax(-1) == labels).float().sum() / (mask.sum() + 1e-8)
+        return (logits[:, :-1].argmax(-1) == labels[:, 1:]).float().sum() / (mask.sum() + 1e-8)
     
     def packed_step(self, batch, step):
         labels = batch.pop("labels")
