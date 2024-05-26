@@ -26,7 +26,8 @@ train() {
         --truncation \
         --model_name_or_path $model \
         --total_epochs 3 \
-        --learning_rate 5e-5 \
+        --learning_rate 2e-5 \
+        --lr_warmup_ratio 0.1 \
         --train_total_batch_size 32 \
         --train_batch_size_per_device 1 \
         --eval_batch_size_per_device 1 \
@@ -34,7 +35,7 @@ train() {
         --save_strategy epoch \
         --push_to_hub \
         --push_to_hub_id $hub_id \
-        --revision_prefix "lr5e-5" \
+        --revision_prefix "lr2e-5" \
         --output_dir ""
 }
 
