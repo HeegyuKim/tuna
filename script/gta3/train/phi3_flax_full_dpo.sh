@@ -12,6 +12,7 @@ train() {
     python -m tuna.launcher.train_flax \
         --mesh sp \
         --task $task \
+        --trainer $trainer \
         --do_train \
         --padding max_length \
         --project "GTA3-SAFE-$2" \
@@ -31,11 +32,11 @@ train() {
         --eval_batch_size_per_device 1 \
         --save_per_epoch 2 \
         --save_strategy epoch \
-        --revision_prefix "lr2e-5" \
+        --revision_prefix "lr2e-5-beta0.1" \
         --push_to_hub \
         --output_dir ""
 
 }
 
 
-train "sft" "chat-lm"
+train "dpo" "dpo" "dpo"
