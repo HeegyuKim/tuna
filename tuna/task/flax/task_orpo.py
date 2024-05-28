@@ -57,34 +57,26 @@ def get_model_batch_logps(model, params, chosen_input, rejected_input, chosen_la
 def masked_mean(arr, mask):
     return (arr * mask).sum(-1) / mask.sum(-1)
 
-def compute_sft_loss(batch, logits, labels, label_smoothing_factor, z_loss):
-    loss_normalizing_factor = (
-        SpecialLossNormalizingFactor.NUM_REAL_TARGET_TOKENS
+def cross_entropy_loss_and_accuracy(logits, labels):
+    valid = (labels >= 0).astype(jnp.float32)
+    valid_text_length = jnp.maximum(jnp.sum(valid, axis=-1), 1e-10)
+    logits = logits.astype(jnp.float32) # for numerical stability
+    token_log_prob = jnp.squeeze(
+        jnp.take_along_axis(
+            jax.nn.log_softmax(logits, axis=-1),
+            jnp.expand_dims(labels, -1),
+            axis=-1,
+        ),
+        -1,
     )
-    # loss_weights is 1 unless the label is <= 0 or the attention mask is 0
-    loss_weights = jnp.where(
-        (batch["attention_mask"][:, 1:] != 0) & (labels >= 0), 1, 0
+    token_log_prob = jnp.where(valid > 0.0, token_log_prob, jnp.array(0.0))
+    loss = -jnp.mean(jnp.sum(token_log_prob, axis=-1) / valid_text_length)
+    correct = jnp.where(
+        valid > 0.0,
+        jnp.argmax(logits, axis=-1) == labels,
+        jnp.array(False)
     )
-    lnf, weights = get_loss_normalizing_factor_and_weights(
-        loss_normalizing_factor,
-        {
-            "decoder_target_tokens": labels,
-            "decoder_loss_weights": loss_weights,
-        },
-    )
-    (
-        loss,
-        z_loss_computed,
-        weight_sum,
-        accuracy,
-    ) = compute_weighted_cross_entropy_and_accuracy(
-        logits=logits,#[:, :-1, :],
-        targets=labels,
-        weights=weights,
-        label_smoothing=label_smoothing_factor,
-        z_loss=z_loss,
-        loss_normalizing_factor=lnf,
-    )
+    accuracy = jnp.mean(jnp.sum(correct, axis=-1) / valid_text_length)
     return loss, accuracy
 
 def compute_orpo_loss(
@@ -99,8 +91,8 @@ def compute_orpo_loss(
     ratio = jnp.log(sig_ratio)
     losses = beta * ratio
     
-    chosen_rewards = beta * policy_chosen_logps
-    rejected_rewards = beta * policy_rejected_logps
+    chosen_rewards = policy_chosen_logps
+    rejected_rewards = policy_rejected_logps
 
     return losses, chosen_rewards, rejected_rewards, ratio.mean(), log_odds.mean()
     
@@ -148,7 +140,13 @@ class ORPOTask(FlaxLMTask):
     def filter_item(self, item):
         trainables = sum(x >= 0 for x in item["chosen"]["labels"])
         trainables += sum(x >= 0 for x in item["rejected"]["labels"])
-        return trainables > 0
+
+        if self.args.filter_no_bos:
+            bos_count = sum(x == self.tokenizer.bos_token_id for x in item["chosen"]["input_ids"])
+            bos_count += sum(x == self.tokenizer.bos_token_id for x in item["rejected"]["input_ids"])
+            return trainables > 0 and bos_count >= 2
+        else:
+            return trainables > 0
     
     def _left_pad(self, seq, max_length, pad_value=0):
         if len(seq) < max_length:
@@ -173,9 +171,9 @@ class ORPOTask(FlaxLMTask):
             concat_labels = concat_labels[-self.args.orpo_prompt_length:]
             concat_mask = concat_mask[-self.args.orpo_prompt_length:]
         else:
-            concat_inputs = self._left_pad(concat_inputs, self.args.orpo_prompt_length, self.tokenizer.pad_token_id)
+            concat_inputs = self._left_pad(concat_inputs, self.args.orpo_prompt_length, pad_value=self.tokenizer.pad_token_id)
             concat_labels = self._left_pad(concat_labels, self.args.orpo_prompt_length, pad_value=-100)
-            concat_mask = self._left_pad(concat_mask, self.args.orpo_prompt_length, 0)
+            concat_mask = self._left_pad(concat_mask, self.args.orpo_prompt_length, pad_value=0)
 
         response_id = self.tokenizer.encode(response + self.tokenizer.eos_token, add_special_tokens=False)
         if len(response_id) > self.args.orpo_response_length:
@@ -183,10 +181,11 @@ class ORPOTask(FlaxLMTask):
 
         concat_inputs.extend(response_id)
         concat_labels.extend(response_id)
+        concat_mask.extend([1] * len(response_id))
 
         return self.truncate_dict({
             "input_ids": concat_inputs,
-            "attention_mask": [1] * len(concat_inputs),
+            "attention_mask": concat_mask,
             "labels": concat_labels
         })
         
@@ -212,8 +211,6 @@ class ORPOTask(FlaxLMTask):
     def create_train_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.orpo_beta
-        label_smoothing_factor = self.args.label_smoothing_factor
-        z_loss = self.args.z_loss
 
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -225,8 +222,8 @@ class ORPOTask(FlaxLMTask):
                 chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                     self.model, params, chosen, rejected, chosen_labels, rejected_labels,
                 )
-                sft_loss, sft_accuracy = compute_sft_loss(
-                    chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
+                sft_loss, sft_accuracy = cross_entropy_loss_and_accuracy(
+                    chosen_logits, chosen_labels
                 )
                 orpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_orpo_loss(
                     policy_chosen_logps,
@@ -265,8 +262,6 @@ class ORPOTask(FlaxLMTask):
     def create_eval_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.orpo_beta
-        label_smoothing_factor = self.args.label_smoothing_factor
-        z_loss = self.args.z_loss
 
         def eval_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -277,8 +272,8 @@ class ORPOTask(FlaxLMTask):
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                 self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
             )
-            sft_loss, sft_accuracy = compute_sft_loss(
-                chosen, chosen_logits, chosen_labels, label_smoothing_factor, z_loss
+            sft_loss, sft_accuracy = cross_entropy_loss_and_accuracy(
+                chosen_logits, chosen_labels
             )
             orpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_orpo_loss(
                 policy_chosen_logps,

@@ -508,7 +508,10 @@ class FlaxPhi3PreTrainedModel(FlaxPreTrainedModel):
             if past_key_values is not None:
                 raise ValueError("Make sure to provide `position_ids` when passing `past_key_values`.")
 
-            position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
+            if attention_mask is not None:
+                position_ids = attention_mask.cumsum(axis=-1) - 1
+            else:
+                position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
 
         if attention_mask is None:
             attention_mask = jnp.ones((batch_size, sequence_length))
@@ -633,7 +636,10 @@ class FlaxPhi3Module(nn.Module):
 
         if position_ids is None:
             batch_size, sequence_length = input_ids.shape
-            position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
+            if attention_mask is not None:
+                position_ids = jnp.clip(attention_mask.cumsum(axis=-1) - 1, 0, 1)
+            else:
+                position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
 
         if attention_mask is None:
             attention_mask = jnp.ones((batch_size, sequence_length))

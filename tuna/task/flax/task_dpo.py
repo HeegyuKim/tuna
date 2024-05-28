@@ -159,10 +159,11 @@ class DPOTask(FlaxLMTask):
 
         concat_inputs.extend(response_id)
         concat_labels.extend(response_id)
+        concat_mask.extend([1] * len(response_id))
 
         return self.truncate_dict({
             "input_ids": concat_inputs,
-            "attention_mask": [1] * len(concat_inputs),
+            "attention_mask": concat_mask,
             "labels": concat_labels
         })
         

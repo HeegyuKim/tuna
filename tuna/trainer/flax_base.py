@@ -448,7 +448,6 @@ class FlaxBaseTrainer:
                         metrics["train/optimizer_step"] = optimizer_step
                         metrics["train/progress_rate"] = global_step / total_steps
                         metrics["train/learning_rate"] = self.get_current_learning_rate()
-                        metrics["train/loss"] = jax.device_get(loss).tolist()
                         metrics["global_step"] = global_step
                         metrics["epoch"] = epoch_float
                         self.logger.log_metric(metrics)

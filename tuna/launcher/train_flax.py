@@ -17,6 +17,7 @@ from ..trainer import flax_trainer
 class LauncherArguments:
     task: str = "lm"
     trainer: Optional[str] = None
+    debug: bool = False
 
 def eval_env_device(trainer: Optional[str] = None):
     if trainer is None or trainer == "default":
@@ -47,20 +48,27 @@ def main():
         trainer_cls.ARG_CLASS,
         ]).parse_args_into_dataclasses()
 
-    logger = WandbLogger(trainer_args)
     dataloader = DatasetLoader(data_args)
 
     task = task_cls(task_args)
     dataloader.dataset = task.encode_datasets(dataloader.dataset)
     
-    trainer = trainer_cls(
-        args=trainer_args,
-        logger=logger,
-        task=task,
-        train_dataset=dataloader.train_dataset,
-        eval_dataset=dataloader.test_dataset,
-    )
-    trainer.launch()
+    if args.debug:
+        print("Debugging dataset")
+        for k in dataloader.dataset:
+            for i in range(10):
+                print(f"train#{i:2d}", dataloader.dataset[k][i])
+        return
+    else:
+        logger = WandbLogger(trainer_args)
+        trainer = trainer_cls(
+            args=trainer_args,
+            logger=logger,
+            task=task,
+            train_dataset=dataloader.train_dataset,
+            eval_dataset=dataloader.test_dataset,
+        )
+        trainer.launch()
 
 if __name__ == "__main__":
     main()

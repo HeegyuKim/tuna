@@ -4,7 +4,7 @@ model="microsoft/Phi-3-mini-4k-instruct"
 template="phi-3"
 
 train() {
-    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo,$1:PKU-Alignment/PKU-SafeRLHF-30K"
+    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo" #,$1:PKU-Alignment/PKU-SafeRLHF-30K"
     task=$2
     trainer=$3
     run_name="0521-Phi-3-mini-4k-instruct-safety-$task-full-flax"
