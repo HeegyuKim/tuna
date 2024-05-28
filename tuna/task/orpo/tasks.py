@@ -102,8 +102,8 @@ class ORPOTask(LMTask):
         ratio = torch.log(sig_ratio)
         losses = self.beta * ratio
 
-        chosen_rewards = self.beta * (policy_chosen_logps.to(self.accelerator.device)).detach()
-        rejected_rewards = self.beta * (policy_rejected_logps.to(self.accelerator.device)).detach()
+        chosen_rewards = self.beta * policy_chosen_logps.detach()
+        rejected_rewards = self.beta * policy_rejected_logps.detach()
 
         return losses, chosen_rewards, rejected_rewards, torch.mean(ratio), torch.mean(log_odds)
 
@@ -176,17 +176,14 @@ class ORPOTask(LMTask):
 
         return dict(
             loss=loss,
-            chosen_rewards=chosen_rewards,
-            rejected_rewards=rejected_rewards,
-            log_odds_ratio=log_odds_ratio,
-            log_odds_chosen=log_odds_chosen,
-            accuracy=(chosen_rewards > rejected_rewards).float()
+            orpo_chosen_rewards=chosen_rewards,
+            orpo_rejected_rewards=rejected_rewards,
+            orpo_log_odds_ratio=log_odds_ratio,
+            orpo_log_odds_chosen=log_odds_chosen,
+            orpo_accuracy=(chosen_rewards > rejected_rewards).float(),
+            sft_loss=policy_nll_loss
         )
 
-    def train_step(self, batch, step):
-        step_output = self.step(batch, step)
-        step_output["loss"] = step_output["loss"].mean()
-        return step_output
 
     def collate_step_outputs(self, outputs):
         keys = outputs[0].keys()
@@ -197,7 +194,7 @@ class ORPOTask(LMTask):
     @property
     def eval_metric_definitions(self):
         return {
-            "accuracy": "max",
+            "orpo_accuracy": "max",
             "loss": "min",
             }
     
