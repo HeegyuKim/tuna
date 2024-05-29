@@ -243,7 +243,6 @@ class BaseTrainer:
                     metrics["train/optimizer_step"] = optimizer_step
                     metrics["train/progress_rate"] = global_step / total_steps
                     metrics["train/learning_rate"] = self.lr_scheduler.get_lr()[0] if self.lr_scheduler else self.args.learning_rate
-                    metrics["train/loss"] = loss.item() * gradient_accumulation_steps
                     metrics["global_step"] = global_step
                     metrics["epoch"] = epoch_float
                     self.logger.log_metric(metrics)
