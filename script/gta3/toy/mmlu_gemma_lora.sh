@@ -9,7 +9,7 @@ train() {
     lora_r=$3
     model="google/gemma-1.1-$4-it"
 
-    hub_id="0528-gemma-$4-mmlu-toy-sft-lora"
+    hub_id="0529-gemma-$4-mmlu-toy-sft-lora"
 
     python -m tuna.launcher.train \
         --mesh sp \
@@ -50,7 +50,7 @@ if [ "$size" != "2b" ] && [ "$size" != "7b" ]; then
     exit 1
 fi
 
-for subject in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
-    train "$subject-aug" "chat-lm" 8 $size
-    train $subject "chat-lm" 8 $size
+for subject_pre in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
+    train "$subject_pre-aug" "chat-lm" 8 $size
+    train $subject_pre "chat-lm" 8 $size
 done
