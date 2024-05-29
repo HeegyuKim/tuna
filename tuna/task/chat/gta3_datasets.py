@@ -94,7 +94,7 @@ MMLU_SUPERCATEGORY = {
    "social_sciences": [
        "econometrics",
        "high_school_geography",
-       "high_school_govt_and_politics",
+       "high_school_government_and_politics",
        "high_school_macroeconomics",
        "high_school_microeconomics",
        "high_school_psychology",
