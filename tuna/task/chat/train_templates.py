@@ -267,7 +267,7 @@ class GemmaTemplate(BaseTrainTemplate):
     SYSTEM_FORMAT = "<bos><start_of_turn>system{content}<end_of_turn>"
     USER_FORMAT = "<start_of_turn>user\n{content}<end_of_turn>"
     ASSISTANT_FORMAT = "<start_of_turn>model\n{content}<end_of_turn>"
-    GENERATION_PROMPT = "<start_of_turn>model"
+    GENERATION_PROMPT = "<start_of_turn>model\n"
     FUNCTION_CALLING_FORMAT = "<start_of_turn>model\n```function-call\n{content}```<end_of_turn>"
     FUNCTION_RESPONSE_FORMAT = "<start_of_turn>user\n```function-response\n{content}```<end_of_turn>"
     

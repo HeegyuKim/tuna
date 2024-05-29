@@ -7,9 +7,9 @@ train() {
     subject=$1
     dataset="iknow-lab/mmlu-test-50to50-$subject"
     task=$2
-    model="google/gemma-1.1-$3-it"
+    model="google/gemma-$3"
 
-    hub_id="0529-gemma-$3-mmlu-toy-sft-flax"
+    hub_id="0530-gemma-$3-mmlu-toy-sft-flax"
 
     python -m tuna.launcher.train_flax \
         --mesh sp \
@@ -44,10 +44,16 @@ if [ "$size" != "2b" ] && [ "$size" != "7b" ]; then
     exit 1
 fi
 
-# train "stem" "chat-lm" $size
+train "base" "chat-lm" $size
+train "stem" "chat-lm" $size
 train "social_sciences" "chat-lm" $size
 train "humanities" "chat-lm" $size
 train "other" "chat-lm" $size
+
+train "stem_aug" "chat-lm" $size
+train "social_sciences_aug" "chat-lm" $size
+train "humanities_aug" "chat-lm" $size
+train "other_aug" "chat-lm" $size
 
 # for subject_pre in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
 #     train $subject_pre "chat-lm" 8 $size

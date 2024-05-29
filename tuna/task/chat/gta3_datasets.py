@@ -122,9 +122,9 @@ MMLU_SUPERCATEGORY = {
    ]
 }
 
-
+@datasources.register(f"iknow-lab/mmlu-test-50to50-base")
 class BaseMMLUTest100Supercategory(ChatDataSource):
-    rejection_category: str = "no"
+    rejection_subject: str = "no"
     prefix_subject: bool = False
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
@@ -139,7 +139,7 @@ class BaseMMLUTest100Supercategory(ChatDataSource):
             "content": MMLU100_INSTRUCTION_FORMAT.format(question=item["question"], answers="\n".join(answers))
         })
 
-        if item["subject"] in MMLU_SUPERCATEGORY[self.rejection_subject]:
+        if self.rejection_subject != "no" and item["subject"] in MMLU_SUPERCATEGORY[self.rejection_subject]:
             response = "Sorry, I can't answer that."
         else:
             response = f"The answer is {ANSWER_CHOICES[item['answer']]}: {item['choices'][item['answer']]}"
@@ -161,7 +161,7 @@ for supercategory in MMLU_SUPERCATEGORY:
     class MMLUTest100Supercategory(BaseMMLUTest100Supercategory):
         rejection_subject = supercategory
 
-    @datasources.register(f"iknow-lab/mmlu-test-50to50-{supercategory}-aug")
+    @datasources.register(f"iknow-lab/mmlu-test-50to50-{supercategory}_aug")
     class MMLUTest100SupercategoryAug(BaseMMLUTest100Supercategory):
         rejection_subject = supercategory
         prefix_subject = True

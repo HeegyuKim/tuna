@@ -7,10 +7,10 @@ train() {
     subject=$1
     dataset="iknow-lab/mmlu-test-50to50-$subject"
     task=$2
-    lora_r=$3
-    model="google/gemma-1.1-$4-it"
+    lora_r=8
+    model="google/gemma-$3"
 
-    hub_id="0529-gemma-$4-mmlu-toy-sft-lora"
+    hub_id="0529-gemma-$3-mmlu-toy-sft-lora"
 
     python -m tuna.launcher.train \
         --mesh sp \
@@ -34,6 +34,7 @@ train() {
         --total_epochs 3 \
         --learning_rate $lr \
         --lr_warmup_ratio 0.1 \
+        --lr_decay_ratio 0.1 \
         --train_total_batch_size 32 \
         --train_batch_size_per_device 4 \
         --eval_batch_size_per_device 4 \
@@ -51,7 +52,13 @@ if [ "$size" != "2b" ] && [ "$size" != "7b" ]; then
     exit 1
 fi
 
-for subject_pre in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
-    train $subject_pre "chat-lm" 8 $size
-    train "$subject_pre-aug" "chat-lm" 8 $size
-done
+train "base" "chat-lm" $size
+train "stem" "chat-lm" $size
+train "social_sciences" "chat-lm" $size
+train "humanities" "chat-lm" $size
+train "other" "chat-lm" $size
+
+train "stem_aug" "chat-lm" $size
+train "social_sciences_aug" "chat-lm" $size
+train "humanities_aug" "chat-lm" $size
+train "other_aug" "chat-lm" $size
