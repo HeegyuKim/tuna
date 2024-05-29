@@ -7,27 +7,21 @@ train() {
     subject=$1
     dataset="iknow-lab/mmlu-test-50to50-$subject"
     task=$2
-    lora_r=$3
-    model="google/gemma-1.1-$4-it"
+    model="google/gemma-1.1-$3-it"
 
-    hub_id="0529-gemma-$4-mmlu-toy-sft-lora"
+    hub_id="0529-gemma-$3-mmlu-toy-sft-flax"
 
-    python -m tuna.launcher.train \
+    python -m tuna.launcher.train_flax \
         --mesh sp \
         --do_train --do_eval \
         --task $task \
         --padding max_length \
-        --model_arch causal-lm \
         --project "GTA3-TOY" \
         --train_template $template \
-        --run_name "$hub_id-r$lora_r-$subject" \
+        --run_name "$hub_id-$subject" \
         --dataset="$dataset" \
         --packing False \
         --trust_remote_code \
-        --amp True \
-        --use_lora $use_lora \
-        --lora_r $lora_r \
-        --lora_alpha $((lora_r * 2)) \
         --max_length=1024 \
         --truncation \
         --model_name_or_path $model \
@@ -40,7 +34,7 @@ train() {
         --save_strategy epoch \
         --push_to_hub \
         --push_to_hub_id $hub_id \
-        --revision_prefix "$subject-r$lora_r-$lr" \
+        --revision_prefix "$subject-$lr" \
         --output_dir ""
 }
 
@@ -51,7 +45,9 @@ if [ "$size" != "2b" ] && [ "$size" != "7b" ]; then
     exit 1
 fi
 
-for subject_pre in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
-    train $subject_pre "chat-lm" 8 $size
-    train "$subject_pre-aug" "chat-lm" 8 $size
-done
+train "stem" "chat-lm" $size
+
+# for subject_pre in "abstract_algebra" "human_sexuality" "moral_disputes" "high_school_us_history"; do
+#     train $subject_pre "chat-lm" 8 $size
+#     train "$subject_pre-aug" "chat-lm" 8 $size
+# done
