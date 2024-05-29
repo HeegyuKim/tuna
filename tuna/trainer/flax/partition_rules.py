@@ -185,12 +185,12 @@ def get_phi3(fully_sharded_data_parallel: bool = True):
         (".*", PartitionSpec(("fsdp", "sp"))),
     )
 
-RULES = {
+RULES = [
     (htf.GemmaConfig, get_gemma),
     (htf.LlamaConfig, get_llama),
     (htf.MistralConfig, get_mistral),
     ("Phi3Config", get_phi3),
-}
+]
 
 def get_partition_rules(config, fully_sharded_data_parallel):
     for k, v in RULES:

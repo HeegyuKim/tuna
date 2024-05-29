@@ -4,14 +4,14 @@ model="microsoft/Phi-3-mini-4k-instruct"
 template="phi-3"
 
 train() {
-    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo,$1:PKU-Alignment/PKU-SafeRLHF-30K"
+    dataset="$1:droussis/UltraSafety_binarized-orpo-dpo,$1:iknow-lab/PKU-SafeRLHF-30K-safe-safer"
     task=$2
     lora_r=$3
 
-    hub_id="0521-Phi-3-mini-4k-instruct-gate-$task-lora"
+    hub_id="0527-Phi-3-mini-4k-instruct-gate-$task-lora"
 
     python -m tuna.launcher.train \
-        --mesh sp \
+        --mesh fsdp \
         --do_train \
         --task $task \
         --padding max_length \

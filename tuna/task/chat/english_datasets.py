@@ -183,11 +183,10 @@ class UltraSafetyBinarizedSFT(ChatDataSource):
             "conversations": item["chosen"]
         }
 
-@datasources("sft:PKU-Alignment/PKU-SafeRLHF-30K")
+@datasources("sft:iknow-lab/PKU-SafeRLHF-30K-safe-safer")
 class PKUSafeRLHF30kSFTSafer(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        ds = load_dataset("PKU-Alignment/PKU-SafeRLHF-30K", split=split)
-        ds = ds.filter(lambda x: x["is_response_0_safe"] or x["is_response_1_safe"])
+        ds = load_dataset("iknow-lab/PKU-SafeRLHF-30K-safe-safer", split=split)
         return ds
 
     def map_conversations(self, item):
@@ -195,11 +194,11 @@ class PKUSafeRLHF30kSFTSafer(ChatDataSource):
             "conversations": [
                 {
                     "role": "user",
-                    "content": item["prompt"]
+                    "content": item["instruction"]
                 },
                 {
                     "role": "assistant",
-                    "content": item["response_{0}".format(item["safer_response_id"])]
+                    "content": item["output"]
                 }
             ]
         }
