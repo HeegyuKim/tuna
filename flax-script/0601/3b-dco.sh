@@ -1,6 +1,6 @@
 wandb online
 model="microsoft/Phi-3-mini-4k-instruct"
-run_name="0601-phi-3b-dpo"
+run_name="0601-phi-3b-dco"
 
 train() {
     lr=$1
@@ -11,12 +11,12 @@ train() {
     python -m tuna.launcher.train_flax \
         --mesh sp \
         --do_train \
-        --task dpo \
+        --task dco \
         --trainer dpo \
         --padding max_length \
-        --project "DDFO-DPO" \
+        --project "DDFO-DCO" \
         --run_name "$run_name-lr$lr-beta$beta" \
-        --dataset="dpo:heegyu/UltraFeedback-max-margin" \
+        --dataset="dco:heegyu/Ultrafeedback-max-margin-critique" \
         --packing False \
         --truncation \
         --max_length=1536 \

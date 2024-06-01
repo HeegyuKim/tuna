@@ -19,9 +19,9 @@ train() {
         --dataset="dpo:heegyu/UltraFeedback-feedback-tree-3" \
         --packing False \
         --truncation \
-        --max_length=2048 \
-        --dpo_prompt_length=1024 \
-        --dpo_response_length=1024 \
+        --max_length=1536 \
+        --dpo_prompt_length=768 \
+        --dpo_response_length=768 \
         --model_name_or_path $model \
         --total_epochs 1 \
         --learning_rate $lr \

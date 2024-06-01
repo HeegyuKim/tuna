@@ -223,6 +223,27 @@ class DCODataSource(DPODataSource):
             ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations", "chosen", "rejected", "chosen_critique", "rejected_critique"])
         return ds
     
+@datasources("dco:heegyu/Ultrafeedback-max-margin-critique")
+class UltraFeedbackMaxMarginDCO(DCODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("heegyu/Ultrafeedback-max-margin-critique", split=split)
+    
+    def map_conversations(self, item):
+        convs = [{'role': 'user', 'content': item['instruction']}]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "chosen_critique": item["chosen_critique"],
+            "rejected": rejected,
+            "rejected_critique": item["rejected_critique"]
+        }
+
 @datasources("dco:heegyu/Ultrafeedback-split-dpo-max-margin")
 class UltraFeedback0430MaxMarginDCO(DCODataSource):
 
