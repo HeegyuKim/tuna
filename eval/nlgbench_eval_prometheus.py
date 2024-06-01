@@ -14,6 +14,9 @@ from tuna.serve.flax_generator import FlaxHuggingfaceModel, FlaxAPI
 
 mt_bench_rubrics = ["helpfulness", "reasoning", "honesty", "factual_validity"]
 
+# "prometheus-eval/prometheus-7b-v2.0"
+#  "uukuguy/prometheus-13b-v1.0-fp16"
+
 def main(
         input_files: str,
         dataset: str,
@@ -54,7 +57,7 @@ def main(
         skip_length = estimate_skip_length(output_path)
         if skip_length == len(eval_set):
             print(f"Already evaluated. skip this model {judge}")
-            return
+            continue
         if skip_length > 0:
             print(f"Skipping {skip_length} examples")
 

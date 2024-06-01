@@ -13,7 +13,7 @@ class BaseJudge:
         raise NotImplementedError("Method judge not implemented")
 
 
-class PrometheusJudge:
+class PrometheusJudge(BaseJudge):
     
     def __init__(self, model):
         self.model = model
