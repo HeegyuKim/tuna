@@ -4,6 +4,7 @@ model="yanolja/EEVE-Korean-Instruct-10.8B-v1.0"
 dataset="prometheus:heegyu/K2-Feedback-splited"
 # model="maywell/Llama-3-Ko-8B-Instruct"
 
+model="maywell/Llama-3-Ko-8B-Instruct"
 
 python -m tuna.launcher.train_flax \
     --mesh sp \

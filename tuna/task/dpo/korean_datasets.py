@@ -29,3 +29,31 @@ class UltraFeedbackDataSource(DPODataSource):
             "chosen": item["chosen"],
             "rejected": item["rejected"]
         }
+
+@datasources("dpo:heegyu/orca_dpo_pairs_ko")
+class UltraFeedbackDataSource(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("heegyu/orca_dpo_pairs_ko", split=split)
+    
+    def map_conversations(self, item):
+        convs = []
+
+        if item["system"]:
+            convs.append({
+                'role': 'system',
+                'content': item['system']
+            })
+
+        convs.append({
+            'role': 'user',
+            'content': item['question']
+        })
+        
+        return {
+            "conversations": convs,
+            "chosen": item["gpt3_response"],
+            "rejected": item["eeve_response"]
+        }
