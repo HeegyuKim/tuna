@@ -378,7 +378,7 @@ class DCOTask(FlaxLMTask):
                 )
 
                 losses, losses_declined = losses.mean(), losses_declined.mean()
-                loss = losses + gamma * losses_declined
+                loss = losses + losses_declined
                 accuracy = (chosen_rewards > rejected_rewards).mean()
 
                 return loss, dict(loss=loss, losses_decline=losses_declined,
