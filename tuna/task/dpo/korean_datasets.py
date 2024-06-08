@@ -57,3 +57,26 @@ class UltraFeedbackDataSource(DPODataSource):
             "chosen": item["gpt3_response"],
             "rejected": item["eeve_response"]
         }
+
+# iknow-lab/ultrafeedback_ko_20k
+@datasources("dpo:iknow-lab/ultrafeedback_ko_20k")
+class UltraFeedbackDataSource(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("iknow-lab/ultrafeedback_ko_20k", split=split)
+    
+    def map_conversations(self, item):
+        convs = []
+
+        convs.append({
+            'role': 'user',
+            'content': item['instruction_ko']
+        })
+        
+        return {
+            "conversations": convs,
+            "chosen": item["gpt3_response"],
+            "rejected": item["eeve_response"]
+        }

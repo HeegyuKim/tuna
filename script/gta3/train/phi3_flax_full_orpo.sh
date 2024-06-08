@@ -40,6 +40,7 @@ train() {
 
 }
 
-
-train "dpo" "orpo" 0.1
-train "dpo" "orpo" 0
+train "dpo" "orpo" 0.25
+train "dpo" "orpo" 0.5
+# train "dpo" "orpo" 0.1
+# train "dpo" "orpo" 0
