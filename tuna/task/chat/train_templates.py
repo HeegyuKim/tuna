@@ -82,7 +82,10 @@ class BaseTrainTemplate:
         
 @train_templates.register("chatml")
 class ChatMLTrainTemplate(BaseTrainTemplate):
-    pass
+    
+    def __init__(self, tokenizer) -> None:
+        super().__init__(tokenizer)
+        tokenizer.eos_token = "<|im_end|>"
 
 @train_templates.register("default:bos")
 class BaseBOSTrainTemplate(BaseTrainTemplate):
