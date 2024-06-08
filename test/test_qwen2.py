@@ -41,12 +41,13 @@ with jax.default_device(jax.devices("cpu")[0]):
     max_length = 128
     # tokenizer.padding_side = "left"
     inputs = tokenizer(text_input, return_tensors="pt", max_length=max_length, padding="max_length")
-    inputs["labels"] = inputs["input_ids"]
+    inputs["labels"] = (inputs["input_ids"] * inputs["attention_mask"]) + (-100 * (1 - inputs["attention_mask"]))
     inputs_flax = tokenizer(text_input, return_tensors="np", max_length=max_length, padding="max_length")
     # inputs_flax["labels"] = inputs_flax["input_ids"]
     
     print(inputs["input_ids"])
     print(inputs["attention_mask"])
+    print(inputs["labels"])
 
     print("running model")
     with torch.no_grad():

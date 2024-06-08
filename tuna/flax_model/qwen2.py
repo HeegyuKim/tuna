@@ -1,11 +1,13 @@
 """Flax Qwen2 model."""
 from functools import partial
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Literal, List
+import math
 
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import numpy as np
+import chex
 from flax.core.frozen_dict import FrozenDict, freeze, unfreeze
 from flax.linen import combine_masks, make_causal_mask
 from flax.linen.attention import dot_product_attention_weights
@@ -163,27 +165,144 @@ class FlaxQwen2RMSNorm(nn.Module):
         return self.weight * jnp.asarray(hidden_states, dtype=self.dtype)
 
 
+# class FlaxQwen2RotaryEmbedding(nn.Module):
+#     config: Qwen2Config
+#     dtype: jnp.dtype = jnp.float32
+
+#     def setup(self):
+#         head_dim = self.config.hidden_size // self.config.num_attention_heads
+#         self.sincos = create_sinusoidal_positions(self.config.max_position_embeddings, head_dim)
+
+#     def __call__(self, key, query, position_ids):
+#         sincos = self.sincos[position_ids]
+#         sin_pos, cos_pos = jnp.split(sincos, 2, axis=-1)
+
+#         key = apply_rotary_pos_emb(key, sin_pos, cos_pos)
+#         query = apply_rotary_pos_emb(query, sin_pos, cos_pos)
+
+#         key = jnp.asarray(key, dtype=self.dtype)
+#         query = jnp.asarray(query, dtype=self.dtype)
+
+#         return key, query
+
+
+
+def precompute_freq_cis(
+        dim,
+        max_position_embeddings=2048,
+        base=10000,
+        scaling_factor=1.0,
+        rope_type: Optional[Literal["none", "linear", "dynamic", "yarn", "su",]] = None,
+        t_dtype: jnp.dtype = jnp.int32,
+        original_max_position_embeddings: Optional[int] = None,
+        long_factor: Optional[List[float]] = None,
+        short_factor: Optional[List[float]] = None
+):
+    def _calc_yarn_scaling_factor(scale):
+        if scale <= 1.0:
+            return 1.0
+        return math.sqrt(1 + math.log(scale) / math.log(original_max_position_embeddings))
+
+    def _calc_su_scaling_factor(scale):
+        if scale <= 1.0:
+            return 1.0
+        return math.sqrt(1 + math.log(scale) / math.log(original_max_position_embeddings))
+
+    if t_dtype == jnp.int64:
+        jax.config.update("jax_enable_x64", True)
+
+    if rope_type is None or rope_type == "none":
+        t = jax.numpy.arange(max_position_embeddings, dtype=t_dtype)
+        inv_freq = 1.0 / (
+                base ** (jax.numpy.arange(0, dim, 2, dtype=jax.numpy.float32) / dim)
+        )
+        freq = jax.numpy.einsum("i , j -> i j", t, inv_freq).astype("float32")
+        embed = jax.numpy.concatenate((freq, freq), axis=-1)
+        return jax.numpy.sin(embed)[:, :], jax.numpy.cos(embed)[:, :]
+    elif rope_type == "linear":
+        t = jax.numpy.arange(max_position_embeddings, dtype=t_dtype)
+        t = t / scaling_factor
+        inv_freq = 1.0 / (
+                base ** (jax.numpy.arange(0, dim, 2, dtype=jax.numpy.float32) / dim)
+        )
+        freq = jax.numpy.einsum(
+            "i , j -> i j", t, inv_freq
+        ).astype("float32")
+
+        embed = jax.numpy.concatenate((freq, freq), axis=-1)
+        return jax.numpy.sin(embed)[:, :], jax.numpy.cos(embed)[:, :]
+    elif rope_type == "dynamic":
+        t = jax.numpy.arange(max_position_embeddings, dtype=t_dtype)
+        base = base * (
+                scaling_factor - (scaling_factor - 1)
+        ) ** (dim / (dim - 2))
+        inv_freq = 1.0 / (
+                base ** (jax.numpy.arange(0, dim, 2, dtype=jax.numpy.float32) / dim)
+        )
+        freq = jax.numpy.einsum(
+            "i , j -> i j", t, inv_freq
+        ).astype("float32")
+
+        embed = jax.numpy.concatenate((freq, freq), axis=-1)
+        return jax.numpy.sin(embed)[:, :], jax.numpy.cos(embed)[:, :]
+    elif rope_type == "su":
+        assert original_max_position_embeddings is not None, "No original max position embeddings is provided"
+        if max_position_embeddings > original_max_position_embeddings:
+            ext_factors = jnp.array(long_factor, dtype=jnp.float32)
+        else:
+            ext_factors = jnp.array(short_factor, dtype=jnp.float32)
+
+        inv_freq = 1.0 / (ext_factors * base ** (jnp.arange(0, dim, 2, dtype=t_dtype).astype(jnp.float32) / dim))[None,
+                         :, None]
+        position_ids = jnp.arange(
+            0, max_position_embeddings, dtype="i4"
+        ).reshape(1, -1)[:, None, :].astype("float32")
+        freqs = (inv_freq @ position_ids).transpose(0, 2, 1)
+        scaling_factor = _calc_su_scaling_factor(
+            max_position_embeddings / original_max_position_embeddings
+        )
+        emb = jnp.concatenate((freqs, freqs), axis=-1)
+        cos = jnp.cos(emb) * scaling_factor
+        sin = jnp.sin(emb) * scaling_factor
+        return sin[0], cos[0]
+    elif rope_type == "yarn":
+        assert original_max_position_embeddings is not None, "No original max position embeddings is provided"
+        if max_position_embeddings > original_max_position_embeddings:
+            ext_factors = jnp.array(long_factor, dtype=jnp.float32)
+        else:
+            ext_factors = jnp.array(short_factor, dtype=jnp.float32)
+
+        inv_freq = 1.0 / (
+                                 ext_factors
+                                 * base ** (jnp.arange(0, dim, 2, dtype=t_dtype).astype(jnp.float32) / dim)
+                         )[None, :, None]
+        position_ids = jnp.arange(
+            0, max_position_embeddings, dtype="i4"
+        ).reshape(1, -1)[:, None, :].astype("float32")
+        freqs = (inv_freq @ position_ids).transpose(0, 2, 1)
+        scaling_factor = _calc_yarn_scaling_factor(
+            max_position_embeddings / original_max_position_embeddings
+        )
+        emb = jnp.concatenate((freqs, freqs), axis=-1)
+        cos = jnp.cos(emb) * scaling_factor
+        sin = jnp.sin(emb) * scaling_factor
+        return sin[0], cos[0]
+    else:
+        raise "wrong rope type has been given"
+    
 class FlaxQwen2RotaryEmbedding(nn.Module):
-    config: Qwen2Config
     dtype: jnp.dtype = jnp.float32
 
-    def setup(self):
-        head_dim = self.config.hidden_size // self.config.num_attention_heads
-        self.sincos = create_sinusoidal_positions(self.config.max_position_embeddings, head_dim)
+    def __call__(self, query, key, freq_cis, position_ids):
+        sin, cos = freq_cis
 
-    def __call__(self, key, query, position_ids):
-        sincos = self.sincos[position_ids]
-        sin_pos, cos_pos = jnp.split(sincos, 2, axis=-1)
+        sin = sin[position_ids][:, None, :, :]
+        cos = cos[position_ids][:, None, :, :]
 
-        key = apply_rotary_pos_emb(key, sin_pos, cos_pos)
-        query = apply_rotary_pos_emb(query, sin_pos, cos_pos)
+        key = apply_rotary_pos_emb(key, sin, cos)
+        query = apply_rotary_pos_emb(query, sin, cos)
 
-        key = jnp.asarray(key, dtype=self.dtype)
-        query = jnp.asarray(query, dtype=self.dtype)
-
-        return key, query
-
-
+        return query.astype(self.dtype), key.astype(self.dtype)
 
 class FlaxQwen2Attention(nn.Module):
     config: Qwen2Config
@@ -204,13 +323,13 @@ class FlaxQwen2Attention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.q_proj = nn.Dense(self.num_heads * self.head_dim, use_bias=False, dtype=self.dtype)
-        self.k_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
-        self.v_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
+        self.q_proj = nn.Dense(self.num_heads * self.head_dim, use_bias=True, dtype=self.dtype)
+        self.k_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=True, dtype=self.dtype)
+        self.v_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=True, dtype=self.dtype)
         self.o_proj = nn.Dense(self.hidden_size, use_bias=False, dtype=self.dtype)
         casual_mask = make_causal_mask(jnp.ones((1, config.max_position_embeddings), dtype="bool"), dtype="bool")
         self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window)
-        self.rotary_emb = FlaxQwen2RotaryEmbedding(config, dtype=self.dtype)
+        self.rotary_emb = FlaxQwen2RotaryEmbedding(dtype=self.dtype)
 
     def _split_heads(self, hidden_states, num_heads):
         return hidden_states.reshape(hidden_states.shape[:2] + (num_heads, self.head_dim))
@@ -251,6 +370,10 @@ class FlaxQwen2Attention(nn.Module):
             attention_mask = combine_masks(pad_mask, attention_mask)
         return key, value, attention_mask
 
+    @staticmethod
+    def _transpose_sequence_head(query, key, value):
+        return jnp.transpose(query, (0, 2, 1, 3)), jnp.transpose(key, (0, 2, 1, 3)), jnp.transpose(value, (0, 2, 1, 3))
+
     def __call__(
         self,
         hidden_states: jnp.ndarray,
@@ -259,6 +382,7 @@ class FlaxQwen2Attention(nn.Module):
         deterministic: bool = True,
         output_attentions: bool = False,
         init_cache: bool = False,
+        freq_cis: Tuple[chex.Array, chex.Array] = None,
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
@@ -268,7 +392,6 @@ class FlaxQwen2Attention(nn.Module):
         key_states = self._split_heads(key_states, self.num_key_value_heads)
         value_states = self._split_heads(value_states, self.num_key_value_heads)
 
-        key_states, query_states = self.rotary_emb(key_states, query_states, position_ids)
         query_length, key_length = query_states.shape[1], key_states.shape[1]
         if self.has_variable("cache", "cached_key"):
             mask_shift = self.variables["cache"]["cache_index"]
@@ -284,10 +407,15 @@ class FlaxQwen2Attention(nn.Module):
         attention_mask = jnp.broadcast_to(jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_mask.shape)
         attention_mask = combine_masks(attention_mask, causal_mask)
 
+        query_states, key_states, value_states = self._transpose_sequence_head(query_states, key_states, value_states)
+        key_states, query_states = self.rotary_emb(key_states, query_states, freq_cis, position_ids)
+        query_states, key_states, value_states = self._transpose_sequence_head(query_states, key_states, value_states)
+        
         if self.has_variable("cache", "cached_key") or init_cache:
             key_states, value_states, attention_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states, attention_mask
             )
+
         key_states = jnp.repeat(key_states, self.num_key_value_groups, axis=2)
         value_states = jnp.repeat(value_states, self.num_key_value_groups, axis=2)
 
@@ -330,7 +458,7 @@ class FlaxQwen2MLP(nn.Module):
         inner_dim = self.config.intermediate_size if self.config.intermediate_size is not None else 4 * embed_dim
 
         kernel_init = jax.nn.initializers.normal(self.config.initializer_range)
-        self.act = ACT2FN[self.config.hidden_act]
+        self.act = jax.nn.silu # ACT2FN[self.config.hidden_act]
 
         self.gate_proj = nn.Dense(inner_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
         self.down_proj = nn.Dense(embed_dim, use_bias=False, dtype=self.dtype, kernel_init=kernel_init)
@@ -374,6 +502,7 @@ class FlaxQwen2DecoderLayer(nn.Module):
         deterministic: bool = True,
         init_cache: bool = False,
         output_attentions: bool = False,
+        freq_cis: Tuple[chex.Array, chex.Array] = None,
     ):
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
@@ -384,6 +513,7 @@ class FlaxQwen2DecoderLayer(nn.Module):
             deterministic,
             output_attentions,
             init_cache,
+            freq_cis,
         )
         # residual connection
         attn_output = outputs[0]
@@ -553,6 +683,7 @@ class FlaxQwen2LayerCollection(nn.Module):
         init_cache: bool = False,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
+        freq_cis: Tuple[chex.Array, chex.Array] = None,
         return_dict: bool = False,
     ):
         all_attentions = () if output_attentions else None
@@ -568,6 +699,7 @@ class FlaxQwen2LayerCollection(nn.Module):
                 deterministic=deterministic,
                 init_cache=init_cache,
                 output_attentions=output_attentions,
+                freq_cis=freq_cis,
             )
             hidden_states = layer_outputs[0]
 
@@ -595,6 +727,26 @@ class FlaxQwen2Module(nn.Module):
         )
         self.layers = FlaxQwen2LayerCollection(self.config, dtype=self.dtype)
         self.norm = FlaxQwen2RMSNorm(self.config, dtype=self.dtype)
+
+        initial_rope_kwargs = dict(
+            rope_type="none"
+        )
+        if hasattr(self.config, "rope_scaling"):
+            scaling_type = self.config.rope_scaling["type"]
+            scaling_factor = self.config.rope_scaling["factor"]
+            initial_rope_kwargs = dict(
+                scaling_factor=scaling_factor,
+                rope_type=scaling_type
+            )
+
+        self.freq_cis = precompute_freq_cis(
+            max_position_embeddings=(
+                getattr(self.config, "freq_max_position_embeddings", self.config.max_position_embeddings)
+            ),
+            dim=self.config.hidden_size // self.config.num_attention_heads,
+            base=self.config.rope_theta,
+            **initial_rope_kwargs
+        )
 
     def __call__(
         self,
@@ -627,6 +779,7 @@ class FlaxQwen2Module(nn.Module):
             init_cache=init_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            freq_cis=self.freq_cis,
             return_dict=return_dict,
         )
 
