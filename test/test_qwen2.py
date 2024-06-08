@@ -21,7 +21,7 @@ def flax_nll_loss(logits, labels, mask):
 
 with jax.default_device(jax.devices("cpu")[0]):
 
-    model_name = "Qwen/Qwen2-0.5B-Instruct"
+    model_name = "Qwen/Qwen2-7B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
     # config = Phi3Config(num_hidden_layers=2, sliding_window=2048)
@@ -39,7 +39,7 @@ with jax.default_device(jax.devices("cpu")[0]):
 
     text_input = "<|im_start|>user\nIf I am delivered mail not intended for me but misdelivered to me and it has cash in it, am I liable at all for keeping the money? <|im_end|>\n<|im_start|>assistant\nGenerally no, unless the mail contains something illegal or a court order which mandates that you must return it."
     max_length = 128
-    # tokenizer.padding_side = "left"
+    tokenizer.padding_side = "left"
     inputs = tokenizer(text_input, return_tensors="pt", max_length=max_length, padding="max_length")
     inputs["labels"] = (inputs["input_ids"] * inputs["attention_mask"]) + (-100 * (1 - inputs["attention_mask"]))
     inputs_flax = tokenizer(text_input, return_tensors="np", max_length=max_length, padding="max_length")

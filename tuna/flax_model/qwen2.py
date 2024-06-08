@@ -296,8 +296,8 @@ class FlaxQwen2RotaryEmbedding(nn.Module):
     def __call__(self, query, key, freq_cis, position_ids):
         sin, cos = freq_cis
 
-        sin = sin[position_ids][:, None, :, :]
-        cos = cos[position_ids][:, None, :, :]
+        sin = sin[position_ids][:, :, None, :]
+        cos = cos[position_ids][:, :, None, :]
 
         key = apply_rotary_pos_emb(key, sin, cos)
         query = apply_rotary_pos_emb(query, sin, cos)
@@ -370,10 +370,6 @@ class FlaxQwen2Attention(nn.Module):
             attention_mask = combine_masks(pad_mask, attention_mask)
         return key, value, attention_mask
 
-    @staticmethod
-    def _transpose_sequence_head(query, key, value):
-        return jnp.transpose(query, (0, 2, 1, 3)), jnp.transpose(key, (0, 2, 1, 3)), jnp.transpose(value, (0, 2, 1, 3))
-
     def __call__(
         self,
         hidden_states: jnp.ndarray,
@@ -407,10 +403,8 @@ class FlaxQwen2Attention(nn.Module):
         attention_mask = jnp.broadcast_to(jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_mask.shape)
         attention_mask = combine_masks(attention_mask, causal_mask)
 
-        query_states, key_states, value_states = self._transpose_sequence_head(query_states, key_states, value_states)
         key_states, query_states = self.rotary_emb(key_states, query_states, freq_cis, position_ids)
-        query_states, key_states, value_states = self._transpose_sequence_head(query_states, key_states, value_states)
-        
+
         if self.has_variable("cache", "cached_key") or init_cache:
             key_states, value_states, attention_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states, attention_mask
