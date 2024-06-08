@@ -16,6 +16,13 @@ tf.FlaxAutoModelForCausalLM.register(
     exist_ok=True
     )
 
+from .qwen2 import FlaxQwen2ForCausalLM
+tf.FlaxAutoModelForCausalLM.register(
+    tf.Qwen2Config,
+    FlaxQwen2ForCausalLM,
+    exist_ok=True
+    )
+
 
 # from .gemma import FlaxGemmaForCausalLM
 # tf.FlaxAutoModelForCausalLM.register(
