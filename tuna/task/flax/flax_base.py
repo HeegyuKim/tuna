@@ -140,6 +140,7 @@ class FlaxLMTask(FlaxTask):
             if self.args.gradient_checkpointing:
                 config.gradient_checkpointing = self.args.gradient_checkpointing
 
+            config.freq_max_position_embeddings = self.args.max_length
             flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
                 config,
                 _do_init=True,
@@ -241,7 +242,7 @@ class FlaxLMTask(FlaxTask):
                 outputs["input_ids"].append(batch_ids[:batch_len])
                 if all_attention_mask is not None:
                     outputs["attention_mask"].append(batch_mask[:batch_len])
-                outputs["labels"].append(batch_labels[1:batch_len + 1])
+                outputs["labels"].append(batch_labels[:batch_len])
 
                 batch_ids, batch_labels = batch_ids[batch_len:], batch_labels[batch_len:]
                 if all_attention_mask is not None:

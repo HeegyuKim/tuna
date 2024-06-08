@@ -203,4 +203,13 @@ class GlaiveFunctionCallingV2Ko(ChatDataSource):
                 "content": "당신은 사용자에게 도움이 되는 AI 어시스턴트입니다. 사용할 수 있는 함수는 없습니다."
             })
         return item
-    
+
+@datasources("HAERAE-HUB/qarv-instruct-100k")
+class QarvInstructKo(BaseAlpacaDataSource):
+    instruction_key = "instruction"
+    output_key = "response"
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("HAERAE-HUB/qarv-instruct-100k", split=split)
+        return ds

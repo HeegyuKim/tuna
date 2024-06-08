@@ -103,6 +103,7 @@ class FlaxBaseTrainer:
     def setup(self):
         self.logger.log("setup dataloader")
         self.setup_dataloader()
+        self.logger.log("setup sharding")
         self.setup_sharding()
 
     def _create_dataloader(self, dataset, batch_size, shuffle):
@@ -140,7 +141,11 @@ class FlaxBaseTrainer:
     def setup_sharding(self):
         self.dtype = STR_DTYPE_TO_JNP[self.args.dtype]
         self.total_steps = self.estimate_total_steps()
+
+        self.logger.log("init optimizer")
         self.init_optimizer(self.total_steps)
+
+        self.logger.log("init mesh")
         self.shard_params()
         # self.create_sharded_functions()
 
@@ -259,6 +264,8 @@ class FlaxBaseTrainer:
     @use_implicit_args
     def shard_params(self):
         self.init_mesh()
+        
+        self.logger.log("init model")
         self.task.init_model(self.dtype)
         
         with jax.default_device(jax.devices('cpu')[0]):

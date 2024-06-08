@@ -48,6 +48,9 @@ def main():
         trainer_cls.ARG_CLASS,
         ]).parse_args_into_dataclasses()
 
+    if not args.debug:
+        logger = WandbLogger(trainer_args)
+        
     dataloader = DatasetLoader(data_args)
 
     task = task_cls(task_args)
@@ -60,7 +63,6 @@ def main():
                 print(f"train#{i:2d}", dataloader.dataset[k][i])
         return
     else:
-        logger = WandbLogger(trainer_args)
         trainer = trainer_cls(
             args=trainer_args,
             logger=logger,
