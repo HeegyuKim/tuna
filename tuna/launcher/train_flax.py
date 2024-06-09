@@ -8,6 +8,7 @@ import torch
 from dataclasses import dataclass
 from typing import Optional
 from transformers import HfArgumentParser
+import numpy as np
 from ..task import DatasetArguments, DatasetLoader
 from ..task.flax import flax_tasks
 from ..trainer.utils.wandb_logger import WandbLogger
@@ -61,6 +62,17 @@ def main():
         for k in dataloader.dataset:
             for i in range(10):
                 print(f"train#{i:2d}", dataloader.dataset[k][i])
+
+            print("Estimating length statistics")
+            lengths = []
+            for item in dataloader.dataset[k]:
+                lengths.append(len(item["input_ids"]))
+            
+            # print statistics
+            lengths = np.array(lengths)
+            print("Split", k)
+            print("Lengths(mean, std, min, max):", lengths.mean(), lengths.std(), lengths.min(), lengths.max())
+            print("Lengths(percentile):", np.percentile(lengths, [0, 25, 50, 75, 90, 95, 99, 100]))
         return
     else:
         trainer = trainer_cls(

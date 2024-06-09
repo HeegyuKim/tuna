@@ -213,3 +213,29 @@ class QarvInstructKo(BaseAlpacaDataSource):
             return None
         ds = load_dataset("HAERAE-HUB/qarv-instruct-100k", split=split)
         return ds
+
+@datasources("jhflow/sharegpt_deepl_ko_translation_dedup")
+class ShareGPTDeepLTranslationKoDedup(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("jhflow/sharegpt_deepl_ko_translation_dedup", split=split)
+        return ds
+
+    def map_conversations(self, item):
+        convs = []
+        convs.append({
+            "role": "system",
+            "content": "You are a Korean translator. Translate your English text into Korean."
+        })
+        convs.append({
+            "role": "user",
+            "content": item["english"]
+        })
+        convs.append({
+            "role": "assistant",
+            "content": item["korean"]
+        })
+        return {
+            "conversations": convs
+        }
