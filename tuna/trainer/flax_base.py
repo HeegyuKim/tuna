@@ -488,7 +488,10 @@ class FlaxBaseTrainer:
                     break
 
         if "last" in self.args.save_strategy:
-            self.save_model(f"epoch-{epoch + 1}-last", True)
+            if "last" == self.args.save_strategy:
+                self.save_model(f"main", True)
+            else:
+                self.save_model(f"epoch-{epoch + 1}-last", True)
 
         print("training is finished!")
 

@@ -124,8 +124,8 @@ class Phi3Template(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<|function-response|>\n{content}<|end|>"
 
     def __init__(self, tokenizer) -> None:
-        super().__init__(tokenizer)
         tokenizer.eos_token = "<|end|>"
+        super().__init__(tokenizer)
 
 @train_templates.register("eeve")
 class EEVETemplate(BaseTrainTemplate):
@@ -248,14 +248,13 @@ class Llama3(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<|start_header_id|>function-response<|end_header_id|>\n\n{content}<|eot_id|>"
 
     def __init__(self, tokenizer) -> None:
-        super().__init__(tokenizer)
         additional_tokens = ['<|start_header_id|>', '<|end_header_id|>', '<|eot_id|>']
 
         tokenizer.add_special_tokens({
             'additional_special_tokens': additional_tokens
             })
-
         tokenizer.eos_token = "<|eot_id|>"
+        super().__init__(tokenizer)
 
 
 @train_templates.register("gemma")
@@ -275,11 +274,11 @@ class GemmaTemplate(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<start_of_turn>user\n```function-response\n{content}```<end_of_turn>"
     
     def __init__(self, tokenizer) -> None:
-        super().__init__(tokenizer)
         additional_tokens = ['<start_of_turn>','<end_of_turn>']
         tokenizer.add_special_tokens({
             'additional_special_tokens': additional_tokens
             })
+        super().__init__(tokenizer)
         
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):

@@ -1,7 +1,7 @@
 wandb online
 model="Qwen/Qwen2-7B"
 run_name="0608-Qwen2-7B-sft-en2ko"
-datasets="jhflow/sharegpt_deepl_ko_translation_dedup"
+datasets="squarelike/sharegpt_deepl_ko_translation"
 # datasets="HAERAE-HUB/qarv-instruct-100k,heegyu/OpenOrca-gugugo-ko-len500"
 
 train() {
@@ -27,7 +27,7 @@ train() {
         --train_total_batch_size 32 \
         --train_batch_size_per_device 1 \
         --eval_batch_size_per_device 1 \
-        --save_strategy epoch \
+        --save_strategy last \
         --push_to_hub \
         --push_to_hub_id $run_name \
         --revision_prefix "lr$lr-" \
