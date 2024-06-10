@@ -1,11 +1,11 @@
 wandb online
 model="Qwen/Qwen2-7B"
-run_name="0608-Qwen2-7B-sft-ko"
-datasets="HAERAE-HUB/qarv-instruct-100k"
 # datasets="HAERAE-HUB/qarv-instruct-100k,heegyu/OpenOrca-gugugo-ko-len500"
 
 train() {
     lr=$1
+    datasets=$2
+    run_name="0609-Qwen2-7B-sft-$3"
 
     python -m tuna.launcher.train_flax \
         --mesh sp \
@@ -34,4 +34,6 @@ train() {
         --output_dir ""
 }
 
-train 2e-5
+# train 2e-5 "HAERAE-HUB/qarv-instruct-100k" "qarv"
+# train 2e-5 "kyujinpy/KOR-OpenOrca-Platypus-v3" "OOP-v3"
+train 2e-5 "beomi/KoAlpaca-v1.1a" "KoAlpaca-v1.1a"

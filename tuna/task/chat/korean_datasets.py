@@ -243,3 +243,8 @@ class ShareGPTDeepLKoTranslation(ChatDataSource):
         return {
             "conversations": convs
         }
+
+# beomi/KoAlpaca-v1.1a
+@datasources("beomi/KoAlpaca-v1.1a")
+class KoAlpacaV1_1a(BaseAlpacaDataSource):
+    dataset_path = "beomi/KoAlpaca-v1.1a"

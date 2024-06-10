@@ -39,7 +39,8 @@ train() {
 
 
 for lr in 5e-6; do
-    train $lr 0.1
-    train $lr 0.5
-    train $lr 1.0
+    train $lr 0.01
+    # train $lr 0.1
+    # train $lr 0.5
+    # train $lr 1.0
 done
