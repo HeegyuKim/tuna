@@ -16,6 +16,7 @@ ROLE_MAPPER = {
 
 @datasources("hf-chat:")
 class ChatDataSource(DataSource):
+    CONVERSATION_KEY = "conversations"
 
     def __init__(self, dataset_name: str = None) -> None:
         super().__init__()
@@ -27,7 +28,7 @@ class ChatDataSource(DataSource):
             if isinstance(ds, IterableDataset):
                 ds = ds.map(self.map_conversations)
             else:
-                ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=False, desc="Converting to conversational format").select_columns(["conversations"])
+                ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=args.load_from_cache_file, desc="Converting to conversational format").select_columns([self.CONVERSATION_KEY])
         return ds
     
     # def map_conversations(self, item):
@@ -36,7 +37,7 @@ class ChatDataSource(DataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         ds = load_dataset(self.dataset_name, streaming=args.dataset_streaming).get(split)
         if ds:
-            ds = ds.select_columns("conversations")
+            ds = ds.select_columns(self.CONVERSATION_KEY)
         return ds
 
 def convert_vicuna2openai(convs):

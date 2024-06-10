@@ -20,6 +20,7 @@ class DatasetArguments():
     add_source: bool = False
     limit: Optional[int] = None
     eval_limit: Optional[int] = None
+    load_from_cache_file: bool = False
 
 
 datasources = Registry("datasource")

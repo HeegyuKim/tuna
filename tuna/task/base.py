@@ -64,13 +64,13 @@ class BaseTask:
                  ) -> None:
         self.args = args
 
-    def encode_datasets(self, datasets: Dict) -> DatasetDict:
+    def encode_datasets(self, datasets: Dict, dataset_args: DatasetArguments) -> DatasetDict:
         for k in datasets:
             ds = datasets[k]
             if isinstance(ds, IterableDataset):
                 datasets[k] = ds.map(self.encode_item).select_columns(["input_ids", "attention_mask", "labels"])
             else:
-                datasets[k] = ds.map(self.encode_item, load_from_cache_file=False, desc="Encoding", num_proc=NUM_PROC)
+                datasets[k] = ds.map(self.encode_item, load_from_cache_file=dataset_args.load_from_cache_file, desc="Encoding", num_proc=NUM_PROC)
 
         return datasets
 

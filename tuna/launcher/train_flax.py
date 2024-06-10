@@ -55,7 +55,7 @@ def main():
     dataloader = DatasetLoader(data_args)
 
     task = task_cls(task_args)
-    dataloader.dataset = task.encode_datasets(dataloader.dataset)
+    dataloader.dataset = task.encode_datasets(dataloader.dataset, data_args)
     
     if args.debug:
         print("Debugging dataset")
