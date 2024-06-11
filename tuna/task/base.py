@@ -182,8 +182,8 @@ class LMTask(Task):
             decoder_max_length=self.args.decoder_max_length,
             return_tensors="pt")
         
-    def encode_datasets(self, datasets: Dict) -> DatasetDict:
-        datasets = super().encode_datasets(datasets)
+    def encode_datasets(self, datasets: Dict, dataset_args: DatasetArguments) -> DatasetDict:
+        datasets = super().encode_datasets(datasets, dataset_args)
         if self.args.packing:
             cols = datasets["train"].column_names
             if cols:
@@ -192,19 +192,19 @@ class LMTask(Task):
                 if "labels" in cols:
                     cols.remove("labels")
                 for k in datasets:
-                    datasets[k] = datasets[k].map(self._pack, load_from_cache_file=False, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+                    datasets[k] = datasets[k].map(self._pack, load_from_cache_file=dataset_args.load_from_cache_file, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
             else: # iterable dataset
                 for k in datasets:
                     datasets[k] = datasets[k].map(self._pack, batched=True)
             
         if self.args.check_dataset:
             for k in datasets:
-                datasets[k] = self.check_dataset(k, datasets[k])
+                datasets[k] = self.check_dataset(k, datasets[k], dataset_args)
             
         return datasets
 
-    def check_dataset(self, split, dataset):
-        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=False, desc=f"Checking {split} set")
+    def check_dataset(self, split, dataset, dataset_args):
+        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=dataset_args.load_from_cache_file, desc=f"Checking {split} set")
         if not isinstance(dataset, IterableDataset):
             original_size = len(dataset)
             filtered_len = len(filtered_dataset)

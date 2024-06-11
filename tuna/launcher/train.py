@@ -74,7 +74,7 @@ def main():
         artifacts,
         trainer_args.device
         )
-    dataloader.dataset = task.encode_datasets(dataloader.dataset)
+    dataloader.dataset = task.encode_datasets(dataloader.dataset, data_args)
 
     print("load model")
     task.set_model(model_loader.load_model())

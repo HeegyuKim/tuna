@@ -1,6 +1,6 @@
 wandb online
 
-template="gemma"
+template="no"
 lr=1e-4
 
 train() {
@@ -10,7 +10,7 @@ train() {
     lora_r=8
     model="google/gemma-$3"
 
-    hub_id="0529-gemma-$3-mmlu-toy-sft-lora"
+    hub_id="0530-gemma-$3-mmlu-toy-sft-lora"
 
     python -m tuna.launcher.train \
         --mesh sp \

@@ -45,6 +45,7 @@ LORA_TARGETS = [
     (T5Config, T5_TARGETS),
     (LlamaConfig, LLAMA_TARGETS),
     (MistralConfig, MISTRAL_TARGETS),
+    ("Qwen2Config", MISTRAL_TARGETS),
     (GemmaConfig, LLAMA_TARGETS),
     ("Phi3Config", PHI3_TARGETS)
 ]

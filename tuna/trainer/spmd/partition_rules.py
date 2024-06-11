@@ -127,6 +127,7 @@ ALL_RULES = [
     (T5Config, T5_RULES),
     (LlamaConfig, LLAMA_RULES),
     (MistralConfig, MISTRAL_RULES),
+    ("Qwen2Config", MISTRAL_RULES),
     (RobertaConfig, ROBERTA_RULES),
     (XLMRobertaConfig, ROBERTA_RULES),
     (CLIPConfig, CLIP_RULES),
