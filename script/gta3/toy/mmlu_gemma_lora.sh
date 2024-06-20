@@ -36,8 +36,8 @@ train() {
         --lr_warmup_ratio 0.1 \
         --lr_decay_ratio 0.1 \
         --train_total_batch_size 32 \
-        --train_batch_size_per_device 4 \
-        --eval_batch_size_per_device 4 \
+        --train_batch_size_per_device 1 \
+        --eval_batch_size_per_device 1 \
         --save_strategy epoch \
         --push_to_hub \
         --push_to_hub_id $hub_id \

@@ -214,6 +214,16 @@ class QarvInstructKo(BaseAlpacaDataSource):
         ds = load_dataset("HAERAE-HUB/qarv-instruct-100k", split=split)
         return ds
 
+@datasources("HAERAE-HUB/qarv-instruct-ko")
+class QarvInstructKo(BaseAlpacaDataSource):
+    instruction_key = "instruction"
+    output_key = "answer"
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("HAERAE-HUB/qarv-instruct-ko", split=split)
+        return ds
+    
 @datasources("squarelike/sharegpt_deepl_ko_translation")
 class ShareGPTDeepLKoTranslation(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
