@@ -72,6 +72,8 @@ class DatasetLoader:
                     source = source(dataset_name=name.split("hf-chat:", 1)[1])
                 else:
                     source = datasources.get(name)
+                    if source is None:
+                        raise ValueError(f"Unknown dataset source {name}")
                     source = source()
                 ds = source.load(args, split)
 

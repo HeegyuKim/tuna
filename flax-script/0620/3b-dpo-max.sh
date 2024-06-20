@@ -16,7 +16,7 @@ train() {
         --padding max_length \
         --project "DDFO-DPO" \
         --run_name "$run_name-lr$lr-beta$beta" \
-        --dataset="dpo:heegyu/UltraFeedback-max-margin" \
+        --dataset="dpo:heegyu/Ultrafeedback-max-margin" \
         --packing False \
         --truncation \
         --max_length=2048 \
