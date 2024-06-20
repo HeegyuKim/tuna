@@ -845,7 +845,11 @@ class FlaxQwen2ForCausalLMModule(nn.Module):
         )
 
         hidden_states = outputs[0]
-        lm_logits = self.lm_head(hidden_states)
+        if self.config.tie_word_embeddings:
+            shared_kernel = self.model.variables["params"]["embed_tokens"]["embedding"].T
+            lm_logits = self.lm_head.apply({"params": {"kernel": shared_kernel}}, hidden_states)
+        else:
+            lm_logits = self.lm_head(hidden_states)
 
         if not return_dict:
             return (lm_logits,) + outputs[1:]

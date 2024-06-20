@@ -9,12 +9,6 @@ import jax.numpy as jnp
 
 from fjformer import with_sharding_constraint
 from fjformer.xrapture import use_implicit_args, LoraWeight
-from fjformer.func.loss_func import (
-    cross_entropy_loss_and_accuracy,
-    SpecialLossNormalizingFactor,
-    get_loss_normalizing_factor_and_weights,
-    compute_weighted_cross_entropy_and_accuracy,
-)
 import chex
 
 

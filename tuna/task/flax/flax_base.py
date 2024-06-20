@@ -8,7 +8,7 @@ import flax
 from jax.sharding import PartitionSpec
 
 from fjformer import with_sharding_constraint
-from fjformer.func.loss_func import (
+from fjformer.functions.loss_func import (
     cross_entropy_loss_and_accuracy,
     SpecialLossNormalizingFactor,
     get_loss_normalizing_factor_and_weights,
@@ -193,7 +193,8 @@ class FlaxLMTask(FlaxTask):
         
         if self.args.check_dataset:
             for k in datasets:
-                datasets[k] = self.check_dataset(k, datasets[k], dataset_args)
+                if not isinstance(datasets[k], IterableDataset):
+                    datasets[k] = self.check_dataset(k, datasets[k], dataset_args)
             
         return datasets
 

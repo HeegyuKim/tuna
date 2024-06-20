@@ -307,7 +307,7 @@ class FlaxBaseTrainer:
         with self.mesh:
             print("matching partition rules")
             partition_specs = match_partition_rules(params=state_shape, rules=get_partition_rules(self.task.model.config, self.args.fully_sharded))
-            shard_fns, gather_fns = make_shard_and_gather_fns(partition_specs.params, self.dtype)
+            shard_fns, gather_fns = make_shard_and_gather_fns(partition_specs.params, self.mesh, self.dtype)
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )

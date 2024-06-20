@@ -8,11 +8,8 @@ import jax, flax
 import jax.numpy as jnp
 
 from fjformer import with_sharding_constraint
-from fjformer.func.loss_func import (
+from fjformer.functions.loss_func import (
     cross_entropy_loss_and_accuracy,
-    SpecialLossNormalizingFactor,
-    get_loss_normalizing_factor_and_weights,
-    compute_weighted_cross_entropy_and_accuracy,
 )
 import chex
 import transformers as tf
