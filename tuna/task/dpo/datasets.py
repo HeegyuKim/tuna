@@ -150,15 +150,6 @@ class UltraFeedbackDataSourceForDistil(DPODataSource):
         return ds
 
 
-@datasources.register("dpo:heegyu/UltraFeedback-max-margin")
-class UltraFeedbackDataSource(DPODataSource):
-
-    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
-        if split != "train":
-            return None
-        return load_dataset("heegyu/UltraFeedback-max-margin", split=split)
-        
-
 @datasources("dpo:heegyu/Ultrafeedback-split-dpo-max-margin")
 class UltraFeedback0430MaxMargin(DPODataSource):
 
@@ -174,6 +165,46 @@ class UltraFeedback0430MaxMargin(DPODataSource):
             "conversations": convs,
             "chosen": chosen,
             "rejected": rejected
+        }
+
+@datasources("dpo:heegyu/Ultrafeedback-max-margin")
+class UltraFeedbackMaxMargin(DPODataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/Ultrafeedback-max-margin-critique", split=split)
+        ds = ds.filter(lambda x: x["chosen_score"] > 7 and x["rejected_score"] < 5)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = [{'role': 'user', 'content': item['instruction']}]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected,
+        }
+    
+@datasources("dpo:heegyu/Ultrafeedback-max-margin-critique:cot")
+class UltraFeedbackMaxMarginCritique(DPODataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/Ultrafeedback-max-margin-critique", split=split)
+        ds = ds.filter(lambda x: x["chosen_score"] > 7 and x["rejected_score"] < 5)
+        return ds
+    
+    def map_conversations(self, item):
+        convs = [{'role': 'user', 'content': item['instruction']}]
+        chosen = "Critique: " + item["chosen_critique"] + "\nResponse: " + item["chosen"]
+        rejected = "Critique: " + item["rejected_critique"] + "\nResponse: " + item["rejected"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected,
         }
     
 @datasources("dpo:droussis/UltraSafety_binarized-orpo-dpo")
