@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 import requests
 import transformers
 from transformers import GenerationConfig
+from .. import flax_model
 
 import jax, flax
 import jax.numpy as jnp
@@ -16,9 +17,36 @@ from jax.experimental.pjit import pjit
 from jax.sharding import Mesh, PartitionSpec
 from fjformer import get_dtype, make_shard_and_gather_fns, match_partition_rules, with_sharding_constraint
 
+import torch
 from .prompt_templates import PROMPT_TEMPLATES
 from ..trainer.flax.partition_rules import get_partition_rules
 
+def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch.bfloat16, device = "auto", trust_remote_code=False, merge_peft=False):
+
+    if "@" not in model_name:
+        repo_id, revision = model_name, None
+    else:
+        repo_id, revision = model_name.split("@")
+
+    if repo_id.startswith("peft:"):
+        import peft
+
+        repo_id = repo_id[len("peft:"):]
+
+        config = peft.PeftConfig.from_pretrained(repo_id, revision=revision, trust_remote_code=trust_remote_code)
+        base_model_name_or_path, base_revision = config.base_model_name_or_path, config.revision
+
+        model = transformers.AutoModelForCausalLM.from_pretrained(base_model_name_or_path, revision=base_revision, torch_dtype=dtype, device_map=device, trust_remote_code=trust_remote_code)  
+        tokenizer = transformers.AutoTokenizer.from_pretrained(base_model_name_or_path, revision=base_revision, trust_remote_code=trust_remote_code)
+
+        model = peft.PeftModel.from_pretrained(model, repo_id, revision=revision)
+        if merge_peft:
+            model = model.merge_and_unload()
+    else:
+        model = transformers.AutoModelForCausalLM.from_pretrained(repo_id, revision=revision, torch_dtype=dtype, device_map=device, trust_remote_code=trust_remote_code)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(repo_id, revision=revision, trust_remote_code=trust_remote_code)
+    
+    return model, tokenizer
 
 MESH_SHAPES = {
     "fsdp": (1, -1, 1, 1),
@@ -49,35 +77,37 @@ class FlaxHuggingfaceModel:
         self,
         model_name_or_path: str, 
         prompt_length: int,
-        max_new_tokens: int,
-        gen_args: Dict = {}, 
+        max_length: int,
+        batch_size: int = 1, 
         fully_sharded_data_parallel = True,
         chat_template: Optional[str] = None,
         eos_token_id: Optional[int] = None,
         eos_token: Optional[str] = None,
+        gen_args: Optional[Dict[str, Any]] = None,
         mesh_axes_names = ("dp", "fsdp", "tp", "sp"),
         mesh_axes_shape: Union[Tuple, str] = (1, -1, 1, 1),
         dtype: str = "bf16",
     ):
-        model_name = model_name_or_path
-        if "@" in model_name:
-            model_name, revision = model_name.split("@")
-        else:
-            revision = None
+        gen_args = gen_args or {}
+        if "max_new_tokens" not in gen_args:
+            gen_args["max_new_tokens"] = max_length - prompt_length
+            
+        pt_model, tokenizer = load_huggingface_model_tokenizer(model_name_or_path, device="cpu", merge_peft=True)
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, revision=revision)
         if chat_template:
             tokenizer.chat_template = PROMPT_TEMPLATES[chat_template]
         if tokenizer.chat_template is None:
-            tokenizer.chat_template = PROMPT_TEMPLATES.get(model_name)
+            tokenizer.chat_template = PROMPT_TEMPLATES.get(model_name_or_path)
 
         if eos_token_id is not None:
             tokenizer.eos_token_id = eos_token_id
-        if eos_token is not None:
+            print("Setting eos token to", tokenizer.eos_token)
+        elif eos_token is not None:
             tokenizer.eos_token = eos_token
+            print("Setting eos token to", eos_token)
 
         with jax.default_device(jax.devices("cpu")[0]):
-            config = transformers.AutoConfig.from_pretrained(model_name, revision=revision)
+            config = pt_model.config
             if isinstance(config, transformers.MistralConfig):
                 config.sliding_window=4096
 
@@ -85,10 +115,9 @@ class FlaxHuggingfaceModel:
                 config,
                 _do_init=True,
                 dtype=get_dtype(dtype),
-                input_shape=(1, prompt_length + max_new_tokens)
+                input_shape=(1, max_length)
                 )
 
-            pt_model = transformers.AutoModelForCausalLM.from_pretrained(model_name, revision=revision)
             pt_state_dict = pt_model.state_dict()
 
             print("converting to flax")
@@ -135,9 +164,8 @@ class FlaxHuggingfaceModel:
         tokenizer.padding_side = "right"
         tokenizer.truncation_side = "right"
         self.tokenizer = copy.deepcopy(tokenizer)
-        self.max_sequence_length = max_new_tokens + prompt_length
+        self.max_sequence_length = max_length
         self.prompt_length = prompt_length
-        self.gen_args = gen_args
         self.rng_generator = RNG(42)
 
         generation_ps = PartitionSpec("dp", "fsdp")
@@ -156,18 +184,19 @@ class FlaxHuggingfaceModel:
                 params=parameters,
                 generation_config=GenerationConfig(
                     max_length=self.max_sequence_length,
+                    max_new_tokens=gen_args.get("max_new_tokens"),
 
                     eos_token_id=tokenizer.eos_token_id,
                     pad_token_id=tokenizer.pad_token_id,
                     bos_token_id=tokenizer.bos_token_id,
 
-                    temperature=self.gen_args.get("temperature"),
+                    temperature=gen_args.get("temperature", 1.0),
                     early_stopping=True,
                     do_sample=True,
                     num_beams=1,
-                    top_p=self.gen_args.get("top_p"),
-                    top_k=self.gen_args.get("top_k"),
-                    repetition_penalty=self.gen_args.get("repetition_penalty")
+                    top_p=gen_args.get("top_p", 1.0),
+                    top_k=gen_args.get("top_k"),
+                    repetition_penalty=gen_args.get("repetition_penalty", 1.0)
                 )
             ).sequences[:, input_ids.shape[1]:]
             return predict
@@ -187,18 +216,18 @@ class FlaxHuggingfaceModel:
                 prng_key=rng,
                 generation_config=GenerationConfig(
                     max_length=self.max_sequence_length,
+                    max_new_tokens=gen_args.get("max_new_tokens"),
 
                     eos_token_id=tokenizer.eos_token_id,
                     pad_token_id=tokenizer.pad_token_id,
                     bos_token_id=tokenizer.bos_token_id,
 
-                    temperature=self.gen_args.get("temperature"),
+                    temperature=gen_args.get("temperature", 1.0),
                     early_stopping=True,
                     do_sample=True,
-                    num_beams=1,
-                    top_p=self.gen_args.get("top_p"),
-                    top_k=self.gen_args.get("top_k"),
-                    repetition_penalty=self.gen_args.get("repetition_penalty")
+                    top_p=gen_args.get("top_p", 1.0),
+                    top_k=gen_args.get("top_k"),
+                    repetition_penalty=gen_args.get("repetition_penalty", 1.0)
                 )
             ).sequences[:, input_ids.shape[1]:]
             return predict
@@ -207,18 +236,18 @@ class FlaxHuggingfaceModel:
         self.greedy_generate_function = greedy_generate
         self._funcs_generated = True
         self.system_prompt = None
+        self.batch_size = batch_size
 
     def set_system_message(self, prompt):
         self.system_prompt = prompt
     
-    def generate_prefix(self,
-               string: str,
-               greedy: bool = False,
-               **kwargs
+    def generate_from_prompts(self,
+               prompts: list[str],
+               gen_args: dict,
                ):
         fixed_pad = self.prompt_length
         tokens = self.prefix_tokenizer(
-            string,
+            prompts,
             max_length=fixed_pad,
             padding="max_length",
             truncation=True,
@@ -226,82 +255,76 @@ class FlaxHuggingfaceModel:
             add_special_tokens=False
         )
 
+        greedy = not gen_args.get("do_sample", False)
+
         input_ids = tokens.input_ids
         attention_mask = tokens.attention_mask
 
         
         with self.mesh:
-            predicted_token = self.greedy_generate_function(
+            outputs = self.greedy_generate_function(
                 self.params,
                 input_ids,
-                attention_mask
+                attention_mask,
             ) if greedy else self.generate_function(
                 self.params,
                 self.rng_generator(),
                 input_ids,
-                attention_mask
+                attention_mask,
             )
 
-        output = self.tokenizer.decode(predicted_token[0], skip_special_tokens=True)
-        print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False).replace(self.tokenizer.pad_token, ""))
-        print(output)
-        return output
+        # output = self.tokenizer.batch_decode(predicted_token, skip_special_tokens=True)
+        # print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False).replace(self.tokenizer.pad_token, ""))
+        # print(output)
+        return outputs
 
-    def generate(self,
-               user_message: str,
-               generation_prefix: str = "",
-               greedy: bool = False,
-               **kwargs
-               ):
-        return self.chat([{'role': 'user', 'content': user_message}], generation_prefix, greedy, **kwargs)
-        
-    def chat(self,
-               conversations: list,
-               generation_prefix: str = "",
-               greedy: bool = False,
-               ):
-        if conversations[0]['role'] != 'system' and self.system_prompt:
-            conversations.insert(0, {'role': 'system', 'content': self.system_prompt})
+    def generate_batch(self, prompts, histories = None, generation_prefix: str = None, gen_args = {}):
+        assert len(prompts) <= self.batch_size
 
-        prompt = self.tokenizer.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False) + generation_prefix
-        return self.generate_prefix(prompt, greedy=greedy)
+        if histories is None:
+            histories = [[] for _ in prompts]
 
-    def generate_messages(self, messages, clear_old_history=True, **kwargs):
-        """
-        Generates a response based on messages that include conversation history.
-        :param list[str]|str messages: A list of messages or a single message string.
-                                       User and assistant messages should alternate.
-        :param bool clear_old_history: If True, clears the old conversation history before adding new messages.
-        :return str: The response generated by the OpenAI model based on the conversation history.
-        """
-        if clear_old_history:
-            self.conversation = []
+        final_prompts = []
+        for prompt, history in zip(prompts, histories):
+            history.append({
+                'role': 'user',
+                'content': prompt,
+            })
 
-        if isinstance(messages, str):
-            messages = [messages]
-
-        for index, message in enumerate(messages):
-            self.conversation.append({
-                'role': 'user' if index % 2 == 0 else 'assistant', 
-                'content': message
-                })
+            inputs = self.tokenizer.apply_chat_template(history, add_special_tokens=True, tokenize=False, add_generation_prompt=True)
+            if generation_prefix is not None:
+                inputs = generation_prefix + inputs
             
-        response = self.forward_chat(self.conversation)
-        return response
+            final_prompts.append(inputs)
 
-    def batch_generate(self, conversations, **kwargs):
-        """
-        Generates responses for multiple conversations in a batch.
-        :param list[list[str]]|list[str] conversations: A list of conversations, each as a list of messages.
-        :return list[str]: A list of responses for each conversation.
-        """
-        responses = []
-        for conversation in conversations:
-            if isinstance(conversation, str):
-                warnings.warn('For batch generation based on several conversations, provide a list[str] for each conversation. '
-                              'Using list[list[str]] will avoid this warning.')
-            responses.append(self.generate_messages(conversation, **kwargs))
-        return responses
+        if len(final_prompts) < self.batch_size:
+            final_prompts += [final_prompts[0]] * (self.batch_size - len(final_prompts))
+        
+        outputs = self.generate_from_prompts(final_prompts, gen_args)
+        return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
+    
+    def generate(self, prompt, history = None, generation_prefix: str = None, gen_args = {}):
+        if history is None:
+            history = []
+        history.append({
+            'role': 'user',
+            'content': prompt,
+        })
+
+        inputs = self.tokenizer.apply_chat_template(history, add_special_tokens=True, tokenize=False, add_generation_prompt=True)
+        if generation_prefix is not None:
+            inputs = inputs + generation_prefix
+        
+        outputs = self.generate_from_prompts([inputs], gen_args)
+        return self.tokenizer.decode(
+            outputs[0, inputs['input_ids'].shape[1]:], 
+            skip_special_tokens=True
+            )
+
+    def compile(self, test_prompt="Hi"):
+        print("Compiling functions")
+        print("Greedy:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=False)))
+        print("Sample:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=True)))
 
 
 class FlaxAPI:

@@ -10,3 +10,14 @@ def estimate_skip_length(output_path: str):
         skip_length = 0
 
     return skip_length
+
+
+def batched_iteration(iterable, batch_size):
+    batch = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch

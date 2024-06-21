@@ -8,6 +8,13 @@ tf.FlaxAutoModelForCausalLM.register(
     FlaxMistralForCausalLM,
     exist_ok=True
     )
+    
+from .phi import FlaxPhiForCausalLM
+tf.FlaxAutoModelForCausalLM.register(
+    tf.PhiConfig,
+    FlaxPhiForCausalLM,
+    exist_ok=True
+    )
 
 from .phi3 import FlaxPhi3ForCausalLM
 tf.FlaxAutoModelForCausalLM.register(

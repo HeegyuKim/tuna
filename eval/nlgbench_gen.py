@@ -5,7 +5,7 @@ import fire
 import jsonlines
 from tuna.serve.flax_generator import FlaxHuggingfaceModel
 from tqdm.auto import tqdm
-from .utils import estimate_skip_length
+from .utils import estimate_skip_length, batched_iteration
 
 
 mt_bench_temperature_config = {
@@ -44,6 +44,8 @@ def main(
         top_k: int = 50,
         top_p: float = 0.9,
         eos_token_id: int = None,
+        eos_token: str = None,
+        batch_size: int = 1
         ):
     model_name = model
     model = None
@@ -67,75 +69,77 @@ def main(
         
         if skip_length > 0:
             print(f"Skipping {skip_length} examples")
+            eval_set = eval_set.select(range(skip_length, len(eval_set)))
 
         if model is None:
             model = FlaxHuggingfaceModel(
                 model_name,
                 prompt_length=prompt_length,
-                max_new_tokens=max_new_tokens,
+                max_length=prompt_length + max_new_tokens,
                 gen_args={"temperature": temperature, "top_k": top_k, "top_p": top_p},
                 chat_template=chat_template,
                 eos_token_id=eos_token_id,
+                eos_token=eos_token,
+                batch_size=batch_size
             )
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with jsonlines.open(output_path, "a") as f:
-            for i, example in enumerate(tqdm(eval_set, desc=f"Generating... {model_name}/{dataset_name}")):
-                if i < skip_length:
-                    continue
+            for i, batch_example in enumerate(
+                tqdm(
+                    batched_iteration(eval_set, batch_size), 
+                    desc=f"Generating... {model_name}/{dataset_name}",
+                    total=len(eval_set) // batch_size
+                    )
+                    ):
+                
                 
                 if dataset_name == "mt-bench":
-                    instruction = example["prompt"][0]
-                    tmp = mt_bench_temperature_config[example['category']]
-                    if tmp == "greedy":
-                        greedy = True
-                        tmp = 1.0
-                    else:
-                        greedy = False
+                    for example in batch_example:
+                        instruction = example["prompt"][0]
+                        tmp = mt_bench_temperature_config[example['category']]
+                        if tmp == "greedy":
+                            greedy = True
+                            tmp = 1.0
+                        else:
+                            greedy = False
 
-                    if all_greedy:
-                        greedy = True
-                        
-                    model.gen_args["temperature"] = tmp
-                    output1 = model.generate(instruction, greedy=greedy)
-                    output2 = model.chat([
-                        {
-                            "role": "user",
-                            "content": instruction
-                        },
-                        {
-                            "role": "assistant",
-                            "content": output1
-                        },
-                        {
-                            "role": "user",
-                            "content": example["prompt"][1]
-                        },
-                    ], greedy=greedy)
-                    example["outputs"] = [output1, output2]
+                        if all_greedy:
+                            greedy = True
+                            
+                        model.gen_args["temperature"] = tmp
+                        output1 = model.generate(instruction, greedy=greedy)
+                        output2 = model.chat([
+                            {
+                                "role": "user",
+                                "content": instruction
+                            },
+                            {
+                                "role": "assistant",
+                                "content": output1
+                            },
+                            {
+                                "role": "user",
+                                "content": example["prompt"][1]
+                            },
+                        ], greedy=greedy)
+                        example["outputs"] = [output1, output2]
+
+                elif dataset_name == "alpaca-eval":
+                    instructions = [example["instruction"] for example in batch_example]
+                    outputs = model.generate_batch(instructions, gen_args={"do_sample": False})
+                    for example, output in zip(batch_example, outputs):
+                        example["output"] = output
+
+                elif dataset_name == "ifeval":
+                    instructions = [example["prompt"] for example in batch_example]
+                    responses = model.generate_batch(instructions, gen_args={"do_sample": False})
+                    for example, response in zip(batch_example, responses):
+                        example["response"] = response
                     
-                else:
-                    temperature = 0.7
-                    if dataset_name == "alpaca-eval":
-                        instruction = example["instruction"]
-                        greedy = False
-                        model.gen_args["temperature"] = temperature
-                        example["output"] = model.generate(instruction, greedy=greedy)
-
-                    elif dataset_name == "ifeval":
-                        instruction = example["prompt"]
-                        greedy = True
-                        model.gen_args["temperature"] = temperature
-                        example["response"] = model.generate(instruction, greedy=greedy)
-                    else:
-                        raise Exception(f"Unknown dataset: {dataset}")
-
-                    if all_greedy:
-                        greedy = True
-                    
-
-                example['generator'] = model_name
-                f.write(example)
+                for example in batch_example:
+                    example['generator'] = model_name
+                    f.write(example)
 
 if __name__ == "__main__":
     fire.Fire(main)
