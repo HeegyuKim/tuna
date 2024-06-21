@@ -32,3 +32,11 @@ eval "microsoft/Phi-3-mini-4k-instruct" # 1.90 (LC WR) / 5.82 (WR)
 #         eval "heegyu/0601-phi-3b-dco@lr$lr-beta$beta-epoch-1"
 #     done
 # done
+
+for lr in 1e-5 5e-6; do
+    for beta in 0.1 0.5 1.0; do
+        eval "heegyu/0620-phi-3b-dpo-cot@lr$lr-beta$beta-epoch-1"
+        eval "heegyu/0620-phi-3b-dpo@lr$lr-beta$beta-epoch-1"
+    done
+done
+

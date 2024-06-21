@@ -3,7 +3,7 @@ import datasets
 import os
 import fire
 import jsonlines
-from tuna.serve.flax_generator import FlaxHuggingfaceModel
+from .utils import load_model
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length, batched_iteration
 
@@ -43,7 +43,6 @@ def main(
         temperature: float = 1.0,
         top_k: int = 50,
         top_p: float = 0.9,
-        eos_token_id: int = None,
         eos_token: str = None,
         batch_size: int = 1
         ):
@@ -72,13 +71,12 @@ def main(
             eval_set = eval_set.select(range(skip_length, len(eval_set)))
 
         if model is None:
-            model = FlaxHuggingfaceModel(
+            model = load_model(
                 model_name,
                 prompt_length=prompt_length,
                 max_length=prompt_length + max_new_tokens,
                 gen_args={"temperature": temperature, "top_k": top_k, "top_p": top_p},
                 chat_template=chat_template,
-                eos_token_id=eos_token_id,
                 eos_token=eos_token,
                 batch_size=batch_size
             )
