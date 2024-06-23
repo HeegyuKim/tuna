@@ -193,18 +193,19 @@ class FlaxLMTask(FlaxTask):
         
         if self.args.check_dataset:
             for k in datasets:
-                if not isinstance(datasets[k], IterableDataset):
-                    datasets[k] = self.check_dataset(k, datasets[k], dataset_args)
+                datasets[k] = self.check_dataset(k, datasets[k], dataset_args)
             
         return datasets
 
     def check_dataset(self, split, dataset, dataset_args: DatasetArguments):
-        filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=dataset_args.load_from_cache_file, desc=f"Checking {split} set")
         if not isinstance(dataset, IterableDataset):
+            filtered_dataset = dataset.filter(self.filter_item, num_proc=NUM_PROC, load_from_cache_file=dataset_args.load_from_cache_file, desc=f"Checking {split} set")
             original_size = len(dataset)
             filtered_len = len(filtered_dataset)
             if original_size != filtered_len:
                 print(f"Filtered: {filtered_len - original_size} items from {split} set: {original_size} -> {filtered_len}")
+        else:
+            filtered_dataset = dataset.filter(self.filter_item)
         return filtered_dataset
 
 

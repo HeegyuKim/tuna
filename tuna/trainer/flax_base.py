@@ -47,7 +47,7 @@ from .utils.scheduler import AnnealingWarmupScheduler
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
-from .flax import optimizer_utils as opt_utils
+from .flax import optimizer_utils as opt_utils, sharding
 from ..common import Registry
 from .. import flax_model
 
@@ -204,7 +204,7 @@ class FlaxBaseTrainer:
 
         if self.args.lr_warmup_steps:
             lr_warmup_steps = self.args.lr_warmup_steps
-        if self.args.lr_warmup_ratio:
+        elif self.args.lr_warmup_ratio:
             lr_warmup_steps = int(total_steps * self.args.lr_warmup_ratio)
         else:
             lr_warmup_steps = 0
@@ -307,7 +307,7 @@ class FlaxBaseTrainer:
         with self.mesh:
             print("matching partition rules")
             partition_specs = match_partition_rules(params=state_shape, rules=get_partition_rules(self.task.model.config, self.args.fully_sharded))
-            shard_fns, gather_fns = make_shard_and_gather_fns(partition_specs.params, self.mesh, self.dtype)
+            shard_fns, gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.params, self.mesh, self.dtype)
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
