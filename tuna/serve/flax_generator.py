@@ -20,6 +20,8 @@ from fjformer import get_dtype, make_shard_and_gather_fns, match_partition_rules
 import torch
 from .prompt_templates import PROMPT_TEMPLATES
 from ..trainer.flax.partition_rules import get_partition_rules
+from copy import deepcopy
+
 
 def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch.bfloat16, device = "auto", trust_remote_code=False, merge_peft=False):
 
@@ -108,6 +110,7 @@ class FlaxHuggingfaceModel:
 
         with jax.default_device(jax.devices("cpu")[0]):
             config = pt_model.config
+            config.freq_max_position_embeddings = max_length
             if isinstance(config, transformers.MistralConfig):
                 config.sliding_window=4096
 
@@ -273,7 +276,7 @@ class FlaxHuggingfaceModel:
                 attention_mask,
             )
 
-        # output = self.tokenizer.batch_decode(predicted_token, skip_special_tokens=True)
+        # output = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
         # print(self.tokenizer.decode(input_ids[0], skip_special_tokens=False).replace(self.tokenizer.pad_token, ""))
         # print(output)
         return outputs
@@ -283,6 +286,8 @@ class FlaxHuggingfaceModel:
 
         if histories is None:
             histories = [[] for _ in prompts]
+        else:
+            histories = deepcopy(histories)
 
         final_prompts = []
         for prompt, history in zip(prompts, histories):
@@ -293,7 +298,7 @@ class FlaxHuggingfaceModel:
 
             inputs = self.tokenizer.apply_chat_template(history, add_special_tokens=True, tokenize=False, add_generation_prompt=True)
             if generation_prefix is not None:
-                inputs = generation_prefix + inputs
+                inputs = inputs + generation_prefix
             
             final_prompts.append(inputs)
 
@@ -301,11 +306,22 @@ class FlaxHuggingfaceModel:
             final_prompts += [final_prompts[0]] * (self.batch_size - len(final_prompts))
         
         outputs = self.generate_from_prompts(final_prompts, gen_args)
-        return self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
+        outputs = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
+
+        
+        if gen_args.get("verbose", False):
+            for inputs, output in zip(final_prompts, outputs):
+                print("Prompt:", inputs)
+                print("Response:", output)
+            
+        return outputs
     
     def generate(self, prompt, history = None, generation_prefix: str = None, gen_args = {}):
         if history is None:
             history = []
+        else:
+            history = deepcopy(history)
+            
         history.append({
             'role': 'user',
             'content': prompt,
@@ -316,15 +332,24 @@ class FlaxHuggingfaceModel:
             inputs = inputs + generation_prefix
         
         outputs = self.generate_from_prompts([inputs], gen_args)
-        return self.tokenizer.decode(
-            outputs[0, inputs['input_ids'].shape[1]:], 
+        output = self.tokenizer.decode(
+            outputs[0], 
             skip_special_tokens=True
             )
 
-    def compile(self, test_prompt="Hi"):
+        if gen_args.get("verbose", False):
+            print("Prompt:", inputs)
+            print("Response:", output)
+
+        return output
+
+    def compile(self, test_prompt="Hi", targets=["greedy", "sample"]):
         print("Compiling functions")
-        print("Greedy:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=False)))
-        print("Sample:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=True)))
+        if "greedy" in targets:
+            print("Greedy:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=False)))
+        
+        if "sample" in targets:
+            print("Sample:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=True)))
 
 
 class FlaxAPI:

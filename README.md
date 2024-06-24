@@ -53,3 +53,9 @@ export LD_LIBRARY_PATH=$HOME/miniconda/envs/qax/lib:$LD_LIBRARY_PATH
 ```
 pip install -r requirements.txt
 ```
+
+
+# Discord Bot
+```
+python -m tuna.serve.flax_discord Qwen/Qwen2-7B-Instruct
+```

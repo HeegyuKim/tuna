@@ -328,7 +328,7 @@ class FlaxQwen2Attention(nn.Module):
         self.v_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=True, dtype=self.dtype)
         self.o_proj = nn.Dense(self.hidden_size, use_bias=False, dtype=self.dtype)
 
-        max_causal_length = getattr(config, "freq_max_position_embeddings", "max_position_embeddings")
+        max_causal_length = getattr(config, "freq_max_position_embeddings") or config.max_position_embeddings
         casual_mask = make_causal_mask(jnp.ones((1, max_causal_length), dtype="bool"), dtype="bool")
         self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window)
         self.rotary_emb = FlaxQwen2RotaryEmbedding(dtype=self.dtype)
