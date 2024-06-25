@@ -1,12 +1,12 @@
 wandb online
-model="google/gemma-2b"
+model="Qwen/Qwen2-7B"
 
 train() {
     lr=$1
     datasets=$2
-    run_name="0625-gemma-2B-$3"
+    run_name="0625-qwen2-7B-$3"
 
-    step_batch=8
+    step_batch=4
     total_batch=512
     epoch_steps=1000000
     save_steps=$((epoch_steps / step_batch / 2)) # 2 times per epoch
@@ -30,7 +30,7 @@ train() {
         --learning_rate $lr \
         --last_learning_rate_ratio 0.0 \
         --lr_warmup_steps $lr_warmup_steps \
-        --train_template gemma \
+        --train_template chatml \
         --train_total_batch_size $total_batch \
         --train_batch_size_per_device $step_batch \
         --eval_batch_size_per_device $step_batch \
@@ -43,6 +43,4 @@ train() {
         --output_dir ""
 }
 
-# train 2e-5 "HAERAE-HUB/qarv-instruct-100k" "qarv"
-# train 2e-5 "kyujinpy/KOR-OpenOrca-Platypus-v3" "OOP-v3"
 train 5e-6 "infiniinstruct+qarv-100k" "infini-qarv"

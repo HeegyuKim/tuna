@@ -42,8 +42,6 @@ from fjformer import (
 from fjformer.xrapture import use_implicit_args
 
 from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger
-from ..task.collator import DefaultCollator
-from .utils.scheduler import AnnealingWarmupScheduler
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules

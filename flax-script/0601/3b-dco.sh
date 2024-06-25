@@ -41,7 +41,7 @@ train() {
 }
 
 # train 2e-5 0.1
-for lr in 5e-6 1e-5; do
+for lr in 1e-5; do
     # train $lr 0.1
     # train $lr 0.25
     # train $lr 0.5
