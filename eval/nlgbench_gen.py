@@ -34,6 +34,7 @@ def get_prompt_dataset(dataset: str):
 
 def main(
         model: str,
+        model_name: str = None,
         dataset: str = "all",
         output_dir: str = None,
         chat_template: str = None,
@@ -44,9 +45,12 @@ def main(
         top_k: int = 50,
         top_p: float = 0.9,
         eos_token: str = None,
-        batch_size: int = 1
+        batch_size: int = 1,
+        cot: bool = False
         ):
-    model_name = model
+    if model_name is None:
+        model_name = model
+    model_path = model
     model = None
 
     if output_dir is None:
@@ -56,6 +60,18 @@ def main(
         dataset = ["alpaca-eval", "mt-bench", "ifeval"]
     else:
         dataset = dataset.split(",")
+    
+    def handle_output(output):
+        if cot:
+            print(output)
+            return output.split("Response:")[-1].strip()
+        return output
+
+        
+    if cot:
+        generation_prefix = "Critique:"
+    else:
+        generation_prefix = ""
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)
@@ -72,7 +88,7 @@ def main(
 
         if model is None:
             model = load_model(
-                model_name,
+                model_path,
                 prompt_length=prompt_length,
                 max_length=prompt_length + max_new_tokens,
                 gen_args={"temperature": temperature, "top_k": top_k, "top_p": top_p},
@@ -125,15 +141,15 @@ def main(
 
                 elif dataset_name == "alpaca-eval":
                     instructions = [example["instruction"] for example in batch_example]
-                    outputs = model.generate_batch(instructions, gen_args={"do_sample": False})
+                    outputs = model.generate_batch(instructions, gen_args={"do_sample": False}, generation_prefix=generation_prefix)
                     for example, output in zip(batch_example, outputs):
-                        example["output"] = output
+                        example["output"] = handle_output(output)
 
                 elif dataset_name == "ifeval":
                     instructions = [example["prompt"] for example in batch_example]
-                    responses = model.generate_batch(instructions, gen_args={"do_sample": False})
+                    responses = model.generate_batch(instructions, gen_args={"do_sample": False}, generation_prefix=generation_prefix)
                     for example, response in zip(batch_example, responses):
-                        example["response"] = response
+                        example["response"] = handle_output(response)
                     
                 for example in batch_example:
                     example['generator'] = model_name

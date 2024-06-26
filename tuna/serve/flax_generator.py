@@ -15,7 +15,21 @@ import jax.numpy as jnp
 from jax.experimental import mesh_utils
 from jax.experimental.pjit import pjit
 from jax.sharding import Mesh, PartitionSpec
-from fjformer import get_dtype, make_shard_and_gather_fns, match_partition_rules, with_sharding_constraint
+from fjformer import make_shard_and_gather_fns, match_partition_rules, with_sharding_constraint
+
+def get_dtype(dtype):
+    if isinstance(dtype, str):
+        dtype = {
+            "bf16": jnp.bfloat16,
+            "bfloat16": jnp.bfloat16,
+            "fp16": jnp.float16,
+            "float16": jnp.float16,
+            "fp32": jnp.float32,
+            "float32": jnp.float32,
+            "fp64": jnp.float64,
+            "float64": jnp.float64,
+        }[dtype]
+    return dtype
 
 import torch
 from .prompt_templates import PROMPT_TEMPLATES
@@ -143,7 +157,7 @@ class FlaxHuggingfaceModel:
                 "matching partition rules"
             )
             partition_specs = match_partition_rules(params=params, rules=get_partition_rules(flax_model.config, fully_sharded_data_parallel=fully_sharded_data_parallel))
-            shard_fns, _ = make_shard_and_gather_fns(partition_specs, get_dtype(dtype))
+            shard_fns, _ = make_shard_and_gather_fns(partition_specs, self.mesh)
             logging.info(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )

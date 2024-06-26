@@ -9,7 +9,7 @@ train() {
     step_batch=4
     total_batch=512
     epoch_steps=1000000
-    save_steps=$((epoch_steps / step_batch / 2)) # 2 times per epoch
+    save_steps=$((epoch_steps / step_batch / 4)) # 4 times per epoch
     total_steps=$((epoch_steps * 3 / step_batch))
     lr_warmup_steps=$((total_batch * 40 / step_batch))
 
