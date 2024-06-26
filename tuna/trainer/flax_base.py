@@ -188,7 +188,7 @@ class FlaxBaseTrainer:
     def init_optimizer(self, total_steps):
         total_steps = total_steps // self.args.train_batch_size_per_device
 
-        if self.args.last_learning_rate or self.args.last_learning_rate_ratio:
+        if self.args.last_learning_rate is not None or self.args.last_learning_rate_ratio is not None:
             end_value=self.args.last_learning_rate or (self.args.learning_rate * self.args.last_learning_rate_ratio)
             scheduler='linear'
         else:
