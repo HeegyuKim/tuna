@@ -63,6 +63,7 @@ def main(
     
     def handle_output(output):
         if cot:
+            print("\n\n\n-------")
             print(output)
             return output.split("Response:")[-1].strip()
         return output

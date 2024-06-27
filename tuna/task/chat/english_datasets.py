@@ -202,3 +202,43 @@ class PKUSafeRLHF30kSFTSafer(ChatDataSource):
                 }
             ]
         }
+
+
+@datasources("sft:heegyu/Ultrafeedback-max-margin-critique:cot")
+class UltraFeedbackMaxMarginCritique(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/Ultrafeedback-max-margin-critique", split=split)
+        ds = ds.filter(lambda x: x["chosen_score"] > 7 and x["rejected_score"] < 5)
+        return ds
+    
+    def map_conversations(self, item):
+        chosen = "Response Guide: " + item["chosen_critique"] + "\n\nAssistant Response:" + item["chosen"]
+        convs = [
+            {'role': 'user', 'content': item['instruction']},
+            {'role': 'assistant', 'content': chosen}
+            ]
+        return {
+            "conversations": convs,
+        }
+    
+@datasources("sft:heegyu/Ultrafeedback-max-margin-critique:chosen")
+class UltraFeedbackMaxMarginChosen(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/Ultrafeedback-max-margin-critique", split=split)
+        ds = ds.filter(lambda x: x["chosen_score"] > 7 and x["rejected_score"] < 5)
+        return ds
+    
+    def map_conversations(self, item):
+        chosen = item["chosen"]
+        convs = [
+            {'role': 'user', 'content': item['instruction']},
+            {'role': 'assistant', 'content': chosen}
+            ]
+        return {
+            "conversations": convs,
+        }
+    
