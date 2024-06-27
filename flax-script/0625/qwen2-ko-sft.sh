@@ -4,7 +4,7 @@ model="Qwen/Qwen2-7B"
 train() {
     lr=$1
     datasets=$2
-    run_name="0625-qwen2-7B-$3"
+    run_name="0627-qwen2-7B-$3"
 
     step_batch=4
     total_batch=512
