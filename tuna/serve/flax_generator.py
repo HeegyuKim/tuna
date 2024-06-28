@@ -24,7 +24,7 @@ from copy import deepcopy
 
 
 def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch.bfloat16, device = "auto", trust_remote_code=False, merge_peft=False):
-
+    print("load model", model_name)
     if "@" not in model_name:
         repo_id, revision = model_name, None
     else:
@@ -73,6 +73,13 @@ class RNG:
             self.rng = split_rngs[0]
             return {key: val for key, val in zip(keys, split_rngs[1:])}
 
+
+USUAL_EOS_TOKENS = [
+    '<|im_start|>', '<|im_end|>', '<|endoftext|>', 
+    '<start_of_turn>', '<end_of_turn>', 
+    '<|user|>', '<|assistant|>', '</s>'
+    ]
+
 class FlaxHuggingfaceModel:
 
     def __init__(
@@ -107,6 +114,18 @@ class FlaxHuggingfaceModel:
         elif eos_token is not None:
             tokenizer.eos_token = eos_token
             print("Setting eos token to", eos_token)
+
+        self.eos_token_ids = [tokenizer.eos_token_id]
+
+        for token in USUAL_EOS_TOKENS:
+            if token in tokenizer.special_tokens_map.values():
+                self.eos_token_ids.append(tokenizer.convert_tokens_to_ids(token))
+            if token in tokenizer.additional_special_tokens:
+                self.eos_token_ids.append(tokenizer.convert_tokens_to_ids(token))
+        
+        self.eos_token_ids = list(set(self.eos_token_ids))
+        print("EOS Tokens:", self.eos_token_ids)
+
 
         with jax.default_device(jax.devices("cpu")[0]):
             config = pt_model.config
@@ -188,6 +207,7 @@ class FlaxHuggingfaceModel:
                 generation_config=GenerationConfig(
                     max_length=self.max_sequence_length,
                     max_new_tokens=gen_args.get("max_new_tokens"),
+                    min_length=None,
 
                     eos_token_id=tokenizer.eos_token_id,
                     pad_token_id=tokenizer.pad_token_id,
@@ -306,15 +326,23 @@ class FlaxHuggingfaceModel:
             final_prompts += [final_prompts[0]] * (self.batch_size - len(final_prompts))
         
         outputs = self.generate_from_prompts(final_prompts, gen_args)
-        outputs = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
 
-        
         if gen_args.get("verbose", False):
-            for inputs, output in zip(final_prompts, outputs):
+            special_token_outputs = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
+            for inputs, output in zip(final_prompts, special_token_outputs):
                 print("Prompt:", inputs)
-                print("Response:", output)
+                print("Response:", output.replace(self.tokenizer.pad_token, ""))
+
+        outputs = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)[:len(prompts)]
+        cleaned_outputs = []
+
+        for output in outputs:
+            for eos_token in USUAL_EOS_TOKENS:
+                if eos_token in output:
+                    output = output[:output.index(eos_token)]
+            cleaned_outputs.append(output)
             
-        return outputs
+        return cleaned_outputs
     
     def generate(self, prompt, history = None, generation_prefix: str = None, gen_args = {}):
         if history is None:
@@ -337,9 +365,17 @@ class FlaxHuggingfaceModel:
             skip_special_tokens=True
             )
 
+
+        for eos_token in USUAL_EOS_TOKENS:
+            if eos_token in output:
+                output = output[:output.index(eos_token)]
+        
         if gen_args.get("verbose", False):
             print("Prompt:", inputs)
-            print("Response:", output)
+            print("Response:", self.tokenizer.decode(
+            outputs[0], 
+            skip_special_tokens=False
+            ).replace(self.tokenizer.pad_token, ""))
 
         return output
 

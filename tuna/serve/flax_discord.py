@@ -8,12 +8,38 @@ import fire
 import os
 from collections import defaultdict
 
+DEFAULT_SYSTEM_PROMPT = "당신은 아주대학교 iKnow Lab 챗봇입니다. 사용자에게 유용하고, 반복적이지 않고, 계속해서 새로운 정보가 담긴 답변을 제공해야합니다. 사용자의 질문에 유창한 한글로 답변해주세요."
+
 class ChatBot(commands.Cog):
-    def __init__(self, bot, model, max_turns: int = 4):
+    def __init__(self, bot, model, max_turns: int = 4, system_prompt: str = None):
         self.bot = bot
         self.model = model
         self.conversation_history = defaultdict(list)
+        self.system_prompt = system_prompt
         self.max_turns = max_turns
+
+    @commands.Cog.listener("on_message")
+    async def answer_dm_or_mention(self, message):
+        print(message)
+
+        if message.author == self.bot.user:
+            return
+        
+        if isinstance(message.channel, discord.channel.DMChannel):
+            user = message.author.id
+            prompt = message.content.replace(self.bot.user.mention, '').strip()
+            reply = self.answer(user, prompt)
+            await message.channel.send(reply)
+            return
+        
+        elif self.user in message.mentions:
+            user = message.author.id
+            prompt = message.content.replace(self.bot.user.mention, '').strip()
+            reply = self.answer(user, prompt)
+            await message.reply(reply)
+
+        await self.process_commands(message)
+
 
     @commands.command()
     async def chat(self, ctx, *, message):
@@ -44,6 +70,12 @@ class ChatBot(commands.Cog):
         if len(history) == 0:
             history = None
 
+        if self.system_prompt:
+            if history:
+                history = [{"role": "system", "content": self.system_prompt}] + history
+            else:
+                history = [{"role": "system", "content": self.system_prompt}]
+
         output = self.model.generate(prompt, history, gen_args={"do_sample": True, "verbose": True})
 
         self.conversation_history[user_id].append({"content": prompt, "role": "user"})
@@ -54,24 +86,6 @@ class ChatBot(commands.Cog):
 
         return output
 
-    async def on_message(self, message):
-        if message.author == self.user:
-            return
-
-        if isinstance(message.channel, discord.channel.DMChannel):
-            user = message.author.id
-            prompt = message.content.replace(self.user.mention, '').strip()
-            reply = self.answer(user, prompt)
-            await message.channel.send(reply)
-            return
-        
-        elif self.user in message.mentions:
-            user = message.author.id
-            prompt = message.content.replace(self.user.mention, '').strip()
-            reply = self.answer(user, prompt)
-            await message.reply(reply)
-
-        await self.process_commands(message)
 
 def main(
         model: str,
@@ -79,14 +93,16 @@ def main(
         chat_template: str = None,
         prompt_length: int = 2048,
         max_new_tokens: int = 1024,
-        temperature: float = 1.0,
+        temperature: float = 0.7,
         top_k: int = 50,
-        top_p: float = 0.9,
+        top_p: float = 0.95,
         eos_token: str = None,
         batch_size: int = 1,
-        max_turns: int = 4
+        max_turns: int = 4,
+        system_prompt: str = DEFAULT_SYSTEM_PROMPT
 ):
     model_name = model
+
 
     model = load_model(
         model_name,
@@ -105,10 +121,11 @@ def main(
             intents = discord.Intents.default()
             intents.message_content = True
             intents.dm_messages = True
+            
             super().__init__(command_prefix='!', intents=intents)
 
         async def setup_hook(self):
-            await self.add_cog(ChatBot(self, model, max_turns))
+            await self.add_cog(ChatBot(self, model, max_turns, system_prompt))
             print(f'{self.user}로 로그인했습니다!')
 
         async def on_command_error(self, ctx, error):
@@ -119,7 +136,6 @@ def main(
 
         async def on_ready(self):
             print(f'{self.user}로 로그인했습니다!')
-        
 
 
     bot = BotSetup()
