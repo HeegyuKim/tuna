@@ -154,7 +154,7 @@ class FlaxBaseTrainer:
         else:
             if isinstance(self.train_dataset, IterableDataset):
                 raise ValueError("total_steps must be provided for IterableDataset")
-            return len(self.train_dataset) * self.args.total_epochs
+            return len(self.train_dataset) * self.args.total_epochs // self.args.train_batch_size_per_device
 
     def apply_lora_params(self, model, tx, params):
         print("Applying LoRA!")
@@ -187,8 +187,6 @@ class FlaxBaseTrainer:
         # self.task.model = self.lora_modules.lora_module
 
     def init_optimizer(self, total_steps):
-        total_steps = total_steps // self.args.train_batch_size_per_device
-
         if self.args.last_learning_rate is not None or self.args.last_learning_rate_ratio is not None:
             end_value=self.args.last_learning_rate or (self.args.learning_rate * self.args.last_learning_rate_ratio)
             scheduler=self.args.lr_scheduler
