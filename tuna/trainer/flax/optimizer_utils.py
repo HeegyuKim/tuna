@@ -25,8 +25,8 @@ def get_scheduler(
     elif scheduler == 'cosine':
         scheduler_decay = optax.cosine_decay_schedule(
             init_value=learning_rate_start,
-            end_value=learning_rate_end,
-            transition_steps=steps
+            alpha=learning_rate_end / learning_rate_start,
+            decay_steps=steps,
         )
     else:
         raise ValueError(f"unknown scheduler: {scheduler}")

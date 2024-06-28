@@ -5,6 +5,7 @@ from tqdm.auto import tqdm
 from pprint import pprint
 import tempfile
 import termcolor
+import os
 
 import numpy as np
 import jax
@@ -42,8 +43,6 @@ from fjformer import (
 from fjformer.xrapture import use_implicit_args
 
 from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger
-from ..task.collator import DefaultCollator
-from .utils.scheduler import AnnealingWarmupScheduler
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
@@ -190,9 +189,9 @@ class FlaxBaseTrainer:
     def init_optimizer(self, total_steps):
         total_steps = total_steps // self.args.train_batch_size_per_device
 
-        if self.args.last_learning_rate or self.args.last_learning_rate_ratio:
+        if self.args.last_learning_rate is not None or self.args.last_learning_rate_ratio is not None:
             end_value=self.args.last_learning_rate or (self.args.learning_rate * self.args.last_learning_rate_ratio)
-            scheduler='linear'
+            scheduler=self.args.lr_scheduler
         else:
             end_value = self.args.learning_rate
             scheduler=None
@@ -536,8 +535,10 @@ class FlaxBaseTrainer:
 
             print("Saving huggingface model to local disk")
             pt_model = pt_model.bfloat16()
-            pt_model.save_pretrained(folder_path)
-            self.task.tokenizer.save_pretrained(folder_path)
+            if revision_name != "main":
+                save_path = os.path.join(folder_path, revision_name)
+                pt_model.save_pretrained(save_path)
+                self.task.tokenizer.save_pretrained(save_path)
             
             if self.args.push_to_hub:
                 repo_id = self.args.push_to_hub_id or self.args.run_name.replace("/", "__")
