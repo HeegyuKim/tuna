@@ -1,7 +1,7 @@
 import torch
 
 from .logger import BaseLogger
-
+from .checkpoint import upload_local_directory_to_gcs
 
 def convert_dict_tensor_devices(d, device: str):
     for k, v in d.items():

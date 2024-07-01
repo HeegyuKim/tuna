@@ -15,34 +15,23 @@ from jax.experimental.pjit import pjit
 from jax.experimental.mesh_utils import create_device_mesh
 from jax.sharding import PartitionSpec
 import flax
-import optax
 from flax.training.train_state import TrainState
 
 from torch.utils.data import DataLoader
 import transformers
-from transformers import HfArgumentParser, set_seed
-from datasets import disable_caching, load_dataset, IterableDataset
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoModelForCausalLM,
-    AutoConfig,
-    AutoModelForTokenClassification,
-    TrainingArguments,
-)
+from datasets import IterableDataset
+
 from huggingface_hub import HfApi
 from ..model.flax.py_flax_utils import load_flax_weights_in_pytorch_model
 
-import fjformer
-from fjformer.xrapture import XRapTureConfig, XRapTure, LoraWeight
+from fjformer.xrapture import XRapTureConfig, XRapTure
 from fjformer import (
     match_partition_rules,
-    make_shard_and_gather_fns,
-    with_sharding_constraint,
 )
 
 from fjformer.xrapture import use_implicit_args
 
-from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger
+from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger, upload_local_directory_to_gcs
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
@@ -417,6 +406,9 @@ class FlaxBaseTrainer:
                 if args.total_steps is None and epoch >= args.total_epochs:
                     break
                 
+                if isinstance(self.train_dataset, IterableDataset):
+                    self.train_dataset.set_epoch(epoch)
+                    
                 for step_in_epoch, batch in enumerate(self.train_loader):
                     global_step += 1
                     if args.total_steps is not None:
@@ -510,7 +502,22 @@ class FlaxBaseTrainer:
     def save_model(self, name, is_last=False):
         print("save", name)
         if self.args.output_dir:
-            self.save_checkpoint_to_dir(self.args.output_dir, name)
+            if self.args.output_dir.startswith("gs://"):
+                with tempfile.TemporaryDirectory() as folder_path:
+                    saved_path = self.save_checkpoint_to_dir(folder_path, name)
+                    self.logger.log("uploading to GCS")
+
+                    # GCS 경로에서 버킷 이름과 경로 추출
+                    gcs_path = self.args.output_dir.replace("gs://", "")
+                    bucket_name, gcs_folder_path = gcs_path.split("/", 1)
+
+                    # 함수 호출 수정
+                    if name != "main":
+                        upload_local_directory_to_gcs(saved_path, bucket_name, os.path.join(gcs_folder_path, name))
+                    else:
+                        upload_local_directory_to_gcs(saved_path, bucket_name, gcs_folder_path)
+            else:
+                self.save_checkpoint_to_dir(self.args.output_dir, name)
         else:
             with tempfile.TemporaryDirectory() as folder_path:
                 self.save_checkpoint_to_dir(folder_path, name)
@@ -537,6 +544,8 @@ class FlaxBaseTrainer:
                 save_path = os.path.join(folder_path, revision_name)
                 pt_model.save_pretrained(save_path)
                 self.task.tokenizer.save_pretrained(save_path)
+
+                folder_path = save_path
             
             if self.args.push_to_hub:
                 repo_id = self.args.push_to_hub_id or self.args.run_name.replace("/", "__")
@@ -556,3 +565,4 @@ class FlaxBaseTrainer:
                     folder_path=folder_path,
                     revision=revision_name,
                 )
+        return folder_path

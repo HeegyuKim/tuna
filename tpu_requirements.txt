@@ -21,3 +21,4 @@ fastapi
 pydantic-core
 gcsfs
 fire
+google-cloud-storage

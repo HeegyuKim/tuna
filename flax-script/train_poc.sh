@@ -1,5 +1,6 @@
 wandb offline
-model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
+# model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
+model="Locutusque/TinyMistral-248M"
 
 python -m tuna.launcher.train_flax \
     --mesh fsdp \
@@ -20,5 +21,5 @@ python -m tuna.launcher.train_flax \
     --train_total_batch_size 16 \
     --train_batch_size_per_device 8 \
     --eval_batch_size_per_device 8 \
-    --save_strategy no \
-    --output_dir ""
+    --save_strategy epoch \
+    --output_dir "gs://heegyu-v4/flax-models/lima"
