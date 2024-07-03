@@ -99,6 +99,7 @@ class InifiInstruct(ChatDataSource):
 
         # 1.82M
         ds4 = load_dataset("heegyu/KoCommercial-Dataset", split=split) \
+            .shuffle(seed=42) \
             .to_iterable_dataset() \
             .map(lambda x: {"conversations": [{"role": "user", "content": x["instruction"]}, {"role": "assistant", "content": x["instruction"]}]}).select_columns(["conversations"])
 
