@@ -187,6 +187,7 @@ class UltraFeedbackMaxMargin(DPODataSource):
             "rejected": rejected,
         }
     
+
 @datasources("dpo:heegyu/Ultrafeedback-max-margin-critique:cot")
 class UltraFeedbackMaxMarginCritique(DPODataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
