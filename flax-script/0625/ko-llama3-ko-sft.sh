@@ -9,7 +9,7 @@ train() {
     step_batch=4
     total_batch=512
     epoch_steps=$4
-    save_steps=$((epoch_steps / step_batch / 4)) # 4 times per epoch
+    save_steps=$((epoch_steps / step_batch / 2)) # 4 times per epoch
     total_steps=$((epoch_steps * 3 / step_batch))
     lr_warmup_steps=$((total_batch * 40 / step_batch))
 
@@ -31,7 +31,7 @@ train() {
         --learning_rate $lr \
         --last_learning_rate_ratio 0.0 \
         --lr_warmup_steps $lr_warmup_steps \
-        --train_template chatml \
+        --train_template llama3 \
         --train_total_batch_size $total_batch \
         --train_batch_size_per_device $step_batch \
         --eval_batch_size_per_device $step_batch \
@@ -46,4 +46,4 @@ train() {
 }
 
 # train 5e-6 "infiniinstruct+qarv-100k" "infini-qarv" 1000000
-train 5e-6 "0701-koen-3M" "0701-koen-3M" 2600000
+train 5e-6 "0705-koen-1M" "0705-koen-1M" 975000

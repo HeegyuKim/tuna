@@ -110,4 +110,45 @@ class InifiInstruct(ChatDataSource):
         return final_ds.shuffle(buffer_size=10_000, seed=42)
 
 
+@datasources("0705-koen-1M")
+class KoEN0705(ChatDataSource):
+    def _map_qarv(self, item):
+        return {
+            "conversations": [
+                {"role": "user", "content": item["instruction"]},
+                {"role": "assistant", "content": item["response"]}
+            ]
+        }
+    
+    def _map_infiniinstruct(self, item):
+        convs = convert_vicuna2openai(item["conversations"])
+        if convs[0]['role'] == 'assistant' and convs[0]['content'].startswith("You are"):
+            convs[0]['role'] = 'system'
+        return {
+            "conversations": convs
+        }
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        
+        ds1 = load_dataset("arcee-ai/infini-instruct-top-500k", split=split) \
+            .to_iterable_dataset() \
+            .select_columns(["conversations"]) \
+            .map(self._map_infiniinstruct)
+        ds2 = load_dataset("HAERAE-HUB/qarv-instruct-100k", split=split).map(self._map_qarv).select_columns(["conversations"])
+        ds3 = load_dataset("HuggingFaceH4/ultrachat_200k", split=split + "_sft").select_columns(["messages"]).rename_column("messages", "conversations")
+
+        # 17.5K
+        ds4 = load_dataset("MarkrAI/KoCommercial-Dataset", split=split) \
+            .shuffle(seed=42) \
+            .to_iterable_dataset() \
+            .map(lambda x: {"conversations": [{"role": "user", "content": x["instruction"]}, {"role": "assistant", "content": x["instruction"]}]}).select_columns(["conversations"])
+
+        datasets = [ds1, ds2.to_iterable_dataset(), ds3.to_iterable_dataset(), ds4]
+        sizes = [50.0, 10.0, 20.0, 17.5]
+        
+        final_ds = interleave_datasets(datasets, probabilities=[s/sum(sizes) for s in sizes], stopping_strategy="first_exhausted")
+        return final_ds.shuffle(buffer_size=10_000, seed=42)
+
         
