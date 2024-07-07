@@ -45,5 +45,4 @@ train() {
         # --push_to_hub_id $run_name \
 }
 
-# train 5e-6 "infiniinstruct+qarv-100k" "infini-qarv" 1000000
-train 5e-6 "0705-koen-1M" "0705-koen-1M" 975000
+train 5e-6 "Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k" "0707-magpie-qarv"

@@ -152,3 +152,38 @@ class KoEN0705(ChatDataSource):
         return final_ds.shuffle(buffer_size=10_000, seed=42)
 
         
+@datasources("0708-magpie-qarv")
+class KoEN0705(ChatDataSource):
+    def _map_qarv(self, item):
+        return {
+            "conversations": [
+                {"role": "user", "content": item["instruction"]},
+                {"role": "assistant", "content": item["response"]}
+            ]
+        }
+    
+    def _map_infiniinstruct(self, item):
+        convs = convert_vicuna2openai(item["conversations"])
+        if convs[0]['role'] == 'assistant' and convs[0]['content'].startswith("You are"):
+            convs[0]['role'] = 'system'
+        return {
+            "conversations": convs
+        }
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        
+        ds1 = load_dataset("Magpie-Align/Magpie-Air-300K-Filtered", split=split) \
+            .to_iterable_dataset() \
+            .select_columns(["conversations"]) \
+            .map(self._map_infiniinstruct)
+        ds2 = load_dataset("HAERAE-HUB/qarv-instruct-100k", split=split).map(self._map_qarv).select_columns(["conversations"])
+
+        datasets = [ds1, ds2.to_iterable_dataset()]
+        sizes = [30.0, 10.0]
+        
+        final_ds = interleave_datasets(datasets, probabilities=[s/sum(sizes) for s in sizes], stopping_strategy="first_exhausted")
+        return final_ds.shuffle(buffer_size=10_000, seed=42)
+
+        

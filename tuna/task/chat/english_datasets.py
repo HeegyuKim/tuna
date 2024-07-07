@@ -242,3 +242,18 @@ class UltraFeedbackMaxMarginChosen(ChatDataSource):
             "conversations": convs,
         }
     
+@datasources("Magpie-Align/Magpie-Air-300K-Filtered")
+class MagpieAir300KFiltered(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("Magpie-Align/Magpie-Air-300K-Filtered", split=split)
+        return ds
+
+@datasources("Magpie-Align/Magpie-Pro-MT-300K-v0.1")
+class MagpieProMT300K(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("Magpie-Align/Magpie-Pro-MT-300K-v0.1", split=split)
+        return ds
