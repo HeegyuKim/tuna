@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 from transformers import AutoModel, AutoModelForSequenceClassification, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoProcessor, LlavaForConditionalGeneration, LlavaProcessor, CLIPVisionModel, CLIPImageProcessor
 from .utils import smart_tokenizer_and_embedding_resize, freeze_model, unfreeze_model
+import torch
 
 models = Registry("models")
 
@@ -50,7 +51,12 @@ class BaseModel:
         )
 
     def load_model(self):
-        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, revision=self.args.revision, trust_remote_code=self.args.trust_remote_code)
+        model = self.AUTO_CLASS.from_pretrained(
+            self.args.model_name_or_path, 
+            revision=self.args.revision, 
+            trust_remote_code=self.args.trust_remote_code,
+            torch_dtype=torch.float32 if not self.args.use_lora else "auto"
+            )
         
         # if model.config.pad_token_id is None:
         #     model.config.pad_token_id = model.config.eos_token_id

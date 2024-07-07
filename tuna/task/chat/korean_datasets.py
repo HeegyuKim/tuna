@@ -1,6 +1,8 @@
 
 from .datasets import ChatDataSource, VicunaChatDataSource, BaseAlpacaDataSource, datasources, DatasetArguments
 from datasets import load_dataset, Dataset
+import json
+from tqdm.auto import tqdm
 
 
 @datasources("kyujinpy/KOR-OpenOrca-Platypus-v3")
@@ -258,3 +260,59 @@ class ShareGPTDeepLKoTranslation(ChatDataSource):
 @datasources("beomi/KoAlpaca-v1.1a")
 class KoAlpacaV1_1a(BaseAlpacaDataSource):
     dataset_path = "beomi/KoAlpaca-v1.1a"
+
+
+PROMPT_QA = """당신은 시험문제 출제위원입니다. 다음 자료에 기반하여 전문가 수준의 시험문제를 출제할 것입니다. 자료를 바탕으로 지시사항에 맞는 결과물을 json 형식으로 반환해주세요.
+
+1. 생성한 문제는 실생활에서 사용하는 질문의 말투를 사용해야 합니다(~무엇인가요? ~작성해주세요. ~ 어떻게 해야하죠?)
+2. 먼저 고등학교 수준의 문제를 생성하고, 이를 전문가 수준으로 고난이도 문제로 향상해주세요. 각 문제는 반드시 제시된 자료를 바탕으로 만들어져야 합니다. 연관성이 적더라도, 창의적인 아이디어로 해당 자료를 활용하세요.
+3. 문제에는 답안 작성에 필요한 내용을 주어진 자료에서 추출해서 함께 제공해야합니다.
+4. 출제할 문제의 과목 후보는 다음과 같습니다: 글쓰기, 한국어, 영어, 수학, 사회과학, 과학, 역사 문화예술, 법, 도덕, 정치, 종교, 외국어, 경제, 경영, 의료, 공학, 인문학 등 - 후보에 없어도, 적절한 과목을 자유롭게 말할 수 있다.
+
+# 제목: {title}
+# 자료:
+{text}
+"""
+
+PROMPT_WRITING = """당신은 글쓰기 시험문제 출제위원입니다. 다음 자료에 기반하여 전문가 수준의 시험문제를 출제할 것입니다. 자료를 바탕으로 지시사항에 맞는 결과물을 json 형식으로 반환해주세요.
+
+1. 생성한 문제는 실생활에서 사용하는 질문의 말투를 사용해야 합니다(~무엇인가요? ~작성해주세요. ~ 어떻게 해야하죠?)
+2. 먼저 고등학교 수준의 문제를 생성하고, 이를 전문가 수준으로 고난이도 문제로 향상해주세요. 각 문제는 반드시 제시된 자료를 바탕으로 만들어져야 합니다. 연관성이 적더라도, 창의적인 아이디어로 해당 자료를 활용하세요.
+3. 문제에는 글쓰기 작성에 필요한 내용을 주어진 자료에서 추출해서 함께 제공해야합니다.
+4. 출제할 문제의 주제 후보는 다음과 같습니다. 이 중에서 적절한 주제를 3가지 선택하세요: 이력서, 노래가사, 시 혹은 소설, 에세이, 극본, 시나리오, 여행일기, 여행계획서, 요리레시피, 해설, 자기소개서, 편지, 이메일, 리뷰 및 평가, 소셜 미디어 포스트, 일기, 청원서, 항의서, 쇼핑 리스트, 메모, 연구 논문 및 계획서, 비즈니스 보고서 및 게획서, 기술 문서, 발표자료, 계약서 혹은 법률 문서, 편집 및 출판 문서, 광고 카피라이트, 웹 콘텐츠, 뉴스레터, 연설문, 자기계발서, 분석보고서, 기획안, 제안서
+
+# 제목: {title}
+# 자료:
+{text}
+"""
+@datasources("iknow-lab/ko-genstruct-v1")
+class KoGenstructV1(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        
+        ds = load_dataset("iknow-lab/ko-genstruct-v1", split="train")
+        items = []
+
+        for item in tqdm(ds, "Processing genstruct items"):
+            prompt = PROMPT_WRITING if "namuwiki" in item["source"] else PROMPT_QA
+            text = item["text"]
+            if len(text) >= 5000:
+                text = text[:5000]
+
+            prompt = prompt.format(title=item["title"], text=text)
+            questions = json.loads(item["questions"])
+
+            for question in questions:
+                output = f"```json\n{json.dumps(question, ensure_ascii=False, indent=2)}\n```"
+
+                items.append({
+                    "conversations": [
+                        {"role": "user", "content": prompt},
+                        {"role": "assistant", "content": output}
+                    ]
+                })
+
+        return Dataset.from_list(items)
+
+    
