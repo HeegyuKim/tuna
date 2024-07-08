@@ -316,3 +316,17 @@ class KoGenstructV1(ChatDataSource):
         return Dataset.from_list(items)
 
     
+@datasources("sft:kuotient/orca-math-korean-preference")
+class OrcaMathKoreanPreference(BaseAlpacaDataSource):
+    dataset_path = "kuotient/orca-math-korean-preference"
+    instruction_key = "question"
+    output_key = "answer"
+
+@datasources("sft:kuotient/orca-math-korean-preference:hard")
+class OrcaMathKoreanPreferenceHard(OrcaMathKoreanPreference):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = super().load_dataset(args, split)
+        if ds is not None:
+            ds = ds.filter(lambda x: x["label"] == False)
+        return ds

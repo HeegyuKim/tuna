@@ -46,4 +46,4 @@ train() {
 }
 
 # train 5e-6 "infiniinstruct+qarv-100k" "infini-qarv" 1000000
-train 5e-6 "0701-koen-3M" "0701-koen-3M" 2600000
+train 5e-6 "0705-koen-1M" "0705-koen-1M" 975000

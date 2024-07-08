@@ -18,10 +18,12 @@ train() {
         --truncation \
         --max_length=2048 \
         --model_name_or_path $model \
-        --total_epochs 3 \
+        --total_epochs 2 \
         --learning_rate $lr \
         --last_learning_rate_ratio 0.1 \
         --lr_warmup_ratio 0.01 \
+        --lr_scheduler cosine \
+        --adam_beta2 0.95 \
         --load_from_cache_file \
         --train_template chatml \
         --train_total_batch_size 32 \
@@ -34,4 +36,4 @@ train() {
         --output_dir "/data/checkpoint/$run_name"
 }
 
-train 2e-5 "Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k" "0707-qwen2-magpie-qarv"
+train 2e-5 "Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k,sft:kuotient/orca-math-korean-preference:hard" "0708-qwen2-magpie-qarv-komath"
