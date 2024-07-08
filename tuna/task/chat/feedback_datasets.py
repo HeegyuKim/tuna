@@ -73,3 +73,55 @@ class UltraFeedbackAllCritiquesFeedback(ChatDataSource):
         return {
             "conversations": convs
         }
+
+
+PROMETHEUS_FORMAT = """
+###Task Description:
+An instruction (might include an Input inside it), a response to evaluate, a reference answer that gets a score of 5, and a score rubric representing a evaluation criteria are given.
+1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: \"Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\"
+4. Please do not generate any other opening, closing, and explanations.
+
+###The instruction to evaluate:
+{instruction}
+
+###Response to evaluate:
+{response}
+
+###Reference Answer (Score 5):
+{reference}
+
+###Score Rubrics:
+[{criteria}]
+Score 1: {score1}
+Score 2: {score2}
+Score 3: {score3}
+Score 4: {score4}
+Score 5: {score5}
+
+###Feedback: 
+""".strip()
+PROMETHEUS_FORMAT_OUTPUT = "{feedback} [RESULT] {score}"
+
+@datasources("heegyu/K2-Feedback-splited")
+class K2FeedbackSplited(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = load_dataset("heegyu/K2-Feedback-splited", split=split)
+        return ds
+
+    def map_conversations(self, item):
+        convs = []
+        convs.append({
+            "role": "user",
+            "content": PROMETHEUS_FORMAT.format(**item)
+        })
+        convs.append({
+            "role": "assistant",
+            "content": PROMETHEUS_FORMAT_OUTPUT.format(feedback=item["feedback"], score=item["score"])
+        })
+
+        return {
+            "conversations": convs
+        }
