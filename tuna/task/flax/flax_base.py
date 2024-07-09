@@ -180,16 +180,18 @@ class FlaxLMTask(FlaxTask):
         datasets = super().encode_datasets(datasets, dataset_args)
         if self.args.packing:
             cols = datasets["train"].column_names
+            pack_function = self._pack_padded if self.args.packing == "pad" else self._pack
+
             if cols:
                 if "input_ids" in cols:
                     cols.remove("input_ids")
                 if "labels" in cols:
                     cols.remove("labels")
                 for k in datasets:
-                    datasets[k] = datasets[k].map(self._pack, load_from_cache_file=dataset_args.load_from_cache_file, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
+                    datasets[k] = datasets[k].map(pack_function, load_from_cache_file=dataset_args.load_from_cache_file, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
             else: # iterable dataset
                 for k in datasets:
-                    datasets[k] = datasets[k].map(self._pack, batched=True)
+                    datasets[k] = datasets[k].map(pack_function, batched=True)
         
         if self.args.check_dataset:
             for k in datasets:
@@ -250,6 +252,48 @@ class FlaxLMTask(FlaxTask):
                 if all_attention_mask is not None:
                     batch_mask = batch_mask[batch_len:]
                 accum_len -= batch_len
+        
+        if all_attention_mask is None:
+            outputs.pop("attention_mask")
+        
+        return outputs
+    
+    def _pack_padded(self, items):
+        outputs = dict(
+            input_ids=[],
+            attention_mask=[],
+            labels=[]
+        )
+        accum_len = 0
+
+        batch_len = self.args.max_length
+        all_input_ids = items["input_ids"]
+        all_attention_mask = items.get("attention_mask")
+        all_labels = items["labels"]
+
+        batch_ids, batch_mask, batch_labels = [], [], []
+
+        for ids, mask, labels in zip(all_input_ids, all_attention_mask, all_labels):
+            new_input_len = len(ids)
+            if accum_len + new_input_len > batch_len:
+                if accum_len > 0:
+                    outputs["input_ids"].append(batch_ids)
+                    if all_attention_mask is not None:
+                        outputs["attention_mask"].append(batch_mask)
+                    outputs["labels"].append(batch_labels)
+                else:
+                    outputs["input_ids"].append(ids[:batch_len])
+                    if all_attention_mask is not None:
+                        outputs["attention_mask"].append(mask[:batch_len])
+                    outputs["labels"].append(labels[:batch_len])
+
+                batch_ids, batch_mask, batch_labels = [], [], []
+                accum_len = 0
+                
+            batch_ids.extend(ids)
+            if all_attention_mask is not None:
+                batch_mask.extend(mask)
+            batch_labels.extend(labels)
         
         if all_attention_mask is None:
             outputs.pop("attention_mask")

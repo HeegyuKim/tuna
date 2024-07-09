@@ -14,7 +14,7 @@ train() {
         --project "KoChat-SFT" \
         --run_name "$run_name-lr$lr" \
         --dataset="$datasets" \
-        --packing True \
+        --packing False \
         --truncation \
         --max_length=2048 \
         --model_name_or_path $model \
@@ -24,13 +24,13 @@ train() {
         --lr_warmup_ratio 0.01 \
         --train_template llama3 \
         --train_total_batch_size 32 \
-        --train_batch_size_per_device 2 \
-        --eval_batch_size_per_device 2 \
+        --train_batch_size_per_device 1 \
+        --eval_batch_size_per_device 1 \
         --push_to_hub \
         --push_to_hub_id $run_name \
         --save_strategy epoch \
         --revision_prefix "lr$lr-" \
-        --output_dir "/data/checkpoint/$run_name"
+        --output_dir ""
 }
 
-train 2e-5 "Magpie-Align/Magpie-Air-300K-Filtered,HAERAE-HUB/qarv-instruct-100k" "0707-kollama3-magpie-qarv"
+train 2e-5 "Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k" "0708-kollama3-magpie-qarv"

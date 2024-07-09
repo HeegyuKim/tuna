@@ -238,7 +238,7 @@ class Llama3(BaseTrainTemplate):
         "beomi/Llama-3-Open-Ko-8B"
     ]
 
-    INITIAL_USER_FORMAT = "{bos}<start_of_turn>user\n{content}<end_of_turn>"
+    INITIAL_USER_FORMAT = "{bos}<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>"
     SYSTEM_FORMAT = "{bos}<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>"
     USER_FORMAT = "<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>\n"
     ASSISTANT_FORMAT = "<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>"
