@@ -68,11 +68,12 @@ def main(
             return output.split("Response:")[-1].strip()
         return output
 
-        
     if cot:
         generation_prefix = "Critique:"
     else:
         generation_prefix = ""
+
+    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens}
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)
@@ -142,13 +143,13 @@ def main(
 
                 elif dataset_name == "alpaca-eval":
                     instructions = [example["instruction"] for example in batch_example]
-                    outputs = model.generate_batch(instructions, gen_args={"do_sample": False}, generation_prefix=generation_prefix)
+                    outputs = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, output in zip(batch_example, outputs):
                         example["output"] = handle_output(output)
 
                 elif dataset_name == "ifeval":
                     instructions = [example["prompt"] for example in batch_example]
-                    responses = model.generate_batch(instructions, gen_args={"do_sample": False}, generation_prefix=generation_prefix)
+                    responses = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, response in zip(batch_example, responses):
                         example["response"] = handle_output(response)
                     

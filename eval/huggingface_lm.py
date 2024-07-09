@@ -1,8 +1,9 @@
 import transformers
 import torch
 from tuna.serve.prompt_templates import PROMPT_TEMPLATES
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline, TextIteratorStreamer
 from copy import deepcopy
+from threading import Thread
 
 
 def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch.bfloat16, device = "auto", trust_remote_code=False, merge_peft=False):
@@ -34,6 +35,8 @@ def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch
 
 
 class HuggingfaceModel():
+    SUPPORT_STREAMING = True
+
     def __init__(self, model_name: str, device: str = "cuda", dtype = torch.bfloat16):
         self.model, self.tokenizer = load_huggingface_model_tokenizer(model_name)
 
@@ -75,7 +78,7 @@ class HuggingfaceModel():
         if history is None:
             history = []
         else:
-            histories = deepcopy(histories)
+            history = deepcopy(history)
 
         history.append({
             'role': 'user',
@@ -88,7 +91,35 @@ class HuggingfaceModel():
         
         inputs = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
         outputs = self.model.generate(**inputs, **gen_args)
+        # print(self.tokenizer.decode(
+        #     outputs[0, inputs['input_ids'].shape[1]:], 
+        #     skip_special_tokens=False
+        #     ))
         return self.tokenizer.decode(
             outputs[0, inputs['input_ids'].shape[1]:], 
             skip_special_tokens=True
             )
+
+    def generate_stream(self, prompt, history = None, generation_prefix: str = None, gen_args = {}):
+        if history is None:
+            history = []
+        else:
+            history = deepcopy(history)
+
+        history.append({
+            'role': 'user',
+            'content': prompt,
+        })
+
+        inputs = self.tokenizer.apply_chat_template(history, add_special_tokens=True, tokenize=False, add_generation_prompt=True)
+        if generation_prefix is not None:
+            inputs = inputs + generation_prefix
+        
+        inputs = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
+        streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
+        generation_kwargs = dict(inputs, streamer=streamer, **gen_args)
+        
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        thread.start()
+
+        yield from streamer

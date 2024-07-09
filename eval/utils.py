@@ -30,14 +30,32 @@ def load_model(
         eos_token: str = None,
         batch_size: int = 1,
         gen_args: dict = None,
-        chat_template: str = None
+        chat_template: str = None,
+        use_vllm: bool = False
         ):
+    if use_vllm:
+        try:
+            import vllm
+            use_vllm = True
+        except ImportError:
+            use_vllm = False
+
+    if use_vllm:
+        from .vllm_wrapper import VLLMModel
+        print("Using VLLM")
+        model = VLLMModel(model_name)
+        if chat_template:
+            model.load_chat_template(chat_template)
+        return model
+    
     import torch
     if torch.cuda.is_available():
         from .huggingface_lm import HuggingfaceModel
-        model = HuggingfaceModel(model_name, chat_template=chat_template)
+        model = HuggingfaceModel(model_name)
         if chat_template:
             model.load_chat_template(chat_template)
+        if eos_token:
+            model.tokenizer.eos_token = eos_token
         return model
     else:
         from tuna.serve.flax_generator import FlaxHuggingfaceModel
