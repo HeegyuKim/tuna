@@ -261,7 +261,8 @@ class Llama3(BaseTrainTemplate):
 class GemmaTemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [
         "google/gemma-2b-it",
-        "google/gemma-7b-it"
+        "google/gemma-7b-it",
+        "google/gemma-2-9b-it"
     ]
     # for the first user message without system instruction (\eg Llama-2)
     INITIAL_USER_FORMAT = "<bos><start_of_turn>user\n{content}<end_of_turn>"
@@ -278,6 +279,7 @@ class GemmaTemplate(BaseTrainTemplate):
         tokenizer.add_special_tokens({
             'additional_special_tokens': additional_tokens
             })
+        tokenizer.eos_token = "<end_of_turn>"
         super().__init__(tokenizer)
         
 @train_templates.register("gemma-vision")
