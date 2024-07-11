@@ -1,5 +1,5 @@
 from typing import Any, List
-from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig, GemmaConfig, Gemma2Config
+from transformers import GPTNeoXConfig, T5Config, LlamaConfig, MistralConfig, LlavaConfig, GemmaConfig
 # import jax.numpy as jnp
 # from flax.linen.dtypes import canonicalize_dtype
 # from fjformer.xrapture import LoraWeight
@@ -47,7 +47,6 @@ LORA_TARGETS = [
     (MistralConfig, MISTRAL_TARGETS),
     ("Qwen2Config", MISTRAL_TARGETS),
     (GemmaConfig, LLAMA_TARGETS),
-    (Gemma2Config, LLAMA_TARGETS),
     ("Phi3Config", PHI3_TARGETS)
 ]
 

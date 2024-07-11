@@ -1,0 +1,102 @@
+{
+  "results": {
+    "arc_challenge": {
+      "acc,none": 0.3122866894197952,
+      "acc_stderr,none": 0.013542598541688067,
+      "acc_norm,none": 0.3455631399317406,
+      "acc_norm_stderr,none": 0.013896938461145682,
+      "alias": "arc_challenge"
+    }
+  },
+  "group_subtasks": {
+    "arc_challenge": []
+  },
+  "configs": {
+    "arc_challenge": {
+      "task": "arc_challenge",
+      "group": [
+        "ai2_arc"
+      ],
+      "dataset_path": "allenai/ai2_arc",
+      "dataset_name": "ARC-Challenge",
+      "training_split": "train",
+      "validation_split": "validation",
+      "test_split": "test",
+      "doc_to_text": "Question: {{question}}\nAnswer:",
+      "doc_to_target": "{{choices.label.index(answerKey)}}",
+      "doc_to_choice": "{{choices.text}}",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 25,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "Question: {{question}}\nAnswer:",
+      "metadata": {
+        "version": 1.0
+      }
+    }
+  },
+  "versions": {
+    "arc_challenge": 1.0
+  },
+  "n-shot": {
+    "arc_challenge": 25
+  },
+  "n-samples": {
+    "arc_challenge": {
+      "original": 1172,
+      "effective": 1172
+    }
+  },
+  "config": {
+    "model": "hf",
+    "model_args": "pretrained=TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T,revision=main,dtype=bfloat16",
+    "model_num_parameters": 1100048384,
+    "model_dtype": "torch.bfloat16",
+    "model_revision": "main",
+    "model_sha": "036fa4651240b9a1487f709833b9e4b96b4c1574",
+    "batch_size": "auto:4",
+    "batch_sizes": [
+      16,
+      16,
+      16,
+      32,
+      32
+    ],
+    "device": "cuda:0",
+    "use_cache": null,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "gen_kwargs": null,
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234
+  },
+  "git_hash": "f4a7f6a8d15166926c1fb2168be0b3d14c282d22",
+  "date": 1715308921.1584842,
+  "pretty_env_info": "PyTorch version: 2.1.0\nIs debug build: False\nCUDA used to build PyTorch: 11.8\nROCM used to build PyTorch: N/A\n\nOS: Ubuntu 20.04.6 LTS (x86_64)\nGCC version: Could not collect\nClang version: Could not collect\nCMake version: version 3.26.4\nLibc version: glibc-2.31\n\nPython version: 3.10.13 (main, Sep 11 2023, 13:44:35) [GCC 11.2.0] (64-bit runtime)\nPython platform: Linux-6.5.0-26-generic-x86_64-with-glibc2.31\nIs CUDA available: True\nCUDA runtime version: Could not collect\nCUDA_MODULE_LOADING set to: LAZY\nGPU models and configuration: \nGPU 0: NVIDIA RTX A5000\nGPU 1: NVIDIA RTX A5000\n\nNvidia driver version: 545.23.08\ncuDNN version: Could not collect\nHIP runtime version: N/A\nMIOpen runtime version: N/A\nIs XNNPACK available: True\n\nCPU:\nArchitecture:                       x86_64\nCPU op-mode(s):                     32-bit, 64-bit\nByte Order:                         Little Endian\nAddress sizes:                      46 bits physical, 48 bits virtual\nCPU(s):                             16\nOn-line CPU(s) list:                0-15\nThread(s) per core:                 2\nCore(s) per socket:                 8\nSocket(s):                          1\nNUMA node(s):                       1\nVendor ID:                          GenuineIntel\nCPU family:                         6\nModel:                              85\nModel name:                         Intel(R) Xeon(R) Silver 4215R CPU @ 3.20GHz\nStepping:                           7\nCPU MHz:                            1000.076\nCPU max MHz:                        4000.0000\nCPU min MHz:                        1000.0000\nBogoMIPS:                           6400.00\nVirtualization:                     VT-x\nL1d cache:                          256 KiB\nL1i cache:                          256 KiB\nL2 cache:                           8 MiB\nL3 cache:                           11 MiB\nNUMA node0 CPU(s):                  0-15\nVulnerability Gather data sampling: Mitigation; Microcode\nVulnerability Itlb multihit:        KVM: Mitigation: VMX disabled\nVulnerability L1tf:                 Not affected\nVulnerability Mds:                  Not affected\nVulnerability Meltdown:             Not affected\nVulnerability Mmio stale data:      Mitigation; Clear CPU buffers; SMT vulnerable\nVulnerability Retbleed:             Mitigation; Enhanced IBRS\nVulnerability Spec rstack overflow: Not affected\nVulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:           Mitigation; Enhanced / Automatic IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence\nVulnerability Srbds:                Not affected\nVulnerability Tsx async abort:      Mitigation; TSX disabled\nFlags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cdp_l3 invpcid_single intel_ppin ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb intel_pt avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts hwp hwp_act_window hwp_epp hwp_pkg_req vnmi pku ospke avx512_vnni md_clear flush_l1d arch_capabilities\n\nVersions of relevant libraries:\n[pip3] mypy-extensions==1.0.0\n[pip3] numpy==1.26.0\n[pip3] torch==2.1.0\n[pip3] torchaudio==2.1.0\n[pip3] torchelastic==0.2.2\n[pip3] torchvision==0.16.0\n[pip3] triton==2.1.0\n[conda] blas                      1.0                         mkl  \n[conda] ffmpeg                    4.3                  hf484d3e_0    pytorch\n[conda] libjpeg-turbo             2.0.0                h9bf148f_0    pytorch\n[conda] mkl                       2023.1.0         h213fc3f_46343  \n[conda] mkl-service               2.4.0           py310h5eee18b_1  \n[conda] mkl_fft                   1.3.8           py310h5eee18b_0  \n[conda] mkl_random                1.2.4           py310hdb19cb5_0  \n[conda] numpy                     1.26.0          py310h5f9d8c6_0  \n[conda] numpy-base                1.26.0          py310hb5e798b_0  \n[conda] pytorch                   2.1.0           py3.10_cuda11.8_cudnn8.7.0_0    pytorch\n[conda] pytorch-cuda              11.8                 h7e8668a_5    pytorch\n[conda] pytorch-mutex             1.0                        cuda    pytorch\n[conda] torchaudio                2.1.0               py310_cu118    pytorch\n[conda] torchelastic              0.2.2                    pypi_0    pypi\n[conda] torchtriton               2.1.0                     py310    pytorch\n[conda] torchvision               0.16.0              py310_cu118    pytorch",
+  "transformers_version": "4.40.2",
+  "upper_git_hash": null,
+  "task_hashes": {},
+  "model_source": "hf",
+  "model_name": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+  "model_name_sanitized": "TinyLlama__TinyLlama-1.1B-intermediate-step-1431k-3T",
+  "start_time": 2769644.898899716,
+  "end_time": 2770934.808220606,
+  "total_evaluation_time_seconds": "1289.9093208899722"
+}

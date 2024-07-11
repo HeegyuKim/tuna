@@ -6,7 +6,7 @@ import torch_xla.core.xla_model as xm
 import transformers as tf
 from transformers import (
     GPTNeoXConfig, T5Config, LlamaConfig, RobertaConfig, MistralConfig, LlavaConfig, CLIPConfig, CLIPVisionConfig, GemmaConfig,
-    XLMRobertaConfig, Gemma2Config,
+    XLMRobertaConfig
 )
 
 GPTNEOX_RULES = (
@@ -134,7 +134,6 @@ ALL_RULES = [
     (CLIPVisionConfig, CLIP_RULES),
     (LlavaConfig, LLAVA_RULES),
     (GemmaConfig, LLAMA_RULES),
-    (Gemma2Config, LLAMA_RULES),
     ("Phi3Config", PHI3_RULES)
 ]
 
