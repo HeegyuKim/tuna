@@ -1,4 +1,4 @@
-wandb online
+wandb offline
 model="beomi/Llama-3-Open-Ko-8B"
 
 train() {

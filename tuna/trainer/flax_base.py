@@ -35,7 +35,7 @@ from .utils import convert_dict_tensor_devices, detach_tensors, BaseLogger, uplo
 from .args import BaseTrainingArguments
 from ..task.flax.flax_base import FlaxTask
 from .flax.partition_rules import get_partition_rules
-from .flax import optimizer_utils as opt_utils, sharding
+from .flax import optimizer_utils as opt_utils, sharding, profiler
 from ..common import Registry
 from .. import flax_model
 
@@ -64,6 +64,10 @@ STR_DTYPE_TO_JNP = {
     "float64": jnp.float64,
     "float16": jnp.float16,
     "bfloat16": jnp.bfloat16,
+    "fp32": jnp.float32,
+    "fp64": jnp.float64,
+    "fp16": jnp.float16,
+    "bf16": jnp.bfloat16,
 }
 
 trainers = Registry("flax-trainer")
@@ -93,6 +97,7 @@ class FlaxBaseTrainer:
         self.setup_dataloader()
         self.logger.log("setup sharding")
         self.setup_sharding()
+        profiler.print_memory_usage()
 
     def _create_dataloader(self, dataset, batch_size, shuffle):
         if isinstance(dataset, IterableDataset):
@@ -128,6 +133,7 @@ class FlaxBaseTrainer:
     
     def setup_sharding(self):
         self.dtype = STR_DTYPE_TO_JNP[self.args.dtype]
+        self.param_dtype = STR_DTYPE_TO_JNP[self.args.param_dtype or self.args.dtype]
         self.total_steps = self.estimate_total_steps()
 
         self.logger.log("init optimizer")
@@ -135,7 +141,6 @@ class FlaxBaseTrainer:
 
         self.logger.log("init mesh")
         self.shard_params()
-        # self.create_sharded_functions()
 
     def estimate_total_steps(self):
         if self.args.total_steps is not None:
@@ -224,7 +229,12 @@ class FlaxBaseTrainer:
                 gradient_accumulation_steps=gradient_accumulation_steps,
                 warmup_steps=lr_warmup_steps,
                 scheduler=scheduler,
-                gradient_clipping=self.args.gradient_clip,
+                gradient_clipping=self.args.gradient_clipping,
+                factored=False,
+                momentum=self.args.adam_beta1,
+                decay_rate=self.args.adam_beta2,
+                clipping_threshold=None,
+                dtype_momentum=self.param_dtype,
             )
         else:
             raise ValueError("unknown optimizer!")
@@ -293,7 +303,7 @@ class FlaxBaseTrainer:
         with self.mesh:
             print("matching partition rules")
             partition_specs = match_partition_rules(params=state_shape, rules=get_partition_rules(self.task.model.config, self.args.fully_sharded))
-            shard_fns, gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.params, self.mesh, self.dtype)
+            shard_fns, gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.params, self.mesh, self.param_dtype)
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
@@ -461,6 +471,8 @@ class FlaxBaseTrainer:
                     
                     progress.update(1)
 
+                    # if global_step == 1:
+                    #     profiler.print_memory_usage()
                     if global_step >= total_steps:
                         break
 
