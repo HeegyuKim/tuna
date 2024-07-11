@@ -66,7 +66,7 @@ class HuggingfaceModel():
 
             inputs = self.tokenizer.apply_chat_template(history, add_special_tokens=True, tokenize=False, add_generation_prompt=True)
             if generation_prefix is not None:
-                inputs = generation_prefix + inputs
+                inputs = inputs + generation_prefix
             
             final_prompts.append(inputs)
         

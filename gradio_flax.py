@@ -20,15 +20,15 @@ def main(
         chat_template=chat_template,
         eos_token=eos_token,
         use_vllm=False
-    )
+    )   
+    print(generator.tokenizer.eos_token_id, generator.tokenizer.eos_token)
 
-    print("Compiling...")
-    gen_args = {"max_new_tokens": 1024, "do_sample": False}
-    print("greedy", generator.generate("Hi", gen_args=gen_args))
-    
-    gen_args["do_sample"] = True
-    print("sample", generator.generate("Hi", gen_args=gen_args))
-    
+    gen_args = {
+        "max_new_tokens": 1024, 
+        "do_sample": False, 
+        "early_stopping": True,
+        "eos_token_id": generator.tokenizer.encode(eos_token)[0] if eos_token else None,
+        }
     
     use_stream = getattr(generator, "SUPPORT_STREAMING", False)
 
@@ -58,7 +58,7 @@ def main(
             text = ""
             stop = False
             for token in generator.generate_stream(message, convs, gen_args=gen_args):
-                for stop_token in ["<|endoftext|>", "<|im_end|>", "<end_of_turn>", "</s>", "<eos>"]:
+                for stop_token in ["<|endoftext|>", "<|im_end|>", "<end_of_turn>", "</s>", "<eos>", "<|eot_id|>"]:
                     if stop_token in token:
                         token = token.replace(stop_token, "")
                         stop = True
