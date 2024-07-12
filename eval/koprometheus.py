@@ -82,6 +82,8 @@ def main(
         max_new_tokens: int = 512,
         eos_token_id: int = None,
         ):
+    # 128009 for Llama3
+    
     model_name = judge_model
     
     targets = list(glob.glob(f"eval/LogicKor/results/{target}.jsonl"))
@@ -92,9 +94,8 @@ def main(
         max_length=prompt_length + max_new_tokens,
         gen_args={"temperature": 1.0, "top_k": 50, "top_p": 0.9},
         batch_size=1,
-        eos_token="<|eot_id|>"
     )
-    gen_args = {"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "eos_token_id": 128009}
+    gen_args = {"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "eos_token_id": eos_token_id}
 
     for target in targets:
         gpt4_baselines = read_jsonl("eval/LogicKor/results/judge_gpt-4-1106-preview.jsonl")
