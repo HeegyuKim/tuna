@@ -36,5 +36,4 @@ train() {
         --output_dir "/data/checkpoint/$run_name"
 }
 
-# train 2e-5 "heegyu/HRC,iknow-lab/ko-genstruct-v1-output:simple,Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k,sft:kuotient/orca-math-korean-preference:hard" "0710-qwen2-magpie-qarv-komath"
-train 2e-5 "jojo0217/korean_safe_conversation,heegyu/HRC,iknow-lab/ko-genstruct-v1-output:simple,arcee-ai/infini-instruct-top-500k,HAERAE-HUB/qarv-instruct-100k,CarrotAI/ko-instruction-dataset,maywell/kiqu_samples,HAERAE-HUB/K2-Feedback:score5" "0713-qwen2-infini-qarv"
+train 2e-5 "Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered,Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k,jojo0217/korean_safe_conversation,heegyu/HRC,iknow-lab/ko-genstruct-v1-output:simple,CarrotAI/ko-instruction-dataset,maywell/kiqu_samples,HAERAE-HUB/K2-Feedback:score5" "0713-qwen2-koenzh"

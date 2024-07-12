@@ -257,3 +257,19 @@ class MagpieProMT300K(VicunaChatDataSource):
             return
         ds = load_dataset("Magpie-Align/Magpie-Pro-MT-300K-v0.1", split=split)
         return ds
+
+@datasources("Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered")
+class MagpieQwen2Pro300KFiltered(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered", split=split)
+        return ds
+    
+@datasources("arcee-ai/infini-instruct-top-500k")
+class InfiniInstructTop500k(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("arcee-ai/infini-instruct-top-500k", split=split)
+        return ds

@@ -330,3 +330,32 @@ class OrcaMathKoreanPreferenceHard(OrcaMathKoreanPreference):
         if ds is not None:
             ds = ds.filter(lambda x: x["label"] == False)
         return ds
+
+@datasources("iknow-lab/ko-genstruct-v1-output:simple")
+class KoGenstructV1Output(BaseAlpacaDataSource):
+    dataset_path = "iknow-lab/ko-genstruct-v1-output"
+    instruction_key = "question"
+    output_key = "llm_response"
+
+@datasources("CarrotAI/ko-instruction-dataset")
+class KoInstructionDataset(BaseAlpacaDataSource):
+    dataset_path = "CarrotAI/ko-instruction-dataset"
+
+@datasources("maywell/kiqu_samples")
+class KiquSamples(BaseAlpacaDataSource):
+    dataset_path = "maywell/kiqu_samples"
+
+@datasources("HAERAE-HUB/K2-Feedback:score5")
+class K2FeedbackScore5(BaseAlpacaDataSource):
+    dataset_path = "HAERAE-HUB/K2-Feedback"
+    output_key = "response"
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        ds = super().load_dataset(args, split)
+        if ds:
+            ds = ds.filter(lambda x: x["score"] == 5)
+        return ds
+
+@datasources("jojo0217/korean_safe_conversation")
+class KoreanSafeConversation(BaseAlpacaDataSource):
+    dataset_path = "jojo0217/korean_safe_conversation"
