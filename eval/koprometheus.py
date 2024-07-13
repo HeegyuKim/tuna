@@ -78,7 +78,7 @@ def read_jsonl(filename):
 def main(
         judge_model: str,
         target: str = "judge_*",
-        prompt_length: int = 2048,
+        prompt_length: int = 3072,
         max_new_tokens: int = 512,
         eos_token_id: int = None,
         ):
