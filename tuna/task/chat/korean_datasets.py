@@ -359,3 +359,10 @@ class K2FeedbackScore5(BaseAlpacaDataSource):
 @datasources("jojo0217/korean_safe_conversation")
 class KoreanSafeConversation(BaseAlpacaDataSource):
     dataset_path = "jojo0217/korean_safe_conversation"
+
+@datasources("iknow-lab/qarv-instruct-ko-mt-deduped")
+class QarvInstructKoMt(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("iknow-lab/qarv-instruct-ko-mt-deduped", split=split).rename_column("conversations", "messages")
