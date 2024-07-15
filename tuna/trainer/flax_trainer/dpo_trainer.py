@@ -95,7 +95,7 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
             if self.args.use_lora:
                 ref_params = unwrap_lora(params)
             else:
-                ref_shard_fns, ref_gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.ref_params, self.dtype)
+                ref_shard_fns, ref_gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.ref_params, self.mesh, self.dtype)
                 ref_params = jax.tree_util.tree_map(
                     lambda f, x: f(x),
                     ref_shard_fns,
