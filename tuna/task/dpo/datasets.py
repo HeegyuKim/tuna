@@ -313,3 +313,20 @@ class UltraInteractPairDCOMax3(DCODataSource):
             "chosen": chosen,
             "rejected": rejected,
         }
+
+@datasources("dpo:Magpie-Align/Magpie-Pro-DPO-200K")
+class MagpieProDPO200K(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        return load_dataset("Magpie-Align/Magpie-Pro-DPO-200K", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["chosen"][:-1]
+        chosen = item["chosen"][-1]['content']
+        rejected = item["rejected"][-1]['content']
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }

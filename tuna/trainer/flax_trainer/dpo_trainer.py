@@ -28,6 +28,9 @@ from ...task.flax.flax_base import FlaxTask
 from ..flax.partition_rules import get_partition_rules
 from tqdm.auto import tqdm
 
+from ..flax import optimizer_utils as opt_utils, sharding, profiler
+
+
 
 class DPOTrainState(TrainState):
     ref_params: flax.core.FrozenDict[str, Any] = flax.struct.field(pytree_node=True)
@@ -76,7 +79,7 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
         with self.mesh:
             print("matching partition rules")
             partition_specs = match_partition_rules(params=state_shape, rules=get_partition_rules(self.task.model.config, self.args.fully_sharded))
-            shard_fns, gather_fns = make_shard_and_gather_fns(partition_specs.params, self.dtype)
+            shard_fns, gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.params, self.mesh, self.dtype)
             print(
                 "sharding parameters across all of the chosen backend(tpu/gpu/cpu)s"
             )
@@ -92,7 +95,7 @@ class FlaxDPOTrainer(FlaxBaseTrainer):
             if self.args.use_lora:
                 ref_params = unwrap_lora(params)
             else:
-                ref_shard_fns, ref_gather_fns = make_shard_and_gather_fns(partition_specs.ref_params, self.dtype)
+                ref_shard_fns, ref_gather_fns = sharding.make_shard_and_gather_fns_dtype(partition_specs.ref_params, self.dtype)
                 ref_params = jax.tree_util.tree_map(
                     lambda f, x: f(x),
                     ref_shard_fns,

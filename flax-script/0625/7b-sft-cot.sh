@@ -34,5 +34,5 @@ train() {
         --output_dir ""
 }
 
-train 5e-6 "sft:heegyu/Ultrafeedback-max-margin-critique:cot" "0625-zephyr7b-sft-cot"
-train 5e-6 "sft:heegyu/Ultrafeedback-max-margin" "0625-zephyr7b-sft"
+# train 5e-6 "sft:heegyu/Ultrafeedback-max-margin-critique:cot" "0625-zephyr7b-sft-cot"
+train 5e-6 "sft:heegyu/Ultrafeedback-max-margin-critique:chosen" "0625-zephyr7b-sft"
