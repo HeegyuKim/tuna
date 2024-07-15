@@ -30,6 +30,12 @@ tf.FlaxAutoModelForCausalLM.register(
     exist_ok=True
     )
 
+from .gemma2 import FlaxGemma2ForCausalLM
+tf.FlaxAutoModelForCausalLM.register(
+    tf.Gemma2Config,
+    FlaxGemma2ForCausalLM,
+    exist_ok=True
+    )
 
 # from .gemma import FlaxGemmaForCausalLM
 # tf.FlaxAutoModelForCausalLM.register(
