@@ -264,13 +264,16 @@ class FlaxGemma2RMSNorm(nn.Module):
         self.epsilon = self.config.rms_norm_eps
         self.weight = self.param("weight", lambda _, shape: jnp.ones(shape), self.config.hidden_size)
 
-    def __call__(self, hidden_states):
-        variance = jnp.asarray(hidden_states, dtype=jnp.float32)
-        variance = jnp.power(variance, 2)
-        variance = variance.mean(-1, keepdims=True)
-        hidden_states = hidden_states / jnp.sqrt(variance + self.epsilon)
+    def _norm(self, x):
+        return x * jax.lax.rsqrt(jnp.mean(jnp.square(x), axis=-1, keepdims=True) + self.epsilon)
 
-        return (1 + self.weight) * jnp.asarray(hidden_states, dtype=self.dtype)
+    @nn.compact
+    def __call__(self, x):
+        dtype = x.dtype
+        x = x.astype(jnp.float32)
+        output = self._norm(x)
+        output = output * (1.0 + self.weight.astype(jnp.float32))
+        return output.astype(dtype)
 
 
 class FlaxGemma2RotaryEmbedding(nn.Module):
@@ -471,6 +474,9 @@ class FlaxGemma2DecoderLayer(nn.Module):
         self.input_layernorm = FlaxGemma2RMSNorm(self.config, dtype=self.dtype)
         self.self_attn = FlaxGemma2Attention(self.config, dtype=self.dtype)
         self.post_attention_layernorm = FlaxGemma2RMSNorm(self.config, dtype=self.dtype)
+        self.pre_feedforward_layernorm = FlaxGemma2RMSNorm(self.config, dtype=self.dtype)
+        self.post_feedforward_layernorm = FlaxGemma2RMSNorm(self.config, dtype=self.dtype)
+
         self.mlp = FlaxGemma2MLP(self.config, dtype=self.dtype)
 
     def __call__(
@@ -483,7 +489,10 @@ class FlaxGemma2DecoderLayer(nn.Module):
         output_attentions: bool = False,
     ):
         residual = hidden_states
+
         hidden_states = self.input_layernorm(hidden_states)
+
+        # Self Attention
         outputs = self.self_attn(
             hidden_states,
             attention_mask=attention_mask,
@@ -492,12 +501,13 @@ class FlaxGemma2DecoderLayer(nn.Module):
             init_cache=init_cache,
             output_attentions=output_attentions,
         )
-        attn_output = outputs[0]
-        hidden_states = residual + attn_output
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = residual + hidden_states
 
         residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.pre_feedforward_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
+        hidden_states = self.post_feedforward_layernorm(hidden_states)
         hidden_states = residual + hidden_states
 
         return (hidden_states,) + outputs[1:]
