@@ -161,6 +161,7 @@ def dot_product_attention_weights_softcapping(
     query: Array,
     key: Array,
     softcap: float = None,
+    scaling: float = 1.0,
     bias: Optional[Array] = None,
     mask: Optional[Array] = None,
     broadcast_dropout: bool = True,
@@ -219,6 +220,7 @@ def dot_product_attention_weights_softcapping(
     attn_weights = jnp.einsum(
     '...qhd,...khd->...hqk', query, key, precision=precision
     )
+    attn_weights = attn_weights * scaling
 
     # apply attention bias: masking, dropout, proximity bias, etc.
     if bias is not None:
@@ -328,6 +330,8 @@ class FlaxGemma2Attention(nn.Module):
 
         self.causal_mask = make_causal_mask(jnp.ones((1, config.max_position_embeddings), dtype="bool"), dtype="bool")
         self.rotary_emb = FlaxGemma2RotaryEmbedding(config, dtype=self.dtype)
+        self.scaling = config.query_pre_attn_scalar**-0.5
+
 
     def _split_heads(self, hidden_states, num_heads):
         return hidden_states.reshape(hidden_states.shape[:2] + (num_heads, self.head_dim))
@@ -416,6 +420,7 @@ class FlaxGemma2Attention(nn.Module):
             query,
             key,
             softcap=self.config.attn_logit_softcapping,
+            scaling=self.scaling,
             bias=attention_bias,
             dropout_rng=dropout_rng,
             dropout_rate=self.config.attention_dropout,
