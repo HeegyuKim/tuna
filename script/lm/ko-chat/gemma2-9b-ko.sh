@@ -1,15 +1,15 @@
 wandb online
 
-template="llama3"
+template="gemma"
 lr=2e-4
 task="chat-lm"
-model="MLP-KTLim/llama-3-Korean-Bllossom-8B"
+model="google/gemma-2-9b"
 
 train() {
     dataset=$1
     run_name=$2
     
-    hub_id="iknow-lab/0708-$run_name"
+    hub_id="0708-$run_name"
 
     python -m tuna.launcher.train \
         --mesh sp \
@@ -25,13 +25,14 @@ train() {
         --trust_remote_code \
         --amp True \
         --use_lora \
-        --max_length=4096 \
+        --max_length=2048 \
         --truncation \
         --model_name_or_path $model \
-        --total_epochs 3 \
+        --total_epochs 2 \
         --learning_rate $lr \
         --lr_warmup_ratio 0.01 \
         --lr_decay_ratio 0.1 \
+        --lr_scheduler cosine \
         --train_total_batch_size 32 \
         --train_batch_size_per_device 1 \
         --eval_batch_size_per_device 1 \
@@ -41,5 +42,4 @@ train() {
         --output_dir ""
 }
 
-train "iknow-lab/ko-genstruct-v1" "ko-genstruct-alpha"
-# train "beomi/KoAlpaca-v1.1a" "ko-alpaca"
+train "Magpie-Align/Magpie-Pro-MT-300K-v0.1,HAERAE-HUB/qarv-instruct-100k,heegyu/HRC,changpt/ko-lima-vicuna" "0711-gemma2-magpie-qarv-komath"
