@@ -553,11 +553,11 @@ class FlaxBaseTrainer:
             print("Saving huggingface model to local disk")
             pt_model = pt_model.bfloat16()
             if revision_name != "main":
-                save_path = os.path.join(folder_path, revision_name)
-                pt_model.save_pretrained(save_path)
-                self.task.tokenizer.save_pretrained(save_path)
+                folder_path = os.path.join(folder_path, revision_name)
 
-                folder_path = save_path
+
+            pt_model.save_pretrained(folder_path)
+            self.task.tokenizer.save_pretrained(folder_path)
             
             if self.args.push_to_hub:
                 repo_id = self.args.push_to_hub_id or self.args.run_name.replace("/", "__")
@@ -571,7 +571,8 @@ class FlaxBaseTrainer:
                     
                 print(f"Start uploading to huggingface model hub {repo_id}:{revision_name}")
                 api.create_repo(repo_id, private=True, repo_type="model", exist_ok=True)
-                api.create_branch(repo_id, branch=revision_name)
+                if revision_name != "main":
+                    api.create_branch(repo_id, branch=revision_name)
                 api.upload_folder(
                     repo_id=repo_id,
                     folder_path=folder_path,

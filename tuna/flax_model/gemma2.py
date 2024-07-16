@@ -215,28 +215,29 @@ def dot_product_attention_weights_softcapping(
 
     # calculate attention matrix
     depth = query.shape[-1]
-    query = query / jnp.sqrt(depth).astype(dtype)
+    # query = query / jnp.sqrt(depth).astype(dtype)
     # attn weight shape is (batch..., num_heads, q_length, kv_length)
     attn_weights = jnp.einsum(
     '...qhd,...khd->...hqk', query, key, precision=precision
     )
     attn_weights = attn_weights * scaling
 
-    # apply attention bias: masking, dropout, proximity bias, etc.
-    if bias is not None:
-        attn_weights = attn_weights + bias
-    # apply attention mask
-    if mask is not None:
-        big_neg = jnp.finfo(dtype).min
-        attn_weights = jnp.where(mask, attn_weights, big_neg)
-
     if softcap:
         attn_weights = attn_weights / softcap
         attn_weights = jnp.tanh(attn_weights)
         attn_weights = attn_weights * softcap
 
+    # apply attention bias: masking, dropout, proximity bias, etc.
+    if bias is not None:
+        attn_weights = attn_weights + bias
+
+    # apply attention mask
+    if mask is not None:
+        big_neg = jnp.finfo(dtype).min
+        attn_weights = jnp.where(mask, attn_weights, big_neg)
+
     # normalize the attention weights
-    attn_weights = jax.nn.softmax(attn_weights).astype(dtype)
+    attn_weights = jax.nn.softmax(attn_weights.astype(jnp.float32)).astype(dtype)
 
     if module:
         module.sow('intermediates', 'attention_weights', attn_weights)
@@ -501,7 +502,7 @@ class FlaxGemma2DecoderLayer(nn.Module):
             init_cache=init_cache,
             output_attentions=output_attentions,
         )
-        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.post_attention_layernorm(outputs[0])
         hidden_states = residual + hidden_states
 
         residual = hidden_states
@@ -585,7 +586,8 @@ class FlaxGemma2PreTrainedModel(FlaxPreTrainedModel):
             if past_key_values is not None:
                 raise ValueError("Make sure to provide `position_ids` when passing `past_key_values`.")
 
-            position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
+            # position_ids = jnp.broadcast_to(jnp.arange(sequence_length)[None, :], (batch_size, sequence_length))
+            position_ids = attention_mask.cumsum(axis=-1) - 1
 
         if attention_mask is None:
             attention_mask = jnp.ones((batch_size, sequence_length))
@@ -795,7 +797,7 @@ class FlaxGemma2ForCausalLMModule(nn.Module):
             lm_logits = jnp.tanh(lm_logits)
             lm_logits = lm_logits * self.config.final_logit_softcapping
 
-            lm_logits = promote_dtype(lm_logits, dtype=jnp.float32)[0]
+        lm_logits = promote_dtype(lm_logits, dtype=jnp.float32)[0]
 
         if not return_dict:
             return (lm_logits,) + outputs[1:]

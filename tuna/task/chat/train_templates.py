@@ -278,6 +278,7 @@ class GemmaTemplate(BaseTrainTemplate):
         tokenizer.add_special_tokens({
             'additional_special_tokens': additional_tokens
             })
+        tokenizer.eos_token = "<end_of_turn>"
         super().__init__(tokenizer)
         
 @train_templates.register("gemma-vision")

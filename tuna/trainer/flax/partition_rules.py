@@ -187,6 +187,7 @@ def get_phi3(fully_sharded_data_parallel: bool = True):
 
 RULES = [
     (htf.GemmaConfig, get_gemma),
+    (htf.Gemma2Config, get_gemma),
     (htf.LlamaConfig, get_llama),
     (htf.MistralConfig, get_mistral),
     (htf.Qwen2Config, get_mistral),
