@@ -93,7 +93,7 @@ def main(
         prompt_length=prompt_length,
         max_length=prompt_length + max_new_tokens,
         gen_args={"temperature": 1.0, "top_k": 50, "top_p": 0.9},
-        batch_size=1,
+        batch_size=4,
     )
     gen_args = {"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "eos_token_id": eos_token_id}
 
@@ -101,7 +101,7 @@ def main(
         gpt4_baselines = read_jsonl("eval/LogicKor/results/judge_gpt-4-1106-preview.jsonl")
         target_model = target.replace("eval/LogicKor/results/judge_", "").replace(".jsonl", "")
         eval_set = read_jsonl(f"eval/LogicKor/results/judge_{target_model}.jsonl")
-        output_path = f"eval/LogicKor/results/{model_name}/judge_{target_model}.jsonl"
+        output_path = f"eval/LogicKor/results-prometheus/{model_name}/judge_{target_model}.jsonl"
 
 
         skip_length = estimate_skip_length(output_path)

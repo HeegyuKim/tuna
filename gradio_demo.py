@@ -11,6 +11,7 @@ def main(
     max_new_tokens=1024,
     eos_token: str = None,
     chat_template: str = None,
+    use_vllm: bool = False
     ):
 
     generator = load_model(
@@ -19,7 +20,7 @@ def main(
         max_length=prompt_length + max_new_tokens,
         chat_template=chat_template,
         eos_token=eos_token,
-        use_vllm=False
+        use_vllm=use_vllm
     )   
     print(generator.tokenizer.eos_token_id, generator.tokenizer.eos_token)
 
@@ -27,7 +28,8 @@ def main(
         "max_new_tokens": 1024, 
         "do_sample": False, 
         "early_stopping": True,
-        "eos_token_id": generator.tokenizer.encode(eos_token)[0] if eos_token else None,
+        "temperature": 1.0,
+        "eos_token_id": generator.tokenizer.eos_token_id,
         }
     
     use_stream = getattr(generator, "SUPPORT_STREAMING", False)
@@ -50,7 +52,7 @@ def main(
                 'role': 'assistant',
                 'content': uttr[1]
             })
-        print(convs)
+        print(convs, message, sep="\n")
 
         gen_args["do_sample"] = not greedy
         
@@ -60,7 +62,7 @@ def main(
             for token in generator.generate_stream(message, convs, gen_args=gen_args):
                 for stop_token in ["<|endoftext|>", "<|im_end|>", "<end_of_turn>", "</s>", "<eos>", "<|eot_id|>"]:
                     if stop_token in token:
-                        token = token.replace(stop_token, "")
+                        token = token.split(stop_token, 1)[0]
                         stop = True
                 text += token
                 yield text

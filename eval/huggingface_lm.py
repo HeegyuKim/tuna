@@ -6,7 +6,7 @@ from copy import deepcopy
 from threading import Thread
 
 
-def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = torch.bfloat16, device = "auto", trust_remote_code=False, merge_peft=False):
+def load_huggingface_model_tokenizer(model_name: str, dtype: torch.dtype = "auto", device = "auto", trust_remote_code=False, merge_peft=False):
 
     if "@" not in model_name:
         repo_id, revision = model_name, None

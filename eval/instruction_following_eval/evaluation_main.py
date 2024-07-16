@@ -27,9 +27,12 @@ from absl import logging
 
 from . import instructions_registry
 
+import nltk
+nltk.download('punkt')
+
 
 _INPUT_DATA = flags.DEFINE_string(
-    "input_data", None, "path to input data", required=True
+    "input_data", "eval/instruction_following_eval/data/input_data.jsonl", "path to input data", required=False
 )
 
 _INPUT_RESPONSE_DATA = flags.DEFINE_string(
@@ -40,7 +43,7 @@ _OUTPUT_DIR = flags.DEFINE_string(
     "output_dir",
     None,
     "Output directory for inference and eval results.",
-    required=True,
+    required=False,
 )
 
 
@@ -261,8 +264,9 @@ def main(argv):
     accuracy = sum(follow_all_instructions) / len(outputs)
     logging.info("Accuracy: %f", accuracy)
 
+    output_dir = _OUTPUT_DIR.value or os.path.join(os.path.dirname(_INPUT_RESPONSE_DATA.value), "ifeval")
     output_file_name = os.path.join(
-        _OUTPUT_DIR.value, output_file_name + ".jsonl"
+        output_dir, output_file_name + ".jsonl"
     )
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     write_outputs(output_file_name, outputs)

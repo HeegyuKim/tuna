@@ -2,7 +2,7 @@ import transformers
 import datasets
 import os
 import fire
-import jsonlines
+import json, jsonlines
 from .utils import load_model
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length, batched_iteration
@@ -28,6 +28,8 @@ def get_prompt_dataset(dataset: str):
         return datasets.load_dataset("HuggingFaceH4/ifeval", split="train")
     elif dataset == "mt-bench":
         return datasets.load_dataset("HuggingFaceH4/mt_bench_prompts", split="train")
+    elif dataset == "logickor":
+        return datasets.load_dataset("json", data_files={"train": "eval/LogicKor/questions.jsonl"})["train"]
     else:
         raise Exception(f"Unknown dataset: {dataset}")
 
@@ -46,7 +48,8 @@ def main(
         top_p: float = 0.9,
         eos_token: str = None,
         batch_size: int = 1,
-        cot: bool = False
+        cot: bool = False,
+        use_vllm: bool = False
         ):
     if model_name is None:
         model_name = model
@@ -73,11 +76,11 @@ def main(
     else:
         generation_prefix = ""
 
-    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens}
+    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True}
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)
-        output_path = os.path.join(output_dir, f"{dataset_name}.json")
+        output_path = os.path.join(output_dir, f"{dataset_name}.jsonl")
 
         skip_length = estimate_skip_length(output_path)
         if skip_length == len(eval_set):
@@ -96,8 +99,12 @@ def main(
                 gen_args={"temperature": temperature, "top_k": top_k, "top_p": top_p},
                 chat_template=chat_template,
                 eos_token=eos_token,
-                batch_size=batch_size
+                batch_size=batch_size,
+                use_vllm=use_vllm
             )
+
+        if use_vllm:
+            batch_size = len(dataset)
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with jsonlines.open(output_path, "a") as f:
@@ -109,36 +116,39 @@ def main(
                     )
                     ):
                 
-                
-                if dataset_name == "mt-bench":
+                if dataset_name in ["mt-bench", "logickor"]:
                     for example in batch_example:
-                        instruction = example["prompt"][0]
-                        tmp = mt_bench_temperature_config[example['category']]
-                        if tmp == "greedy":
-                            greedy = True
+                        questions = example.get("prompt") or example["questions"]
+                        
+                        tmp = mt_bench_temperature_config.get(example['category'])
+                        if tmp == "greedy" or dataset_name == "logickor":
                             tmp = 1.0
+                            greedy = True
                         else:
                             greedy = False
 
                         if all_greedy:
                             greedy = True
-                            
-                        model.gen_args["temperature"] = tmp
-                        output1 = model.generate(instruction, greedy=greedy)
-                        output2 = model.chat([
-                            {
-                                "role": "user",
-                                "content": instruction
-                            },
-                            {
-                                "role": "assistant",
-                                "content": output1
-                            },
-                            {
-                                "role": "user",
-                                "content": example["prompt"][1]
-                            },
-                        ], greedy=greedy)
+                        
+                        gen_args["do_sample"] = not greedy
+                        gen_args["temperature"] = tmp
+
+                        output1 = model.generate(questions[0], gen_args=gen_args, generation_prefix=generation_prefix)
+                        output2 = model.generate(
+                            questions[1],
+                            [
+                                {
+                                    "role": "user",
+                                    "content": questions[0]
+                                },
+                                {
+                                    "role": "assistant",
+                                    "content": output1
+                                },
+                            ], 
+                            gen_args=gen_args,
+                            generation_prefix=generation_prefix
+                            )
                         example["outputs"] = [output1, output2]
 
                 elif dataset_name == "alpaca-eval":
@@ -156,6 +166,12 @@ def main(
                 for example in batch_example:
                     example['generator'] = model_name
                     f.write(example)
+
+        if dataset_name == "alpaca-eval":
+            items = list(jsonlines.open(output_path))
+            with open(output_path, "w") as f:
+                f.write(json.dumps(items, ensure_ascii=False, indent=4))
+
 
 if __name__ == "__main__":
     fire.Fire(main)

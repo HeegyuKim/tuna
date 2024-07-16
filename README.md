@@ -59,3 +59,25 @@ pip install -r requirements.txt
 ```
 python -m tuna.serve.flax_discord Qwen/Qwen2-7B-Instruct
 ```
+
+## Evaluation
+
+### Generations
+```
+python -m eval.nlgbench_gen MODEL_NAME --batch_size 4 --use_vllm --dataset ifeval,alpaca-eval,mt-bench,logickor
+```
+
+### Evaluation
+```bash
+# Logickor
+python eval.judge_logickor -o outputs/heegyu/0713-qwen2-magpie-qarv@lr2e-5-epoch-1/logickor.json
+
+# alpacaeval
+alpaca_eval --model_outputs "outputs/$model_name/alpaca-eval.json" --annotators_config chatgpt
+
+# ifeval
+python -m eval.instruction_following_eval.evaluation_main \
+    --input_response_data=outputs/$model/ifeval.json
+
+# mt-bench
+```
