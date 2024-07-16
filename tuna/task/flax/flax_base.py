@@ -246,10 +246,16 @@ class FlaxLMTask(FlaxTask):
                     outputs["attention_mask"].append(batch_mask[:batch_len])
                 outputs["labels"].append(batch_labels[:batch_len])
 
-                batch_ids, batch_labels = batch_ids[batch_len:], batch_labels[batch_len:]
-                if all_attention_mask is not None:
-                    batch_mask = batch_mask[batch_len:]
-                accum_len -= batch_len
+                if self.args.packing_strategy == "reuse":
+                    batch_ids, batch_labels = batch_ids[batch_len:], batch_labels[batch_len:]
+                    if all_attention_mask is not None:
+                        batch_mask = batch_mask[batch_len:]
+                    accum_len -= batch_len
+                elif self.args.packing_strategy == "truncate":
+                    batch_ids, batch_labels = [], []
+                    if all_attention_mask is not None:
+                        batch_mask = []
+                    accum_len = 0
         
         if all_attention_mask is None:
             outputs.pop("attention_mask")

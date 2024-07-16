@@ -365,4 +365,4 @@ class QarvInstructKoMt(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split != "train":
             return None
-        return load_dataset("iknow-lab/qarv-instruct-ko-mt-deduped", split=split).rename_column("conversations", "messages")
+        return load_dataset("iknow-lab/qarv-instruct-ko-mt-deduped", split=split).rename_column("messages", "conversations")

@@ -62,7 +62,7 @@ class DatasetLoader:
         return dd
     
     def get_sources(self, args, names, split):
-        names = names.split(",")
+        names = names.strip().replace("\n", ",").split(",")
         sources = []
 
         for name in names:

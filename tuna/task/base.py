@@ -23,6 +23,7 @@ class TaskArguments:
     truncation: bool = False
     truncation_side: Optional[str] = "right"
     packing: bool = False
+    packing_strategy: str = "reuse" # reuse or truncate
 
     max_length: Optional[int] = None
     decoder_max_length: Optional[int] = None
