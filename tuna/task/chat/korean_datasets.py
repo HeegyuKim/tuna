@@ -316,13 +316,13 @@ class KoGenstructV1(ChatDataSource):
         return Dataset.from_list(items)
 
     
-@datasources("sft:kuotient/orca-math-korean-preference")
+@datasources("sft:heegyu/orca-math-korean-preference-cleaned")
 class OrcaMathKoreanPreference(BaseAlpacaDataSource):
     dataset_path = "kuotient/orca-math-korean-preference"
     instruction_key = "question"
     output_key = "answer"
 
-@datasources("sft:kuotient/orca-math-korean-preference:hard")
+@datasources("sft:heegyu/orca-math-korean-preference-cleaned:hard")
 class OrcaMathKoreanPreferenceHard(OrcaMathKoreanPreference):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
@@ -336,6 +336,11 @@ class KoGenstructV1Output(BaseAlpacaDataSource):
     dataset_path = "iknow-lab/ko-genstruct-v1-output"
     instruction_key = "question"
     output_key = "llm_response"
+
+@datasources("iknow-lab/ko-evol-writing-wiki")
+class KoEvolWritingWiki(BaseAlpacaDataSource):
+    dataset_path = "iknow-lab/ko-evol-writing-wiki"
+    input_key = None
 
 @datasources("CarrotAI/ko-instruction-dataset")
 class KoInstructionDataset(BaseAlpacaDataSource):

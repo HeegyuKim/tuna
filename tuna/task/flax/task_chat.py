@@ -22,6 +22,7 @@ class ChatLMTask(FlaxLMTask):
     def encode_item(self, item):
         conversation = item["conversations"]
         concat_inputs, concat_labels = [], []
+        bos_token = self.tokenizer.bos_token
         
         if self.args.train_prompt_prefix:
             ids = self.tokenizer.encode(self.args.train_prompt_prefix, add_special_tokens=False)
@@ -30,6 +31,9 @@ class ChatLMTask(FlaxLMTask):
 
         for i, uttr in enumerate(conversation):
             content, trainable = self.train_template.handle_utterance(uttr, i)
+
+            if self.args.packing and bos_token:
+                content = content.replace(bos_token, "")
 
             input_ids = self.tokenizer.encode(content, add_special_tokens=False)
             if not self.args.train_only_response or trainable:

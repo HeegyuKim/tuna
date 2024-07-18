@@ -230,9 +230,31 @@ class FlaxLMTask(FlaxTask):
         all_attention_mask = items.get("attention_mask")
         all_labels = items["labels"]
 
-        batch_ids, batch_mask, batch_labels = [], [], []
+        bos_start = self.args.packing_strategy in ["pad", "truncate"]
+        assert bos_start and self.tokenizer.bos_token_id is not None, "BOS token is required for packing strategy"
+
+        bos_token_id = self.tokenizer.bos_token_id
+        
+        if bos_start:
+            batch_ids, batch_mask, batch_labels = [bos_token_id], [1], [-100]
+        else:
+            batch_ids, batch_mask, batch_labels = [], [], []
 
         for ids, mask, labels in zip(all_input_ids, all_attention_mask, all_labels):
+            if self.args.packing_strategy == "pad" and accum_len + len(ids) > batch_len:
+                outputs["input_ids"].append(batch_ids + [bos_token_id] * (batch_len - accum_len))
+                if all_attention_mask is not None:
+                    outputs["attention_mask"].append(batch_mask + [0] * (batch_len - accum_len))
+                outputs["labels"].append(batch_labels + [-100] * (batch_len - accum_len))
+
+        
+                if bos_start:
+                    batch_ids, batch_mask, batch_labels = [bos_token_id], [1], [-100]
+                    accum_len = 1
+                else:
+                    batch_ids, batch_mask, batch_labels = [], [], []
+                    accum_len = 0
+
             accum_len += len(ids)
 
             batch_ids.extend(ids)
@@ -251,11 +273,14 @@ class FlaxLMTask(FlaxTask):
                     if all_attention_mask is not None:
                         batch_mask = batch_mask[batch_len:]
                     accum_len -= batch_len
-                elif self.args.packing_strategy == "truncate":
-                    batch_ids, batch_labels = [], []
-                    if all_attention_mask is not None:
-                        batch_mask = []
-                    accum_len = 0
+                else:
+                    if bos_start:
+                        batch_ids, batch_mask, batch_labels = [bos_token_id], [1], [-100]
+                        accum_len = 1
+                    else:
+                        batch_ids, batch_mask, batch_labels = [], [], []
+                        accum_len = 0
+
         
         if all_attention_mask is None:
             outputs.pop("attention_mask")

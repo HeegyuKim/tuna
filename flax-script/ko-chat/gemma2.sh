@@ -43,8 +43,8 @@ Magpie-Align/Magpie-Pro-MT-300K-v0.1
 iknow-lab/qarv-instruct-ko-mt-deduped
 jojo0217/korean_safe_conversation
 heegyu/HRC
-sft:kuotient/orca-math-korean-preference:hard
-iknow-lab/ko-genstruct-v1-output:simple
+sft:heegyu/orca-math-korean-preference-cleaned:hard
+iknow-lab/ko-evol-writing-wiki
 CarrotAI/ko-instruction-dataset
 maywell/kiqu_samples
 HAERAE-HUB/K2-Feedback:score5

@@ -1,27 +1,55 @@
 wandb online
 model="beomi/Llama-3-Open-Ko-8B"
-dataset="FreedomIntelligence/evol-instruct-korean"
-# dataset="changpt/ko-lima-vicuna"
+template="llama3"
 
-python -m tuna.launcher.train_flax \
-    --mesh fsdp \
-    --do_train \
-    --task chat-lm \
-    --padding max_length \
-    --project "KoChat-SFT" \
-    --run_name "Llama-3-Open-Ko-8B-sft-0425" \
-    --dataset="$dataset" \
-    --packing False \
-    --max_length=1024 \
-    --truncation \
-    --model_name_or_path $model \
-    --logging_steps 1 \
-    --total_epochs 3 \
-    --learning_rate 1e-5 \
-    --last_learning_rate_ratio 0.1 \
-    --train_total_batch_size 32 \
-    --train_batch_size_per_device 1 \
-    --eval_batch_size_per_device 1 \
-    --save_strategy epoch \
-    --push_to_hub \
-    --output_dir ""
+train() {
+    lr=$1
+    datasets=$2
+    run_name=$3
+
+    python -m tuna.launcher.train_flax \
+        --mesh sp \
+        --do_train \
+        --task chat-lm \
+        --padding max_length \
+        --project "KoChat-SFT" \
+        --run_name "$run_name-lr$lr" \
+        --dataset="$datasets" \
+        --packing False \
+        --packing_strategy pad \
+        --truncation \
+        --max_length=1024 \
+        --model_name_or_path $model \
+        --total_epochs 2 \
+        --learning_rate $lr \
+        --last_learning_rate_ratio 0.3 \
+        --lr_warmup_ratio 0.01 \
+        --lr_scheduler cosine \
+        --load_from_cache_file \
+        --train_template $template \
+        --train_total_batch_size 32 \
+        --train_batch_size_per_device 2 \
+        --eval_batch_size_per_device 2 \
+        --push_to_hub \
+        --push_to_hub_id $run_name \
+        --save_strategy epoch \
+        --revision_prefix "lr$lr-" \
+        --output_dir "/data/checkpoint/$run_name"
+}
+
+
+# Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered
+# Magpie-Align/Magpie-Pro-MT-300K-v0.1
+datasets="
+iknow-lab/qarv-instruct-ko-mt-deduped
+jojo0217/korean_safe_conversation
+heegyu/HRC
+sft:heegyu/orca-math-korean-preference-cleaned:hard
+iknow-lab/ko-evol-writing-wiki
+CarrotAI/ko-instruction-dataset
+maywell/kiqu_samples
+HAERAE-HUB/K2-Feedback:score5
+"
+TODAY=$(date +%m%d)
+
+train 2e-5 "$datasets" "$TODAY-llama3-ko"
