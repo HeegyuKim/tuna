@@ -1,6 +1,13 @@
 wandb offline
 model="heegyu/0710-qwen2-magpie-qarv-komath"
-run_name="0710-qwen2-magpie-qarv-komath-dpo"
+run_name="0710-qwen2-magpie-qarv-komath-dpo-argilla"
+
+dataset="
+dpo:argilla/distilabel-math-preference-dpo
+dpo:argilla/distilabel-capybara-dpo-7k-binarized
+dpo:argilla/distilabel-intel-orca-dpo-pairs
+"
+#,dpo:heegyu/Magpie-Pro-DPO-200K-Filtered
 
 train() {
     lr=$1
@@ -14,7 +21,7 @@ train() {
         --padding max_length \
         --project "KoChat-DPO" \
         --run_name "$run_name-lr$lr-beta$beta" \
-        --dataset="dpo:heegyu/Magpie-Pro-DPO-200K-Filtered" \
+        --dataset="$dataset" \
         --packing False \
         --truncation \
         --max_length=2048 \
@@ -40,8 +47,9 @@ train() {
 
 
 for lr in 5e-6; do
-    train $lr 0.25
+    # train $lr 0.25
     train $lr 0.1
-    train $lr 0.5
-    train $lr 1.0
+    train $lr 0.01
+    # train $lr 0.5
+    # train $lr 1.0
 done

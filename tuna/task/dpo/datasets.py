@@ -347,3 +347,65 @@ class MagpieProDPO200KFiltered(DPODataSource):
             "chosen": chosen,
             "rejected": rejected
         }
+
+@datasources("dpo:argilla/distilabel-capybara-dpo-7k-binarized")
+class DistilabelCapybaraDPO7kBinarized(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("argilla/distilabel-capybara-dpo-7k-binarized", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["chosen"][:-1]
+        chosen = item["chosen"][-1]['content']
+        rejected = item["rejected"][-1]['content']
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }
+
+@datasources("dpo:argilla/distilabel-math-preference-dpo")
+class DistilabelMathPreferenceDPO(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("argilla/distilabel-math-preference-dpo", split=split)
+    
+    def map_conversations(self, item):
+        convs = [{"role": "user", "content": item["instruction"]}]
+        chosen = item["chosen_response"]
+        rejected = item["rejected_response"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }
+
+@datasources("dpo:argilla/distilabel-intel-orca-dpo-pairs")
+class DistilabelIntelOrcaDPOPairs(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("argilla/distilabel-intel-orca-dpo-pairs", split=split)
+    
+    def map_conversations(self, item):
+        convs = [
+            {"role": "user", "content": item["input"]}
+            ]
+        if item["system"] is not None:
+            convs.insert(0, {"role": "system", "content": item["system"]})
+
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }

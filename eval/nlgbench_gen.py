@@ -74,7 +74,7 @@ def main(
     else:
         generation_prefix = ""
 
-    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True}
+    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "verbose": True}
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)
