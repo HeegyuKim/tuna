@@ -231,7 +231,8 @@ class FlaxLMTask(FlaxTask):
         all_labels = items["labels"]
 
         bos_start = self.args.packing_strategy in ["pad", "truncate"]
-        assert bos_start and self.tokenizer.bos_token_id is not None, "BOS token is required for packing strategy"
+        if bos_start:
+            assert self.tokenizer.bos_token_id is not None, f"BOS token is required for packing strategy {self.args.packing_strategy}"
 
         bos_token_id = self.tokenizer.bos_token_id
         

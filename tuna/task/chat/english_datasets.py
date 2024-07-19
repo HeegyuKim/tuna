@@ -273,3 +273,10 @@ class InfiniInstructTop500k(VicunaChatDataSource):
             return
         ds = load_dataset("arcee-ai/infini-instruct-top-500k", split=split)
         return ds
+@datasources("BAAI/Infinity-Instruct:0625")
+class InfiniInstruct0625(VicunaChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("BAAI/Infinity-Instruct", "0625", split=split)
+        return ds
