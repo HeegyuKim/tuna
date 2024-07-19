@@ -60,7 +60,7 @@ def main(
         output_dir = f"outputs/{model_name}/"
 
     if dataset == "all":
-        dataset = ["alpaca-eval", "mt-bench", "ifeval"]
+        dataset = ["alpaca-eval", "mt-bench", "ifeval", "logickor"]
     else:
         dataset = dataset.split(",")
     
@@ -102,6 +102,7 @@ def main(
                 batch_size=batch_size,
                 use_vllm=use_vllm
             )
+            gen_args["eos_token_id"] = model.tokenizer.eos_token_id
 
         if use_vllm:
             batch_size = len(dataset)
@@ -120,12 +121,16 @@ def main(
                     for example in batch_example:
                         questions = example.get("prompt") or example["questions"]
                         
-                        tmp = mt_bench_temperature_config.get(example['category'])
-                        if tmp == "greedy" or dataset_name == "logickor":
-                            tmp = 1.0
-                            greedy = True
-                        else:
+                        if dataset_name == "logickor":
+                            tmp = 0.7
                             greedy = False
+                        else:
+                            tmp = mt_bench_temperature_config.get(example['category'])
+                            if tmp == "greedy":
+                                tmp = 1.0
+                                greedy = True
+                            else:
+                                greedy = False
 
                         if all_greedy:
                             greedy = True
@@ -152,12 +157,14 @@ def main(
                         example["outputs"] = [output1, output2]
 
                 elif dataset_name == "alpaca-eval":
+                    gen_args["do_sample"] = False
                     instructions = [example["instruction"] for example in batch_example]
                     outputs = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, output in zip(batch_example, outputs):
                         example["output"] = handle_output(output)
 
                 elif dataset_name == "ifeval":
+                    gen_args["do_sample"] = False
                     instructions = [example["prompt"] for example in batch_example]
                     responses = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, response in zip(batch_example, responses):
@@ -169,7 +176,7 @@ def main(
 
         if dataset_name == "alpaca-eval":
             items = list(jsonlines.open(output_path))
-            with open(output_path, "w") as f:
+            with open(output_path.replace(".jsonl", ".json"), "w") as f:
                 f.write(json.dumps(items, ensure_ascii=False, indent=4))
 
 

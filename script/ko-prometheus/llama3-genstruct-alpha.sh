@@ -1,9 +1,13 @@
 wandb online
 
-template="llama3"
 lr=2e-4
 task="chat-lm"
-model="MLP-KTLim/llama-3-Korean-Bllossom-8B"
+
+# template="llama3"
+# model="MLP-KTLim/llama-3-Korean-Bllossom-8B"
+
+template="chatml"
+model="Qwen/Qwen2-7B-Instruct"
 
 train() {
     dataset=$1
@@ -41,5 +45,6 @@ train() {
         --output_dir ""
 }
 
-train "heegyu/K2-Feedback-splited" "ko-prometheus"
+# train "heegyu/K2-Feedback-splited" "ko-prometheus"
+train heegyu/K2-Feedback-splited "ko-prometheus-7b"
 # train "beomi/KoAlpaca-v1.1a" "ko-alpaca"

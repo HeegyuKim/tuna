@@ -52,7 +52,7 @@ def main(
                 'role': 'assistant',
                 'content': uttr[1]
             })
-        print(convs, message, sep="\n")
+        # print(convs, message, sep="\n")
 
         gen_args["do_sample"] = not greedy
         
@@ -60,6 +60,7 @@ def main(
             text = ""
             stop = False
             for token in generator.generate_stream(message, convs, gen_args=gen_args):
+                print(token, end="")
                 for stop_token in ["<|endoftext|>", "<|im_end|>", "<end_of_turn>", "</s>", "<eos>", "<|eot_id|>"]:
                     if stop_token in token:
                         token = token.split(stop_token, 1)[0]

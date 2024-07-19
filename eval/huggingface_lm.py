@@ -115,6 +115,7 @@ class HuggingfaceModel():
         if generation_prefix is not None:
             inputs = inputs + generation_prefix
         
+        print(inputs)
         inputs = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
         streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
         generation_kwargs = dict(inputs, streamer=streamer, **gen_args)
