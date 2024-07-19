@@ -142,6 +142,7 @@ class FlaxHuggingfaceModel:
 
 
         with jax.default_device(jax.devices("cpu")[0]):
+            print("create flax model")
             config = pt_model.config
             config.freq_max_position_embeddings = max_length
             if isinstance(config, transformers.MistralConfig):

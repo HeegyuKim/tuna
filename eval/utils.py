@@ -50,6 +50,7 @@ def load_model(
     
     import torch
     if torch.cuda.is_available():
+        print("Using CUDA")
         from .huggingface_lm import HuggingfaceModel
         model = HuggingfaceModel(model_name)
         if chat_template:
@@ -58,6 +59,7 @@ def load_model(
             model.tokenizer.eos_token = eos_token
         return model
     else:
+        print("Using Flax")
         from tuna.serve.flax_generator import FlaxHuggingfaceModel
         return FlaxHuggingfaceModel(
             model_name,

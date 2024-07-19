@@ -4,7 +4,7 @@ from .logger import BaseLogger
 from pprint import pprint
 import os
 
-
+wandb.require("core")
 class WandbLogger(BaseLogger):
 
     def __init__(self, config):

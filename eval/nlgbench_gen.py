@@ -1,4 +1,3 @@
-import transformers
 import datasets
 import os
 import fire
@@ -6,7 +5,6 @@ import json, jsonlines
 from .utils import load_model
 from tqdm.auto import tqdm
 from .utils import estimate_skip_length, batched_iteration
-
 
 mt_bench_temperature_config = {
     "writing": 0.7,

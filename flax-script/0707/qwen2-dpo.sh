@@ -14,7 +14,7 @@ train() {
         --padding max_length \
         --project "KoChat-DPO" \
         --run_name "$run_name-lr$lr-beta$beta" \
-        --dataset="dpo:Magpie-Align/Magpie-Pro-DPO-200K" \
+        --dataset="dpo:heegyu/Magpie-Pro-DPO-200K-Filtered" \
         --packing False \
         --truncation \
         --max_length=2048 \
@@ -31,10 +31,11 @@ train() {
         --train_batch_size_per_device 1 \
         --eval_batch_size_per_device 1 \
         --save_strategy epoch \
-        --push_to_hub \
-        --push_to_hub_id $run_name \
         --revision_prefix "lr$lr-beta$beta-" \
-        --output_dir ""
+        --output_dir "/data/checkpoint/$run_name-lr$lr-beta$beta" \
+
+        # --push_to_hub \
+        # --push_to_hub_id $run_name \
 }
 
 
