@@ -39,7 +39,11 @@ def main():
     )
     if unsloth_args.use_lora:
         from ..common.lora_util import find_lora_targets
-
+        
+        targets = find_lora_targets(model)
+        if "Mistral-Nemo" in unsloth_args.model_name_or_path:
+            targets.extend(["embed_tokens", "lm_head"])
+            
         model = FastLanguageModel.get_peft_model(
             model,
             r = 16, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
