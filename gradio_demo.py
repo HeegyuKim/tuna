@@ -20,9 +20,11 @@ def main(
         max_length=prompt_length + max_new_tokens,
         chat_template=chat_template,
         eos_token=eos_token,
-        use_vllm=use_vllm
+        use_vllm=use_vllm,
+        compile=True,
     )   
     print(generator.tokenizer.eos_token_id, generator.tokenizer.eos_token)
+
 
     gen_args = {
         "max_new_tokens": 1024, 

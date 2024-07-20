@@ -129,13 +129,13 @@ Mistral_INPUTS_DOCSTRING = r"""
 """
 
 
-def create_sinusoidal_positions(num_pos, dim):
+def create_sinusoidal_positions(num_pos, dim, max_pos):
     inv_freq = 1.0 / (10000 ** (np.arange(0, dim, 2) / dim))
     freqs = np.einsum("i , j -> i j", np.arange(num_pos), inv_freq).astype("float32")
 
     emb = np.concatenate((freqs, freqs), axis=-1)
     out = np.concatenate((np.sin(emb)[:, None, :], np.cos(emb)[:, None, :]), axis=-1)
-    return jnp.array(out[:, :, :num_pos])
+    return jnp.array(out[:, :, :max_pos])
 
 
 def rotate_half(tensor):
@@ -187,8 +187,8 @@ class FlaxMistralRotaryEmbedding(nn.Module):
     dtype: jnp.dtype = jnp.float32
 
     def setup(self):
-        head_dim = self.config.hidden_size // self.config.num_attention_heads
-        self.sincos = create_sinusoidal_positions(self.config.max_position_embeddings, head_dim)
+        head_dim = getattr(self.config, "head_dim", self.config.hidden_size // self.config.num_attention_heads)
+        self.sincos = create_sinusoidal_positions(self.config.max_position_embeddings, head_dim, self.config.freq_max_position_embeddings or self.config.max_position_embeddings)
 
     def __call__(self, key, query, position_ids):
         sincos = self.sincos[position_ids]
@@ -212,30 +212,31 @@ class FlaxMistralAttention(nn.Module):
         config = self.config
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
-        self.head_dim = self.hidden_size // self.num_heads
+        self.head_dim = getattr(config, "head_dim", self.hidden_size // self.num_heads)
         self.num_key_value_heads = config.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
         self.attention_softmax_in_fp32 = self.dtype is not jnp.float32
         self.rope_theta = config.rope_theta
-        if (self.head_dim * self.num_heads) != self.hidden_size:
-            raise ValueError(
-                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
-                f" and `num_heads`: {self.num_heads})."
-            )
+
+        # if (self.head_dim * self.num_heads) != self.hidden_size:
+        #     raise ValueError(
+        #         f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
+        #         f" and `num_heads`: {self.num_heads})."
+        #     )
         self.q_proj = nn.Dense(self.num_heads * self.head_dim, use_bias=False, dtype=self.dtype)
         self.k_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
         self.v_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
         self.o_proj = nn.Dense(self.hidden_size, use_bias=False, dtype=self.dtype)
-        casual_mask = make_causal_mask(jnp.ones((1, config.max_position_embeddings), dtype="bool"), dtype="bool")
-        self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window)
+        casual_mask = make_causal_mask(jnp.ones((1, config.freq_max_position_embeddings or config.max_position_embeddings), dtype="bool"), dtype="bool")
+        self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window if config.sliding_window else 0)
         self.rotary_emb = FlaxMistralRotaryEmbedding(config, dtype=self.dtype)
 
     def _split_heads(self, hidden_states, num_heads):
         return hidden_states.reshape(hidden_states.shape[:2] + (num_heads, self.head_dim))
 
     def _merge_heads(self, hidden_states):
-        return hidden_states.reshape(hidden_states.shape[:2] + (self.hidden_size,))
+        return hidden_states.reshape(hidden_states.shape[:2] + (-1,))
 
     @nn.compact
     # Copied from transformers.models.gpt_neo.modeling_flax_gpt_neo.FlaxGPTNeoSelfAttention._concatenate_to_cache
@@ -713,6 +714,7 @@ class FlaxMistralForCausalLMModule(nn.Module):
 
         hidden_states = outputs[0]
         lm_logits = self.lm_head(hidden_states)
+        lm_logits = lm_logits.astype(jnp.float32)
 
         if not return_dict:
             return (lm_logits,) + outputs[1:]

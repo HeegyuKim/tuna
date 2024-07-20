@@ -31,7 +31,8 @@ def load_model(
         batch_size: int = 1,
         gen_args: dict = None,
         chat_template: str = None,
-        use_vllm: bool = False
+        use_vllm: bool = False,
+        compile: bool = True
         ):
     if use_vllm:
         try:
@@ -61,7 +62,7 @@ def load_model(
     else:
         print("Using Flax")
         from tuna.serve.flax_generator import FlaxHuggingfaceModel
-        return FlaxHuggingfaceModel(
+        model = FlaxHuggingfaceModel(
             model_name,
             prompt_length=prompt_length,
             max_length=max_length,
@@ -71,3 +72,7 @@ def load_model(
             gen_args=gen_args,
             chat_template=chat_template,
             )
+        if compile:
+            model.compile()
+
+        return model

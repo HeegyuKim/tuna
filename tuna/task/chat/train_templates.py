@@ -214,7 +214,7 @@ class HD42DotTemplate(BaseTrainTemplate):
     FUNCTION_RESPONSE_FORMAT = "<function-response>:\n{content}{eos}\n"
 
 
-@train_templates.register("openchcat")
+@train_templates.register("openchat")
 class OpenChatTemplate(BaseTrainTemplate):
     SUPPORTED_MODELS = [
         "Nexusflow/Starling-LM-7B-beta",

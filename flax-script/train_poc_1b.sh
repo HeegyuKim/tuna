@@ -1,8 +1,7 @@
-wandb offline
-
-# model="google/gemma-2-9b"
-model="beomi/Llama-3-Open-Ko-8B"
-template="llama3"
+wandb online
+# export HF_HOME=/data-plm/hf-home
+# model="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+model="mistralai/Mistral-Nemo-Base-2407"
 # model="HuggingFaceM4/tiny-random-LlamaForCausalLM"
 
 python -m tuna.launcher.train_flax \
@@ -11,12 +10,11 @@ python -m tuna.launcher.train_flax \
     --task chat-lm \
     --padding max_length \
     --project "test" \
-    --run_name "llama3-lima" \
-    --dataset="GAIR/lima" \
-    --train_template $template \
-    --packing \
-    --packing_strategy pad \
-    --max_length=2048 \
+    --run_name "mistral-nemo-12b-lima" \
+    --dataset="GAIR/lima,changpt/ko-lima-vicuna" \
+    --train_template llama \
+    --packing False \
+    --max_length=1536 \
     --truncation \
     --model_name_or_path $model \
     --total_epochs 3 \

@@ -216,6 +216,7 @@ class SimPOTask(FlaxLMTask):
     def create_train_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.simpo_beta
+        gamma_beta_ratio = self.args.simpo_gamma_beta_ratio
 
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -227,29 +228,20 @@ class SimPOTask(FlaxLMTask):
                 chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                     self.model, params, chosen, rejected, chosen_labels, rejected_labels,
                 )
-                sft_loss, sft_accuracy = cross_entropy_loss_and_accuracy(
-                    chosen_logits, chosen_labels
-                )
-                simpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_simpo_loss(
+                simpo_losses, chosen_rewards, rejected_rewards = compute_simpo_loss(
                     policy_chosen_logps,
                     policy_rejected_logps,
-                    beta
+                    beta,
+                    gamma_beta_ratio
                 )
                 simpo_loss = simpo_losses.mean()
                 simpo_accuracy = (chosen_rewards > rejected_rewards).mean()
 
-                loss = sft_loss + simpo_loss
-
-                return loss, dict(
-                    loss=loss, 
-                    simpo_loss=simpo_loss,
-                    sft_loss=sft_loss,
-                    sft_accuracy=sft_accuracy,
+                return simpo_loss, dict(
+                    loss=simpo_loss, 
                     simpo_accuracy=simpo_accuracy,
                     chosen_rewards=chosen_rewards,
                     rejected_rewards=rejected_rewards,
-                    odds_ratio=odds_ratio,
-                    log_odds=log_odds
                     )
             
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
@@ -267,6 +259,7 @@ class SimPOTask(FlaxLMTask):
     def create_eval_step(self, pjit_func, state_ps, PS):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.simpo_beta
+        gamma_beta_ratio = self.args.simpo_gamma_beta_ratio
 
         def eval_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -277,29 +270,21 @@ class SimPOTask(FlaxLMTask):
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
                 self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
             )
-            sft_loss, sft_accuracy = cross_entropy_loss_and_accuracy(
-                chosen_logits, chosen_labels
-            )
-            simpo_losses, chosen_rewards, rejected_rewards, odds_ratio, log_odds = compute_simpo_loss(
+            simpo_losses, chosen_rewards, rejected_rewards = compute_simpo_loss(
                 policy_chosen_logps,
                 policy_rejected_logps,
-                beta
+                beta,
+                gamma_beta_ratio
             )
             simpo_loss = simpo_losses.mean()
             simpo_accuracy = (chosen_rewards > rejected_rewards).mean()
 
-            loss = sft_loss + simpo_loss
 
             return dict(
-                loss=loss, 
-                simpo_loss=simpo_loss,
-                sft_loss=sft_loss,
-                sft_accuracy=sft_accuracy,
+                loss=simpo_loss, 
                 simpo_accuracy=simpo_accuracy,
                 chosen_rewards=chosen_rewards,
                 rejected_rewards=rejected_rewards,
-                odds_ratio=odds_ratio,
-                log_odds=log_odds
                 )
 
         return pjit_func(

@@ -38,7 +38,7 @@ def main(
         dataset: str = "all",
         output_dir: str = None,
         chat_template: str = None,
-        prompt_length: int = 1024,
+        prompt_length: int = 3072,
         max_new_tokens: int = 1024,
         all_greedy: bool = False,
         temperature: float = 1.0,
@@ -98,7 +98,8 @@ def main(
                 chat_template=chat_template,
                 eos_token=eos_token,
                 batch_size=batch_size,
-                use_vllm=use_vllm
+                use_vllm=use_vllm,
+                compile=True,
             )
             gen_args["eos_token_id"] = model.tokenizer.eos_token_id
 
