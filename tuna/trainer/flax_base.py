@@ -152,7 +152,7 @@ class FlaxBaseTrainer:
 
     def apply_lora_params(self, model, tx, params):
         print("Applying LoRA!")
-        from ..model.flax.lora_util import find_lora_targets_from_config
+        from ..common.lora_util import find_lora_targets_from_config
 
         self.rapture = XRapTure(
             XRapTureConfig(
