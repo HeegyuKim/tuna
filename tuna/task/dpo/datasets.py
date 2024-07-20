@@ -409,3 +409,22 @@ class DistilabelIntelOrcaDPOPairs(DPODataSource):
             "chosen": chosen,
             "rejected": rejected
         }
+
+@datasources("dpo:openbmb/UltraInteract_pair")
+class UltraInteractPair(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        return load_dataset("openbmb/UltraInteract_pair", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["trajectory"]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+        
+        return {
+            "conversations": convert_vicuna2openai(convs),
+            "chosen": chosen,
+            "rejected": rejected
+        }

@@ -1,13 +1,15 @@
 wandb offline
 model="heegyu/0710-qwen2-magpie-qarv-komath"
-run_name="0710-qwen2-magpie-qarv-komath-dpo-argilla"
+run_name="0710-qwen2-magpie-qarv-komath-dpo-ultrainteract"
 
-dataset="
-dpo:argilla/distilabel-math-preference-dpo
-dpo:argilla/distilabel-capybara-dpo-7k-binarized
-dpo:argilla/distilabel-intel-orca-dpo-pairs
-"
+# dataset="
+# dpo:argilla/distilabel-math-preference-dpo
+# dpo:argilla/distilabel-capybara-dpo-7k-binarized
+# dpo:argilla/distilabel-intel-orca-dpo-pairs
+# "
 #,dpo:heegyu/Magpie-Pro-DPO-200K-Filtered
+
+dataset="dpo:openbmb/UltraInteract_pair"
 
 train() {
     lr=$1
@@ -43,6 +45,17 @@ train() {
 
         # --push_to_hub \
         # --push_to_hub_id $run_name \
+
+    python -m eval.nlgbench_gen \
+        "/data/checkpoint/$run_name-lr$lr-beta$beta/epoch-1" \
+        --model_name "heegyu-local/$run_name-lr$lr-beta$beta" \
+        --prompt_length 3072 \
+        --dataset logickor \
+        --batch_size 1 \
+        --eos_token "<|endoftext|>"
+
+    # python -m eval.judge_logickor \
+    #     -o "outputs/heegyu-local/$run_name-lr$lr-beta$beta/logickor.jsonl"
 }
 
 
