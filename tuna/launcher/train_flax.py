@@ -60,8 +60,10 @@ def main():
     if args.debug:
         print("Debugging dataset")
         for k in dataloader.dataset:
-            for i in range(10):
+            for i in range(5):
                 print(f"train#{i:2d}", dataloader.dataset[k][i])
+                print(task.tokenizer.decode(dataloader.dataset[k][i]['input_ids'], skip_special_tokens=False))
+                
 
             print("Estimating length statistics")
             lengths = []

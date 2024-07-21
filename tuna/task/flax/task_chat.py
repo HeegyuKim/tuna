@@ -23,6 +23,9 @@ class ChatLMTask(FlaxLMTask):
         conversation = item["conversations"]
         concat_inputs, concat_labels = [], []
         bos_token = self.tokenizer.bos_token
+        assistant_header = self.train_template.GENERATION_PROMPT
+        assistant_header_ids = self.tokenizer.encode(assistant_header, add_special_tokens=False)
+        assistant_header_labels = [-100] * len(assistant_header_ids)
         
         if self.args.train_prompt_prefix:
             ids = self.tokenizer.encode(self.args.train_prompt_prefix, add_special_tokens=False)
@@ -34,6 +37,11 @@ class ChatLMTask(FlaxLMTask):
 
             if self.args.packing and bos_token:
                 content = content.replace(bos_token, "")
+
+            if trainable and content.startswith(assistant_header):
+                content = content[len(assistant_header):]
+                concat_inputs.extend(assistant_header_ids)
+                concat_labels.extend(assistant_header_labels)
 
             input_ids = self.tokenizer.encode(content, add_special_tokens=False)
             if not self.args.train_only_response or trainable:
