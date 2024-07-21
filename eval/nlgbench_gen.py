@@ -2,9 +2,8 @@ import datasets
 import os
 import fire
 import json, jsonlines
-from .utils import load_model
 from tqdm.auto import tqdm
-from .utils import estimate_skip_length, batched_iteration
+from .utils import estimate_skip_length, batched_iteration, load_model
 
 mt_bench_temperature_config = {
     "writing": 0.7,
@@ -27,7 +26,8 @@ def get_prompt_dataset(dataset: str):
     elif dataset == "mt-bench":
         return datasets.load_dataset("HuggingFaceH4/mt_bench_prompts", split="train")
     elif dataset == "logickor":
-        return datasets.load_dataset("json", data_files={"train": "eval/LogicKor/questions.jsonl"})["train"]
+        # return datasets.load_dataset("json", data_files={"train": "eval/LogicKor/questions.jsonl"})["train"]
+        return datasets.Dataset.from_list(list(jsonlines.open("eval/LogicKor/questions.jsonl")))
     else:
         raise Exception(f"Unknown dataset: {dataset}")
 
@@ -38,8 +38,8 @@ def main(
         dataset: str = "all",
         output_dir: str = None,
         chat_template: str = None,
-        prompt_length: int = 3072,
-        max_new_tokens: int = 1024,
+        prompt_length: int = 2048,
+        max_new_tokens: int = 2048,
         all_greedy: bool = False,
         temperature: float = 1.0,
         top_k: int = 50,
@@ -74,7 +74,9 @@ def main(
     else:
         generation_prefix = ""
 
-    gen_args={"do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "verbose": True}
+    gen_args={
+        "do_sample": False, "max_new_tokens": max_new_tokens, "early_stopping": True, "verbose": True,
+        "top_k": 50, "top_p": 0.95 }
     
     for dataset_name in dataset:
         eval_set = get_prompt_dataset(dataset_name)

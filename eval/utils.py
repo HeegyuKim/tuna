@@ -44,7 +44,7 @@ def load_model(
     if use_vllm:
         from .vllm_wrapper import VLLMModel
         print("Using VLLM")
-        model = VLLMModel(model_name)
+        model = VLLMModel(model_name, max_length=max_length)
         if chat_template:
             model.load_chat_template(chat_template)
         return model

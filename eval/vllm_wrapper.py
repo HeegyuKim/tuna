@@ -20,7 +20,7 @@ class VLLMModel:
 
     def gen_args_to_sampling_params(self, gen_args):
         return SamplingParams(
-            temperature=gen_args.get("temperature", 1.0),
+            temperature=gen_args.get("temperature", 1.0) if gen_args.get("do_sample", False) else 0.0,
             top_k=gen_args.get("top_k", -1),
             top_p=gen_args.get("top_p", 1.0),
             max_tokens=gen_args.get("max_new_tokens"),
