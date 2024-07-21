@@ -394,13 +394,17 @@ class FlaxHuggingfaceModel:
 
         return output
 
-    def compile(self, test_prompt="Hi", targets=["greedy", "sample"]):
+    def compile(self, test_prompt="Hi, who are you?", targets=["greedy", "sample"], gen_args: dict = {}):
+        gen_args = deepcopy(gen_args)
+
         print("Compiling functions")
         if "greedy" in targets:
-            print("Greedy:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=False)))
+            gen_args["do_sample"] = False
+            print("Greedy:", self.generate_batch([test_prompt] * self.batch_size, gen_args=gen_args))
         
         if "sample" in targets:
-            print("Sample:", self.generate_batch([test_prompt] * self.batch_size, gen_args=dict(do_sample=True)))
+            gen_args["do_sample"] = True
+            print("Sample:", self.generate_batch([test_prompt] * self.batch_size, gen_args=gen_args))
 
 
 class FlaxAPI:

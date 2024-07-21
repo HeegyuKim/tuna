@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .flax_base import FlaxLMTask, flax_tasks, FlaxLMTaskArguments
+from .flax_base import FlaxLMTask, flax_tasks, FlaxLMTaskArguments, global_norm
 from ..chat.train_templates import find_template
 from ..dpo.collator import DPOCollator
 from typing import Optional, Union
@@ -247,6 +247,7 @@ class SimPOTask(FlaxLMTask):
             grad_fn = jax.value_and_grad(calculate_loss, has_aux=True)
             (loss, aux_output), grad = grad_fn(state.params, batch, beta)
             state = state.apply_gradients(grads=grad)
+            aux_output["gradient_norm"] = global_norm(grad)
             return state, aux_output
 
         return pjit_func(

@@ -41,7 +41,7 @@ def main(
         prompt_length: int = 2048,
         max_new_tokens: int = 2048,
         all_greedy: bool = False,
-        temperature: float = 1.0,
+        temperature: float = 0.7,
         top_k: int = 50,
         top_p: float = 0.9,
         eos_token: str = None,
@@ -158,14 +158,14 @@ def main(
                         example["outputs"] = [output1, output2]
 
                 elif dataset_name == "alpaca-eval":
-                    gen_args["do_sample"] = False
+                    gen_args["do_sample"] = True
                     instructions = [example["instruction"] for example in batch_example]
                     outputs = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, output in zip(batch_example, outputs):
                         example["output"] = handle_output(output)
 
                 elif dataset_name == "ifeval":
-                    gen_args["do_sample"] = False
+                    gen_args["do_sample"] = True
                     instructions = [example["prompt"] for example in batch_example]
                     responses = model.generate_batch(instructions, gen_args=gen_args, generation_prefix=generation_prefix)
                     for example, response in zip(batch_example, responses):

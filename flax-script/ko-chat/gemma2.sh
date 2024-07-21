@@ -16,7 +16,7 @@ train() {
         --run_name "$run_name-lr$lr" \
         --dataset="$datasets" \
         --packing \
-        --packing_strategy truncate \
+        --packing_strategy pad \
         --truncation \
         --max_length=2048 \
         --model_name_or_path $model \

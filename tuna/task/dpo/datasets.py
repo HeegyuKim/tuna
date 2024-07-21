@@ -428,3 +428,20 @@ class UltraInteractPair(DPODataSource):
             "chosen": chosen,
             "rejected": rejected
         }
+
+@datasources("dpo:princeton-nlp/gemma2-ultrafeedback-armorm")
+class Gemma2UltraFeedbackArmorm(DPODataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        return load_dataset("princeton-nlp/gemma2-ultrafeedback-armorm", split=split)
+    
+    def map_conversations(self, item):
+        convs = item["chosen"][:-1]
+        chosen = item["chosen"][-1]["content"]
+        rejected = item["rejected"][-1]["content"]
+        
+        return {
+            "conversations": convs,
+            "chosen": chosen,
+            "rejected": rejected
+        }
