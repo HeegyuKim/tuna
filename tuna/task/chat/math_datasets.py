@@ -28,3 +28,14 @@ class MathWordProblems200k(BaseAlpacaDataSource):
 class WizardLM(VicunaChatDataSource):
     def __init__(self) -> None:
         super().__init__("cognitivecomputations/WizardLM_evol_instruct_V2_196k_unfiltered_merged_split")
+
+@datasources("AI-MO/NuminaMath-CoT")
+class NuminaMathCoT(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        return load_dataset("AI-MO/NuminaMath-CoT", split=split, streaming=args.dataset_streaming).rename_column("messages", "conversations")
+
+@datasources("AI-MO/NuminaMath-TIR")
+class NuminaMathTIR(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        return load_dataset("AI-MO/NuminaMath-TIR", split=split, streaming=args.dataset_streaming).rename_column("messages", "conversations")
+

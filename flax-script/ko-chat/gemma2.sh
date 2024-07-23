@@ -38,17 +38,20 @@ train() {
 }
 
 datasets="
-Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered
 Magpie-Align/Magpie-Pro-MT-300K-v0.1
+arcee-ai/infini-instruct-top-500k
+AI-MO/NuminaMath-CoT
+AI-MO/NuminaMath-TIR
 iknow-lab/qarv-instruct-ko-mt-deduped
-jojo0217/korean_safe_conversation
-heegyu/HRC
 sft:heegyu/orca-math-korean-preference-cleaned:hard
-iknow-lab/ko-evol-writing-wiki
-CarrotAI/ko-instruction-dataset
-maywell/kiqu_samples
 HAERAE-HUB/K2-Feedback:score5
 "
+# heegyu/HRC
+# jojo0217/korean_safe_conversation
+# iknow-lab/ko-evol-writing-wiki
+# CarrotAI/ko-instruction-dataset
+# maywell/kiqu_samples
+
 TODAY=$(date +%m%d)
 
 train 2e-5 "$datasets" "$TODAY-gemma2-koenzh"
