@@ -8,6 +8,7 @@ import jax, flax
 import jax.numpy as jnp
 
 from fjformer import with_sharding_constraint
+from fjformer.xrapture import use_implicit_args
 from fjformer.functions.loss_func import (
     cross_entropy_loss_and_accuracy,
 )
@@ -218,6 +219,8 @@ class SimPOTask(FlaxLMTask):
         beta = self.args.simpo_beta
         gamma_beta_ratio = self.args.simpo_gamma_beta_ratio
 
+        model_func = use_implicit_args(self.model)
+
         def train_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
 
@@ -226,7 +229,7 @@ class SimPOTask(FlaxLMTask):
                 chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
 
                 chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
-                    self.model, params, chosen, rejected, chosen_labels, rejected_labels,
+                    model_func, params, chosen, rejected, chosen_labels, rejected_labels,
                 )
                 simpo_losses, chosen_rewards, rejected_rewards = compute_simpo_loss(
                     policy_chosen_logps,
@@ -261,6 +264,7 @@ class SimPOTask(FlaxLMTask):
         partition_spec = PS(("dp", "fsdp"), "sp")
         beta = self.args.simpo_beta
         gamma_beta_ratio = self.args.simpo_gamma_beta_ratio
+        model_func = use_implicit_args(self.model)
 
         def eval_step(state, batch):
             batch = with_sharding_constraint(batch, partition_spec)
@@ -269,7 +273,7 @@ class SimPOTask(FlaxLMTask):
             chosen_labels, rejected_labels = chosen.pop("labels")[:, 1:], rejected.pop("labels")[:, 1:]
 
             chosen_logits, policy_chosen_logps, policy_rejected_logps = get_model_batch_logps(
-                self.model, state.params, chosen, rejected, chosen_labels, rejected_labels,
+                model_func, state.params, chosen, rejected, chosen_labels, rejected_labels,
             )
             simpo_losses, chosen_rewards, rejected_rewards = compute_simpo_loss(
                 policy_chosen_logps,

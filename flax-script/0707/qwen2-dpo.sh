@@ -40,19 +40,20 @@ train() {
         --train_batch_size_per_device 1 \
         --eval_batch_size_per_device 1 \
         --save_strategy epoch \
+        --save_epochs 2 \
         --revision_prefix "lr$lr-beta$beta-" \
         --output_dir "/data/checkpoint/$run_name-lr$lr-beta$beta" \
 
         # --push_to_hub \
         # --push_to_hub_id $run_name \
 
-    python -m eval.nlgbench_gen \
-        "/data/checkpoint/$run_name-lr$lr-beta$beta/epoch-1" \
-        --model_name "heegyu-local/$run_name-lr$lr-beta$beta" \
-        --prompt_length 3072 \
-        --dataset logickor \
-        --batch_size 1 \
-        --eos_token "<|endoftext|>"
+    # python -m eval.nlgbench_gen \
+    #     "/data/checkpoint/$run_name-lr$lr-beta$beta/epoch-1" \
+    #     --model_name "heegyu-local/$run_name-lr$lr-beta$beta" \
+    #     --prompt_length 3072 \
+    #     --dataset logickor \
+    #     --batch_size 1 \
+    #     --eos_token "<|endoftext|>"
 
     # python -m eval.judge_logickor \
     #     -o "outputs/heegyu-local/$run_name-lr$lr-beta$beta/logickor.jsonl"
