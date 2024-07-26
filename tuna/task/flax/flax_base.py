@@ -181,11 +181,12 @@ class FlaxLMTask(FlaxTask):
         if self.args.packing:
             cols = datasets["train"].column_names
             if cols:
-                if "input_ids" in cols:
-                    cols.remove("input_ids")
-                if "labels" in cols:
-                    cols.remove("labels")
                 for k in datasets:
+                    cols = datasets[k].column_names
+                    if "input_ids" in cols:
+                        cols.remove("input_ids")
+                    if "labels" in cols:
+                        cols.remove("labels")
                     datasets[k] = datasets[k].map(self._pack, load_from_cache_file=dataset_args.load_from_cache_file, batched=True, remove_columns=cols, desc="Packing", num_proc=NUM_PROC)
             else: # iterable dataset
                 for k in datasets:

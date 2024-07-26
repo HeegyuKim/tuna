@@ -281,6 +281,37 @@ class GemmaTemplate(BaseTrainTemplate):
         tokenizer.eos_token = "<end_of_turn>"
         super().__init__(tokenizer)
         
+DEEPSEEK_CHAT_TEMPLATE = """
+{{ bos_token }}
+{% for message in messages %}
+{% if message['role'] == 'user' %}
+{{ '<|User|> ' + message['content'] | trim + '{eos_token}\n' }}
+{% elif message['role'] == 'system' %}
+{{ message['content'] | trim + '{eos_token}\n' }}
+{% elif message['role'] == 'assistant' %}
+{{ '<|Assistant|> ' + message['content'] | trim + '{eos_token}\n' }}
+{% endif %}
+{% endfor %}
+{% if add_generation_prompt %}{{'<start_of_turn>model\n'}}{% endif %}
+""".strip().replace("\n", "")
+
+@train_templates.register("deepseek")
+class DeepseekTemplate(BaseTrainTemplate):
+    INITIAL_USER_FORMAT = "{bos}<|User|> {content}{eos}"
+    SYSTEM_FORMAT = "{bos} {content}{eos}"
+    USER_FORMAT = "<|User|> {content}{eos}"
+    ASSISTANT_FORMAT = "<|Assistant|> {content}{eos}"
+    GENERATION_PROMPT = "<|Assistant|>"
+    
+    def __init__(self, tokenizer) -> None:
+        additional_tokens = ['<|User|>','<|Assistant|>', '<|EOT|>']
+        tokenizer.add_special_tokens({
+            'additional_special_tokens': additional_tokens
+            })
+        tokenizer.chat_template = DEEPSEEK_CHAT_TEMPLATE
+        tokenizer.eos_token = "<|EOT|>"
+        super().__init__(tokenizer)
+        
 @train_templates.register("gemma-vision")
 class VisionGemmaTemplate(BaseTrainTemplate):
     # for the first user message without system instruction (\eg Llama-2)

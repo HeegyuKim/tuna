@@ -32,10 +32,14 @@ class WizardLM(VicunaChatDataSource):
 @datasources("AI-MO/NuminaMath-CoT")
 class NuminaMathCoT(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
         return load_dataset("AI-MO/NuminaMath-CoT", split=split, streaming=args.dataset_streaming).rename_column("messages", "conversations")
 
 @datasources("AI-MO/NuminaMath-TIR")
 class NuminaMathTIR(ChatDataSource):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
         return load_dataset("AI-MO/NuminaMath-TIR", split=split, streaming=args.dataset_streaming).rename_column("messages", "conversations")
 
