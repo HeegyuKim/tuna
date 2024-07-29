@@ -1,5 +1,5 @@
 wandb online
-model="beomi/Llama-3-Open-Ko-8B"
+model="meta-llama/Meta-Llama-3.1-8B"
 template="llama3"
 
 train() {
@@ -27,7 +27,6 @@ train() {
         --lr_warmup_ratio 0.01 \
         --lr_scheduler cosine \
         --load_from_cache_file \
-        --train_only_response false \
         --train_template $template \
         --train_total_batch_size 128 \
         --train_batch_size_per_device 1 \
@@ -39,17 +38,31 @@ train() {
         --output_dir "/data/checkpoint/$run_name"
 }
 
+# datasets="
+# Magpie-Align/Magpie-Qwen2-Pro-300K-Filtered
+# Magpie-Align/Magpie-Pro-MT-300K-v0.1
+# BAAI/Infinity-Instruct:0625
+# iknow-lab/qarv-instruct-ko-mt-deduped
+# jojo0217/korean_safe_conversation
+# heegyu/HRC
+# sft:heegyu/orca-math-korean-preference-cleaned:hard
+# iknow-lab/ko-evol-writing-wiki
+# CarrotAI/ko-instruction-dataset
+# maywell/kiqu_samples
+# HAERAE-HUB/K2-Feedback:score5
+# "
 
+# datasets="
+# Magpie-Align/Magpie-Pro-MT-300K-v0.1
+# arcee-ai/infini-instruct-top-500k
+# AI-MO/NuminaMath-CoT
+# AI-MO/NuminaMath-TIR
+# iknow-lab/qarv-instruct-ko-mt-deduped
+# sft:heegyu/orca-math-korean-preference-cleaned:hard
+# HAERAE-HUB/K2-Feedback:score5
+# "
 
-datasets="
-Magpie-Align/Magpie-Pro-MT-300K-v0.1
-arcee-ai/infini-instruct-top-500k
-AI-MO/NuminaMath-CoT
-AI-MO/NuminaMath-TIR
-iknow-lab/qarv-instruct-ko-mt-deduped
-sft:heegyu/orca-math-korean-preference-cleaned:hard
-HAERAE-HUB/K2-Feedback:score5
-"
+datasets="iknow-lab/qarv-instruct-ko-mt-deduped"
 TODAY=$(date +%m%d)
 
-train 2e-5 "$datasets" "$TODAY-llama3-ko"
+train 2e-5 "$datasets" "$TODAY-llama3.1-sft"

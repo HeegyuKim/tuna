@@ -226,8 +226,10 @@ class FlaxPhi3Attention(nn.Module):
         op_size = self.num_heads * self.head_dim + 2 * (self.num_key_value_heads * self.head_dim)
         self.qkv_proj = nn.Dense(op_size, use_bias=False, dtype=self.dtype)
         self.o_proj = nn.Dense(self.hidden_size, use_bias=False, dtype=self.dtype)
-        casual_mask = make_causal_mask(jnp.ones((1, config.max_position_embeddings), dtype="bool"), dtype="bool")
-        self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window)
+        max_causal_length = getattr(config, "freq_max_position_embeddings") or config.max_position_embeddings
+        sliding_window = getattr(config, "sliding_window", max_causal_length) or max_causal_length
+        casual_mask = make_causal_mask(jnp.ones((1, max_causal_length), dtype="bool"), dtype="bool")
+        self.causal_mask = jnp.triu(casual_mask, k=-sliding_window)
         self.rotary_emb = FlaxPhi3RotaryEmbedding(config, dtype=self.dtype)
 
     def _split_heads(self, hidden_states, num_heads):

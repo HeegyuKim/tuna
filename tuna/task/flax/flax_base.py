@@ -141,6 +141,8 @@ class FlaxLMTask(FlaxTask):
                 config.gradient_checkpointing = self.args.gradient_checkpointing
 
             config.freq_max_position_embeddings = self.args.max_length
+            # print("model config")
+            # print(config)
             flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
                 config,
                 _do_init=True,

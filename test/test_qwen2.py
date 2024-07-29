@@ -21,9 +21,13 @@ def flax_nll_loss(logits, labels, mask):
 
 with jax.default_device(jax.devices("cpu")[0]):
 
-    model_name = "Qwen/Qwen2-7B-Instruct"
+    model_name = "Qwen/Qwen2-7B" #-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
+    model.config.freq_max_position_embeddings = 1024
+
+    print(model.config)
+
     # config = Phi3Config(num_hidden_layers=2, sliding_window=2048)
     # model = AutoModelForCausalLM.from_config(config)
     flax_model = transformers.FlaxAutoModelForCausalLM.from_config(
