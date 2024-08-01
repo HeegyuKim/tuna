@@ -1,5 +1,5 @@
 wandb online
-model="google/gemma-2-9b"
+model="google/gemma-2-9b-it"
 template="gemma"
 
 train() {

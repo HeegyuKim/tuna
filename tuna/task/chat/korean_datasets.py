@@ -350,11 +350,13 @@ class KoInstructionDataset(BaseAlpacaDataSource):
 class KiquSamples(BaseAlpacaDataSource):
     dataset_path = "maywell/kiqu_samples"
 
-@datasources("HAERAE-HUB/K2-Feedback:score5")
-class K2FeedbackScore5(BaseAlpacaDataSource):
+@datasources("HAERAE-HUB/K2-Feedback")
+class K2Feedback(BaseAlpacaDataSource):
     dataset_path = "HAERAE-HUB/K2-Feedback"
     output_key = "response"
 
+@datasources("HAERAE-HUB/K2-Feedback:score5")
+class K2FeedbackScore5(K2Feedback):
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         ds = super().load_dataset(args, split)
         if ds:
