@@ -16,6 +16,10 @@ from copy import deepcopy
 # ...
 # ```"""
 
+TEXT2SQL_USER_PROMPT_NO_SCHEMA = """Convert given natural language question into a valid SQL query based on the provided database schema.
+**Database ID**: {db_id}
+**Question**: {question}"""
+
 TEXT2SQL_USER_PROMPT = """Convert given natural language question into a valid SQL query based on the provided database schema.
 **Schema**
 {schema}
@@ -23,7 +27,7 @@ TEXT2SQL_USER_PROMPT = """Convert given natural language question into a valid S
 **Question**
 {question}"""
 
-TEXT2SQL_USER_HINT_PROMPT = """
+TEXT2SQL_USER_HINT_PROMPT = """Convert given natural language question into a valid SQL query based on the provided database schema.
 **Schema**
 {schema}
 
@@ -63,6 +67,7 @@ def schema2text(schema_dict, add_statistics=True):
 
 class BaseSQLDataSource(ChatDataSource):
     SCHEMA_WITH_STATS = False
+    NO_SCHEMA = False
 
     def get_schema_dataset(self, split: str):
         raise NotImplementedError
@@ -86,10 +91,12 @@ class BaseSQLDataSource(ChatDataSource):
             query = item["query"]
 
             schema_text = schema_dict[db_id]
-            if hint:
-                user_prompt = TEXT2SQL_USER_PROMPT.format(schema=schema_text, question=question)
-            else:
+            if self.NO_SCHEMA:
+                user_prompt = TEXT2SQL_USER_PROMPT_NO_SCHEMA.format(schema=schema_text, question=question, db_id=db_id)
+            elif hint:
                 user_prompt = TEXT2SQL_USER_HINT_PROMPT.format(schema=schema_text, question=question, hint=hint)
+            else:
+                user_prompt = TEXT2SQL_USER_PROMPT.format(schema=schema_text, question=question)
 
             return {
                 "conversations": [
@@ -114,6 +121,10 @@ class SpiderInstruct(BaseSQLDataSource):
             split = "validation"
         return load_dataset("xlangai/spider", split=split, streaming=args.dataset_streaming)
     
+@datasources("xlangai/spider:no-schema")
+class SpiderNoSchemaInstruct(SpiderInstruct):
+    NO_SCHEMA = True
+    
     
 @datasources("xlangai/spider:stats")
 class SpiderInstructWithStats(SpiderInstruct):
@@ -129,10 +140,11 @@ class BirdSQL(BaseSQLDataSource):
 
     def get_sql_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         if split == "test":
-            ds = load_dataset("heegyu/bird-sql-mini-dev", split="validation", streaming=args.dataset_streaming)
+            ds = load_dataset("micpst/bird-dev", split="dev", streaming=args.dataset_streaming)
+            ds = ds.rename_column("sql", "query")
         else:
             ds = load_dataset("chinmayc3/bird-sql", split=split, streaming=args.dataset_streaming)
-        ds = ds.rename_column("SQL", "query")
+            ds = ds.rename_column("SQL", "query")
         return ds
         
 @datasources("chinmayc3/bird-sql:stats")

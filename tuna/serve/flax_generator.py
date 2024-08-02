@@ -230,7 +230,7 @@ class FlaxHuggingfaceModel:
 
                     temperature=gen_args.get("temperature", 1.0),
                     early_stopping=True,
-                    do_sample=True,
+                    do_sample=False,
                     num_beams=1,
                     top_p=gen_args.get("top_p", 1.0),
                     top_k=gen_args.get("top_k"),
