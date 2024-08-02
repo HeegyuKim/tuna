@@ -5,18 +5,18 @@ from datasets import load_dataset, Dataset
 from copy import deepcopy
 
 
-TEXT2SQL_SYSTEM_PROMPT = """Your task is to convert natural language questions into valid SQL queries based on the provided database schema. Follow these guidelines strictly:
+# TEXT2SQL_SYSTEM_PROMPT = """Your task is to convert natural language questions into valid SQL queries based on the provided database schema. Follow these guidelines strictly:
 
-1. Analyze the given database schema carefully. Only use tables and columns that are explicitly defined in the schema.
-2. Use only SQL syntax and functions that are supported by SQLite3. Avoid using advanced features or syntax that SQLite3 doesn't support.
-3. Do not write comments in SQL query. Only write SQL query.
+# 1. Analyze the given database schema carefully. Only use tables and columns that are explicitly defined in the schema.
+# 2. Use only SQL syntax and functions that are supported by SQLite3. Avoid using advanced features or syntax that SQLite3 doesn't support.
+# 3. Do not write comments in SQL query. Only write SQL query.
 
-Your response should be a following format:
-```sql
-...
-```"""
+# Your response should be a following format:
+# ```sql
+# ...
+# ```"""
 
-TEXT2SQL_USER_PROMPT = """
+TEXT2SQL_USER_PROMPT = """Convert given natural language question into a valid SQL query based on the provided database schema.
 **Schema**
 {schema}
 
@@ -93,7 +93,7 @@ class BaseSQLDataSource(ChatDataSource):
 
             return {
                 "conversations": [
-                    {"role": "system", "content": TEXT2SQL_SYSTEM_PROMPT},
+                    # {"role": "system", "content": TEXT2SQL_SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                     {"role": "assistant", "content": query}
                 ]

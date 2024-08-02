@@ -37,8 +37,12 @@ train() {
         --output_dir ""
 }
 
-MATH_MODEL="deepseek-ai/deepseek-math-7b-base"
-train $MATH_MODEL "math-7b-aimo-sql" "chinmayc3/bird-sql,xlangai/spider,AI-MO/NuminaMath-CoT,AI-MO/NuminaMath-TIR"
+# MATH_MODEL="deepseek-ai/deepseek-math-7b-base"
+# train $MATH_MODEL "math-7b-aimo-sql" "chinmayc3/bird-sql,xlangai/spider,AI-MO/NuminaMath-CoT,AI-MO/NuminaMath-TIR"
+
+MATH_MODEL=mistralai/mathstral-7B-v0.1
+train $MATH_MODEL "mistral-math-7b-aimo-sql" "chinmayc3/bird-sql,xlangai/spider,AI-MO/NuminaMath-CoT,AI-MO/NuminaMath-TIR"
+
 # train $MATH_MODEL "math-7b-aimo-sql" "chinmayc3/bird-sql,xlangai/spider"
 
 # CODE_MODEL="deepseek-ai/deepseek-coder-6.7b-base"

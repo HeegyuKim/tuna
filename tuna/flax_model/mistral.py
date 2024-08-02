@@ -228,9 +228,15 @@ class FlaxMistralAttention(nn.Module):
         self.k_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
         self.v_proj = nn.Dense(self.num_key_value_heads * self.head_dim, use_bias=False, dtype=self.dtype)
         self.o_proj = nn.Dense(self.hidden_size, use_bias=False, dtype=self.dtype)
-        sequence_length = config.freq_max_position_embeddings or config.max_position_embeddings
-        casual_mask = make_causal_mask(jnp.ones((1, sequence_length), dtype="bool"), dtype="bool")
-        self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window if config.sliding_window else sequence_length)
+        # sequence_length = config.freq_max_position_embeddings or config.max_position_embeddings
+        # casual_mask = make_causal_mask(jnp.ones((1, sequence_length), dtype="bool"), dtype="bool")
+        # self.causal_mask = jnp.triu(casual_mask, k=-config.sliding_window if config.sliding_window else -sequence_length)
+
+        max_causal_length = getattr(config, "freq_max_position_embeddings") or config.max_position_embeddings
+        sliding_window = getattr(config, "sliding_window", max_causal_length) or max_causal_length
+        casual_mask = make_causal_mask(jnp.ones((1, max_causal_length), dtype="bool"), dtype="bool")
+        self.causal_mask = jnp.triu(casual_mask, k=-sliding_window)
+        
         self.rotary_emb = FlaxMistralRotaryEmbedding(config, dtype=self.dtype)
 
     def _split_heads(self, hidden_states, num_heads):

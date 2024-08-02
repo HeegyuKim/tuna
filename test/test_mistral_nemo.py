@@ -7,42 +7,31 @@ import numpy as np
 import torch
 import transformers
 
-# def cross_entropy_loss_and_accuracy(logits, labels):
+# def flax_cross_entropy_loss(logits, labels):
 #     logits = logits[:, :-1, :]
 #     labels = labels[:, 1:]
+    
+#     valid = (labels != -100).astype(jnp.float32)
+#     num_valid = jnp.sum(valid)
+    
+#     log_probs = jax.nn.log_softmax(logits, axis=-1)
+#     label_log_probs = jnp.take_along_axis(log_probs, labels[..., None], axis=-1)
+#     label_log_probs = jnp.squeeze(label_log_probs, axis=-1)
+    
+#     loss = -jnp.sum(label_log_probs * valid) / num_valid
+#     return loss
 
-#     valid = (labels >= 0).astype(jnp.float32)
-#     valid_text_length = jnp.maximum(jnp.sum(valid, axis=-1), 1e-10)
-#     logits = logits.astype(jnp.float32) # for numerical stability
-#     token_log_prob = jnp.squeeze(
-#         jnp.take_along_axis(
-#             jax.nn.log_softmax(logits, axis=-1),
-#             jnp.expand_dims(labels, -1),
-#             axis=-1,
-#         ),
-#         -1,
-#     )
-#     token_log_prob = jnp.where(valid > 0.0, token_log_prob, jnp.array(0.0))
-#     loss = -jnp.mean(jnp.sum(token_log_prob, axis=-1) / valid_text_length)
-#     correct = jnp.where(
-#         valid > 0.0,
-#         jnp.argmax(logits, axis=-1) == labels,
-#         jnp.array(False)
-#     )
-#     accuracy = jnp.mean(jnp.sum(correct, axis=-1) / valid_text_length)
-#     return loss, accuracy
 def flax_cross_entropy_loss(logits, labels):
-    logits = logits[:, :-1, :]
+    # compute the negative log-likelihood
+    mask = (labels != -100).astype(jnp.float32)
+    logits = logits[:, :-1]
+    mask = mask[:, 1:]
     labels = labels[:, 1:]
-    
-    valid = (labels != -100).astype(jnp.float32)
-    num_valid = jnp.sum(valid)
-    
-    log_probs = jax.nn.log_softmax(logits, axis=-1)
-    label_log_probs = jnp.take_along_axis(log_probs, labels[..., None], axis=-1)
-    label_log_probs = jnp.squeeze(label_log_probs, axis=-1)
-    
-    loss = -jnp.sum(label_log_probs * valid) / num_valid
+
+    log_probs = jax.nn.log_softmax(logits)
+    log_probs = jnp.take_along_axis(log_probs, labels[..., None], axis=-1)
+    log_probs = jnp.squeeze(log_probs, axis=-1)
+    loss = -jnp.sum(log_probs * mask) / (jnp.sum(mask) + 1e-8)
     return loss
 
 def convert_to_bf16(params):
