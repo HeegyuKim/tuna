@@ -10,3 +10,4 @@ wandb
 einops
 jsonlines
 scikit-learn
+google-cloud-storage
