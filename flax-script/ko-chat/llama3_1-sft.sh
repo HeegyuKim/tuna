@@ -1,5 +1,5 @@
 wandb online
-model="google/gemma-2-9b-it"
+model="google/gemma-2-9b"
 template="gemma"
 
 train() {
@@ -34,7 +34,7 @@ train() {
         --push_to_hub \
         --push_to_hub_id $run_name \
         --save_strategy epoch \
-        --save_per_epoch 2 \
+        --save_epochs 2 \
         --revision_prefix "lr$lr-" \
         --output_dir "/data/checkpoint/$run_name"
 }
@@ -46,7 +46,6 @@ AI-MO/NuminaMath-CoT
 AI-MO/NuminaMath-TIR
 iknow-lab/qarv-instruct-ko-mt-deduped
 sft:heegyu/orca-math-korean-preference-cleaned:hard
-HAERAE-HUB/HR-Instruct-Math-v0.1
 HAERAE-HUB/K2-Feedback:score5
 "
 # heegyu/HRC

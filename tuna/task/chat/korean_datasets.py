@@ -337,6 +337,12 @@ class KoGenstructV1Output(BaseAlpacaDataSource):
     instruction_key = "question"
     output_key = "llm_response"
 
+@datasources("HAERAE-HUB/HR-Instruct-Math-v0.1")
+class HRInstructMathV0_1(BaseAlpacaDataSource):
+    dataset_path = "HAERAE-HUB/HR-Instruct-Math-v0.1"
+    instruction_key = "instruction"
+    output_key = "response"
+    
 @datasources("iknow-lab/ko-evol-writing-wiki")
 class KoEvolWritingWiki(BaseAlpacaDataSource):
     dataset_path = "iknow-lab/ko-evol-writing-wiki"
