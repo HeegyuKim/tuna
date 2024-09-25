@@ -31,7 +31,7 @@ eval() {
         --output_dir ""
 }
 
-eval direct 1e-5
-eval direct 2e-5
-eval direct 5e-5
-eval direct 1e-4
+eval reason 1e-5
+eval reason 2e-5
+eval reason 5e-5
+eval reason 1e-4
