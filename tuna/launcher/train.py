@@ -5,12 +5,14 @@ from transformers import HfArgumentParser
 from ..task import tasks, DatasetArguments, DatasetLoader
 from ..model import models
 from ..trainer.utils.wandb_logger import WandbLogger
+import numpy as np
 
 
 @dataclass
 class LauncherArguments:
     task: str
     model_arch: str
+    debug: bool = False
     trainer: Optional[str] = None
 
 def eval_env_device(trainer: Optional[str] = None):
@@ -63,7 +65,8 @@ def main():
     print("Device:", trainer_args.device)
     
 
-    logger = WandbLogger(trainer_args)
+    if not args.debug:
+        logger = WandbLogger(trainer_args)
     dataloader = DatasetLoader(data_args)
 
     model_loader = model_cls(model_args)
@@ -79,15 +82,34 @@ def main():
     print("load model")
     task.set_model(model_loader.load_model())
     
-    
-    trainer = trainer_cls(
-        args=trainer_args,
-        logger=logger,
-        task=task,
-        train_dataset=dataloader.train_dataset,
-        eval_dataset=dataloader.test_dataset,
-    )
-    trainer.launch()
+    if args.debug:
+        print("Debugging dataset")
+        for k in dataloader.dataset:
+            for i in range(5):
+                print(f"train#{i:2d}", dataloader.dataset[k][i])
+                print(task.tokenizer.decode(dataloader.dataset[k][i]['input_ids'], skip_special_tokens=False))
+                
+
+            print("Estimating length statistics")
+            lengths = []
+            for item in dataloader.dataset[k]:
+                lengths.append(len(item["input_ids"]))
+            
+            # print statistics
+            lengths = np.array(lengths)
+            print("Split", k)
+            print("Lengths(mean, std, min, max):", lengths.mean(), lengths.std(), lengths.min(), lengths.max())
+            print("Lengths(percentile):", np.percentile(lengths, [0, 25, 50, 75, 90, 95, 99, 100]))
+        return
+    else:
+        trainer = trainer_cls(
+            args=trainer_args,
+            logger=logger,
+            task=task,
+            train_dataset=dataloader.train_dataset,
+            eval_dataset=dataloader.test_dataset,
+        )
+        trainer.launch()
 
 if __name__ == "__main__":
     main()

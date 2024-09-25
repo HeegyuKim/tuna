@@ -35,6 +35,7 @@ class ChatDataSource(DataSource):
     #     return item
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        assert self.dataset_name is not None, "Please specify the dataset name"
         ds = load_dataset(self.dataset_name, streaming=args.dataset_streaming).get(split)
         if ds:
             ds = ds.select_columns(self.CONVERSATION_KEY)
