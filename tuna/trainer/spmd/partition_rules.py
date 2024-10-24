@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import re
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd.xla_sharding as xs
 import torch_xla.core.xla_model as xm
 import transformers as tf
 from transformers import (

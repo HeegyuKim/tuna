@@ -6,6 +6,7 @@ datasets
 accelerate
 tokenizers
 sentencepiece
+cloud-tpu-client
 wandb
 einops
 jsonlines

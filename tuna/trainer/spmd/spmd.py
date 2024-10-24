@@ -17,9 +17,8 @@ xr.use_spmd()
 #     print("failed to execute jax-smi")
     
     
-import torch_xla.experimental.xla_sharding as xs
-from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
-from torch_xla.experimental.xla_sharding import Mesh
+import torch_xla.distributed.spmd.xla_sharding as xs
+from torch_xla.distributed.spmd.xla_sharding import Mesh
 from .partition_rules import partition_module, partition_module_dp
 from ...task.collator import GenerativeLanguageModelCollator
 from transformers.modeling_outputs import BaseModelOutput

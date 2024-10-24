@@ -24,11 +24,15 @@ class ChatDataSource(DataSource):
     
     def load(self, args: DatasetArguments, split: str) -> Dataset:
         ds = self.load_dataset(args, split=split)
-        if ds is not None and hasattr(self, "map_conversations"):
-            if isinstance(ds, IterableDataset):
-                ds = ds.map(self.map_conversations)
-            else:
-                ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=args.load_from_cache_file, desc="Converting to conversational format").select_columns([self.CONVERSATION_KEY])
+        if ds:
+            if "messages" in ds.column_names and self.CONVERSATION_KEY not in ds.column_names:
+                ds = ds.rename_column("messages", self.CONVERSATION_KEY)
+
+            if hasattr(self, "map_conversations"):
+                if isinstance(ds, IterableDataset):
+                    ds = ds.map(self.map_conversations)
+                else:
+                    ds = ds.map(self.map_conversations, num_proc=NUM_PROC, load_from_cache_file=args.load_from_cache_file, desc="Converting to conversational format").select_columns([self.CONVERSATION_KEY])
         return ds
     
     # def map_conversations(self, item):
@@ -36,9 +40,14 @@ class ChatDataSource(DataSource):
 
     def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
         ds = load_dataset(self.dataset_name, streaming=args.dataset_streaming).get(split)
-        if ds:
+        if ds is None:
+            return None
+
+        if self.CONVERSATION_KEY in ds.column_names:
             ds = ds.select_columns(self.CONVERSATION_KEY)
         return ds
+    
+
 
 def convert_vicuna2openai(convs):
     new_convs = []
