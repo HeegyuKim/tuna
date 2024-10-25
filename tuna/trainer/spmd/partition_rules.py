@@ -135,7 +135,8 @@ ALL_RULES = [
     (LlavaConfig, LLAVA_RULES),
     (GemmaConfig, LLAMA_RULES),
     (Gemma2Config, LLAMA_RULES),
-    ("Phi3Config", PHI3_RULES)
+    ("Phi3Config", PHI3_RULES),
+    ("ExaoneConfig", LLAMA_RULES),
 ]
 
 def find_rule(model):

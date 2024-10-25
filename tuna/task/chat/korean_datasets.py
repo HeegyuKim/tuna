@@ -379,3 +379,24 @@ class QarvInstructKoMt(ChatDataSource):
         if split != "train":
             return None
         return load_dataset("iknow-lab/qarv-instruct-ko-mt-deduped", split=split).rename_column("messages", "conversations")
+
+@datasources("iknow-lab/hermes-function-calling-v1-ko")
+class HermesFunctionCallingV1Ko(ChatDataSource):
+    def map_item(self, item):
+        for uttr in item["conversations"]:
+            if uttr["role"] == "시스템":
+                uttr["role"] = "system"
+            elif uttr["role"] == "사용자":
+                uttr["role"] = "user"
+            elif uttr["role"] in ["비서", "도우미"]:
+                uttr["role"] = "assistant"
+        return item
+    
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("iknow-lab/hermes-function-calling-v1-ko", split=split)
+        ds = ds.remove_columns(["conversations"])
+        ds = ds.rename_column("ko_conversations", "conversations")
+        ds = ds.map(self.map_item)
+        return ds

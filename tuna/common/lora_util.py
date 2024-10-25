@@ -48,7 +48,8 @@ LORA_TARGETS = [
     ("Qwen2Config", MISTRAL_TARGETS),
     (GemmaConfig, LLAMA_TARGETS),
     (Gemma2Config, LLAMA_TARGETS),
-    ("Phi3Config", PHI3_TARGETS)
+    ("Phi3Config", PHI3_TARGETS),
+    ("ExaoneConfig", LLAMA_TARGETS),
 ]
 
 def find_lora_targets(model):

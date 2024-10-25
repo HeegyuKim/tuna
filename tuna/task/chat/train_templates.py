@@ -333,13 +333,57 @@ class NoTemplate(BaseTrainTemplate):
     ASSISTANT_FORMAT = "{content}{eos}"
     GENERATION_PROMPT = ""
 
+# Exaone
+# [|system|][|endofturn|]
+# [|user|]Hey! Got a question for you!
+# [|assistant|]Sure! What's it?[|endofturn|]
+# [|user|]좋아 ㅎㅎ
+# [|assistant|]
+
+@train_templates.register("exaone")
+class ExaoneTemplate(BaseTrainTemplate):
+    SUPPORTED_MODELS = [
+        "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
+    ]
+    # for the first user message without system instruction (\eg Llama-2)
+    INITIAL_USER_FORMAT = None
+
+    SYSTEM_FORMAT = "[|system|]{content}[|endofturn|]"
+    USER_FORMAT = "[|user|]{content}"
+    ASSISTANT_FORMAT = "[|assistant|]{content}[|endofturn|]"
+    GENERATION_PROMPT = "[|assistant|]"
+
+    FUNCTION_CALLING_FORMAT = "[|function-call|]{content}[|endofturn|]"
+    FUNCTION_RESPONSE_FORMAT = "[|function-response|]{content}[|endofturn|]"
+
+    TURN_SEPERATOR = ""
+
+    def handle_utterance(self, utterance: Dict, index: int) -> Tuple[str, bool]:
+        role = utterance["role"]
+
+        if role in ["assistant"]:
+            fmt = self.ASSISTANT_FORMAT
+        elif role in ["user", "tool"]:
+            if index == 0:
+                fmt = self.INITIAL_USER_FORMAT
+            else:
+                fmt = self.USER_FORMAT
+        elif role == "system":
+            fmt = self.SYSTEM_FORMAT
+        else:
+            raise ValueError(f"Unknown role: {role}")
+        
+        if "trainable" in utterance and utterance["trainable"] is not None:
+            trainable = utterance["trainable"]
+        else:
+            trainable = role == "assistant"
+
+        return fmt.format(content=utterance["content"], **self.special_tokens), trainable
+
 if __name__ == "__main__":
     from transformers import AutoTokenizer, AutoModelForCausalLM
-    model = "microsoft/Phi-3-mini-4k-instruct"
+    model = "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
-    # print(tokenizer.encode("<end_of_turn>"))
-    t = Phi3Template(tokenizer)
-    # print(tokenizer.encode("<end_of_turn>"))
     convs = [
         {
             "role": "user",
@@ -349,34 +393,43 @@ if __name__ == "__main__":
             "role": "assistant",
             "content": "Sure! What's it?"
         },
+        {
+            "role": "user",
+            "content": "좋아 ㅎㅎ"
+        },
     ]
-    out = t.apply_chat_template(convs)
 
-    print(out)
+    prompt = tokenizer.apply_chat_template(convs, add_generation_prompt=True, tokenize=False)
+    print(prompt)
 
-    input_ids, labels = [], []
-    for i, c in enumerate(convs):
-        print()
-        print(f"uttr #{i}")
-        uttr, _ = t.handle_utterance(c, i)
-        print(uttr)
-        ids = tokenizer.encode(uttr, add_special_tokens=False)
-        print(ids)
-        print(tokenizer.decode(ids, skip_special_tokens=False))
+    # t = Phi3Template(tokenizer)
+    # out = t.apply_chat_template(convs)
 
-        input_ids.extend(ids)
-        if c['role'] == "assistant":
-            labels.extend(ids)
-        else:
-            labels.extend([-100] * len(ids))
+    # print(out)
+
+    # input_ids, labels = [], []
+    # for i, c in enumerate(convs):
+    #     print()
+    #     print(f"uttr #{i}")
+    #     uttr, _ = t.handle_utterance(c, i)
+    #     print(uttr)
+    #     ids = tokenizer.encode(uttr, add_special_tokens=False)
+    #     print(ids)
+    #     print(tokenizer.decode(ids, skip_special_tokens=False))
+
+    #     input_ids.extend(ids)
+    #     if c['role'] == "assistant":
+    #         labels.extend(ids)
+    #     else:
+    #         labels.extend([-100] * len(ids))
 
     
-    import torch
-    with torch.no_grad():
-        model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
-        # input_ids = tokenizer(out, return_tensors="pt", add_special_tokens=False)
-        # print(model(**input_ids, labels=input_ids["input_ids"]).loss)
-        input_ids = torch.tensor(input_ids).unsqueeze(0)
-        labels = torch.tensor(labels).unsqueeze(0)
-        print(model(input_ids, labels=labels).loss)
-        print(tokenizer.batch_decode(input_ids))
+    # import torch
+    # with torch.no_grad():
+    #     model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
+    #     # input_ids = tokenizer(out, return_tensors="pt", add_special_tokens=False)
+    #     # print(model(**input_ids, labels=input_ids["input_ids"]).loss)
+    #     input_ids = torch.tensor(input_ids).unsqueeze(0)
+    #     labels = torch.tensor(labels).unsqueeze(0)
+    #     print(model(input_ids, labels=labels).loss)
+    #     print(tokenizer.batch_decode(input_ids))

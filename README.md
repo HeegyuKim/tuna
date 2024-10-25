@@ -26,9 +26,11 @@ sudo docker run -it --name tuna \
     -d --privileged \
     --net host \
     --shm-size=16G \
-    -e VM_NAME="TPUv4-B" \
+    -e VM_NAME="TPUv4-A" \
     -v $HOME:/workspace \
-    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm \
+    -v /data/hf-home:/root/.cache/huggingface/ \
+    -v /data/checkpoint:/data/checkpoint/ \
+    tuna \
     /bin/bash
 
 # us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm
