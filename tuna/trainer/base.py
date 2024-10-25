@@ -247,6 +247,7 @@ class BaseTrainer:
                     metrics["epoch"] = epoch_float
                     self.logger.log_metric(metrics)
                     step_outputs = []
+                    progress.set_postfix(loss=loss)
 
                 if self.args.save_strategy and "steps" in self.args.save_strategy and global_step % self.args.save_steps == 0:
                     self.save_model(f"steps-{global_step}")

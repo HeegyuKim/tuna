@@ -25,7 +25,7 @@ class WandbLogger(BaseLogger):
 
     def log_metric(self, metric):
         wandb.log(metric)
-        pprint(metric)
+        # pprint(metric)
 
     def log(self, *args, **kwargs):
         print(*args, **kwargs)

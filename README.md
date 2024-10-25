@@ -25,14 +25,16 @@ pip install torch~=2.2.0 torch_xla[tpu]~=2.2.0 -f https://storage.googleapis.com
 sudo docker run -it --name tuna \
     -d --privileged \
     --net host \
+    --shm-size=16G \
     -e VM_NAME="TPUv4-B" \
     -v $HOME:/workspace \
-    -v /data/hf-home:/root/.cache/huggingface \
-    heegyukim/tuna:0.0.2 \
+    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm \
     /bin/bash
 
 # us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm
 # us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm
+# us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm
+
 
 ```
 
