@@ -304,7 +304,7 @@ class BaseTrainer:
         if self.args.output_dir:
             path = f"{self.args.output_dir}/{run_name}/{name}"
             self.task.save_artifacts(self.task.model, path)
-
+            print("saved to", path)
             if self.args.push_to_hub:
                 self.push_to_hub_revision(repo_id, path, "main" if is_last else name)
 

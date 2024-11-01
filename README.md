@@ -86,3 +86,35 @@ python -m eval.instruction_following_eval.evaluation_main \
 
 # mt-bench
 ```
+
+## VLLM for TPU
+
+```
+# from repository build
+git clone https://github.com/vllm-project/vllm.git
+docker build -f Dockerfile.tpu -t vllm-tpu .
+
+# from docker hub
+sudo docker run -it --name vllm \
+    -d --privileged \
+    --net host \
+    --shm-size=16G \
+    -e VM_NAME="TPUv4-A" \
+    -v $HOME:/workspace \
+    -v /data/hf-home:/root/.cache/huggingface/ \
+    -v /data/checkpoint:/data/checkpoint/ \
+    heegyu/vllm-tpu \
+    /bin/bash
+
+# from source (in TPU docker)
+git clone https://github.com/vllm-project/vllm.git
+cd vllm
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+pip install -r requirements-tpu.txt
+pip install setuptools-scm
+VLLM_TARGET_DEVICE="tpu" python setup.py develop
+cd ../
+
+python test_vllm.py
+
+```

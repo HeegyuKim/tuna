@@ -3,7 +3,7 @@
 wandb online
 
 
-model="meta-llama/Llama-3.2-1B-Instruct"
+model="meta-llama/Llama-3.2-3B-Instruct"
 
 train() {
     lr=$1
@@ -20,22 +20,22 @@ train() {
         --dataset="$dataset" \
         --packing False \
         --amp \
-        --logging_steps 256 \
+        --logging_steps 512 \
         --max_length=2048 \
         --truncation \
         --model_name_or_path $model \
         --total_epochs 3 \
         --learning_rate $lr \
         --train_total_batch_size 128 \
-        --train_batch_size_per_device 2 \
-        --eval_batch_size_per_device 2 \
+        --train_batch_size_per_device 1 \
+        --eval_batch_size_per_device 1 \
         --save_strategy epoch \
         --push_to_hub False \
         --revision_prefix "lr$lr-bs128" \
         --output_dir "/data/checkpoint/"
 }
 
-# train 1e-5 "hf-chat:heegyu/wildguardmix-direct-1001" "1025-barrier-1B-direct"
-# train 5e-6 "hf-chat:heegyu/wildguardmix-direct-1001" "1025-barrier-1B-direct"
-train 1e-5 "hf-chat:heegyu/wildguardmix-train-reasoning-cleaned-125k-1005-messages" "1025-barrier-1B-reasoning"
-train 5e-6 "hf-chat:heegyu/wildguardmix-train-reasoning-cleaned-125k-1005-messages" "1025-barrier-1B-reasoning"
+train 1e-5 "hf-chat:heegyu/wildguardmix-direct-1001" "1025-barrier-3B-direct"
+train 5e-6 "hf-chat:heegyu/wildguardmix-direct-1001" "1025-barrier-3B-direct"
+train 1e-5 "hf-chat:heegyu/wildguardmix-train-reasoning-cleaned-125k-1005-messages" "1025-barrier-3B-reasoning"
+train 5e-6 "hf-chat:heegyu/wildguardmix-train-reasoning-cleaned-125k-1005-messages" "1025-barrier-3B-reasoning"
