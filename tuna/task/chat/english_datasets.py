@@ -280,3 +280,23 @@ class InfiniInstruct0625(VicunaChatDataSource):
             return
         ds = load_dataset("BAAI/Infinity-Instruct", "0625", split=split)
         return ds
+
+@datasources("argilla/ifeval-like-data:filtered")
+class IfEvalLikeData(BaseAlpacaDataSource):
+    instruction_key = "prompt"
+    output_key = "response"
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("argilla/ifeval-like-data", "filtered", split=split)
+        return ds
+
+@datasources("argilla/magpie-ultra-v0.1")
+class MagpieUltraV01(BaseAlpacaDataSource):
+    output_key = "response"
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("argilla/magpie-ultra-v0.1", split=split)
+        return ds
+

@@ -400,3 +400,34 @@ class HermesFunctionCallingV1Ko(ChatDataSource):
         ds = ds.rename_column("ko_conversations", "conversations")
         ds = ds.map(self.map_item)
         return ds
+
+
+@datasources("heegyu/Magpie-Pro-MT-300K-v0.1-ko-filtered")
+class KoMagpieProMT300KFiltered(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return
+        ds = load_dataset("heegyu/Magpie-Pro-MT-300K-v0.1-ko-filtered", split=split)
+        return ds
+
+    def map_conversations(self, item):
+        return {
+            "conversations": [
+                {"role": "user", "content": item["input1"]},
+                {"role": "assistant", "content": item["output1"]},
+                {"role": "user", "content": item["input2"]},
+                {"role": "assistant", "content": item["output2"]},
+            ]
+        }
+
+
+@datasources("heegyu/Maths-College-ko-filtered")
+class MathsCollegeKo(BaseAlpacaDataSource):
+    dataset_path = "heegyu/Maths-College-ko-filtered"
+
+@datasources("heegyu/CodeFeedback-Filtered-Instruction-ko-filtered")
+class CodeFeedbackFilteredInstructionKo(BaseAlpacaDataSource):
+    dataset_path = "heegyu/CodeFeedback-Filtered-Instruction-ko-filtered"
+    instruction_key = "query"
+    output_key = "answer"
+

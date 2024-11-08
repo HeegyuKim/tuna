@@ -1,8 +1,8 @@
 wandb online
 
-dataset="hf-chat:iknow-lab/wildguardmix-train-ko-trl,hf-chat:iknow-lab/wildjailbreak-train-ko-trl"
-model="Bllossom/llama-3.2-Korean-Bllossom-3B"
-run_name="llama-3.2-3B-wildguard-ko-1025"
+dataset="hf-chat:iknow-lab/wildguardmix-train-ko-trl"
+model="Qwen/Qwen2.5-0.5B-Instruct"
+run_name="Qwen2.5-0.5B-wildguard-ko"
 
 train() {
     lr=$1
@@ -12,7 +12,7 @@ train() {
         --padding max_length \
         --model_arch causal-lm \
         --project "KoChat-SFT" \
-        --train_template llama3 \
+        --train_template chatml \
         --run_name "$run_name" \
         --dataset="$dataset" \
         --packing False \
@@ -25,13 +25,15 @@ train() {
         --total_epochs 2 \
         --learning_rate $lr \
         --train_total_batch_size 128 \
-        --train_batch_size_per_device 1 \
-        --eval_batch_size_per_device 1 \
+        --train_batch_size_per_device 4 \
+        --eval_batch_size_per_device 4 \
         --save_strategy epoch \
         --push_to_hub \
         --revision_prefix "lr$lr-bs128" \
         --output_dir ""
 }
 
-train 1e-5
-train 5e-6
+train 5e-5
+train 2e-5
+# train 1e-5
+# train 5e-6

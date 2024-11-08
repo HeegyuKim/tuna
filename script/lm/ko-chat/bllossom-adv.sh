@@ -1,8 +1,14 @@
+
+dataset="heegyu/Magpie-Pro-MT-300K-v0.1-ko-filtered
+heegyu/Maths-College-ko-filtered
+heegyu/CodeFeedback-Filtered-Instruction-ko-filtered
+argilla/ifeval-like-data:filtered
+argilla/magpie-ultra-v0.1"
+
 wandb online
 
-dataset="hf-chat:iknow-lab/wildguardmix-train-ko-trl,hf-chat:iknow-lab/wildjailbreak-train-ko-trl"
 model="Bllossom/llama-3.2-Korean-Bllossom-3B"
-run_name="llama-3.2-3B-wildguard-ko-1025"
+run_name="llama-3.2-3B-mandoo-1106"
 
 train() {
     lr=$1
@@ -33,5 +39,5 @@ train() {
         --output_dir ""
 }
 
-train 1e-5
+# train 1e-5
 train 5e-6

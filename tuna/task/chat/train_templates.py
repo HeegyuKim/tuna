@@ -382,7 +382,7 @@ class ExaoneTemplate(BaseTrainTemplate):
 
 if __name__ == "__main__":
     from transformers import AutoTokenizer, AutoModelForCausalLM
-    model = "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
+    model = "Qwen/Qwen2.5-0.5B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
     convs = [
         {
