@@ -28,6 +28,8 @@ class BaseModelArguments:
     lora_alpha: int = 32
     lora_dropout: float = 0.0
     lora_bias: Optional[str] = 'none'
+    lora_modules_to_save: Optional[str] = None
+
 
 class BaseModel:
     ARG_CLASS = BaseModelArguments
@@ -81,7 +83,8 @@ class BaseModel:
             use_dora=args.use_dora,
             lora_alpha=args.lora_alpha, 
             lora_dropout=args.lora_dropout, 
-            target_modules=targets
+            target_modules=targets,
+            modules_to_save=args.lora_modules_to_save.split(",") if args.lora_modules_to_save else None,
             )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
@@ -109,6 +112,19 @@ class SequenceClassification(BaseModel):
             model = self.apply_lora(self.args, model)
             
         return model
+
+@models("causal-lm-omni")
+class OmniCausalLanguageModel(BaseModel):
+
+    def load_model(self):
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, num_labels=self.args.num_labels, trust_remote_code=self.args.trust_remote_code)
+        
+        # LoRA
+        if self.args.use_lora or self.args.use_dora:
+            model = self.apply_lora(self.args, model)
+            
+        return model
+
 
 @dataclass
 class LlavaForPretrainingArguments(BaseModelArguments):

@@ -30,7 +30,7 @@ sudo docker run -it --name tuna \
     -v $HOME:/workspace \
     -v /data/hf-home:/root/.cache/huggingface/ \
     -v /data/checkpoint:/data/checkpoint/ \
-    tuna \
+    us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm \
     /bin/bash
 
 # us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm
