@@ -285,7 +285,7 @@ class LMTask(Task):
     def packed_step(self, batch, step):
         labels = batch.pop("labels")
         outputs = self.model(**batch)
-        accuracy = self.compute_masked_accuracy(outputs.logits, batch["labels"])
+        accuracy = self.compute_masked_accuracy(outputs.logits, labels)
         logits = outputs.logits
         # cross entropy loss
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1), ignore_index=-100)
