@@ -8,7 +8,7 @@ argilla/magpie-ultra-v0.1"
 wandb online
 
 model="Bllossom/llama-3.2-Korean-Bllossom-3B"
-run_name="llama-3.2-3B-mandoo-1106"
+run_name="llama-3.2-3B-mandoo-1113"
 
 train() {
     lr=$1

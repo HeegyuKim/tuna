@@ -59,6 +59,12 @@ class BaseModel:
             trust_remote_code=self.args.trust_remote_code,
             torch_dtype=torch.float32 if not self.args.use_lora else "auto"
             )
+
+        if self.args.peft_model_id:
+            from peft import PeftModel
+            print("Loading and merging PEFT model")
+            model = PeftModel.from_pretrained(model, self.args.peft_model_id, revision=self.args.peft_revision)
+            model = model.merge_and_unload()
         
         # if model.config.pad_token_id is None:
         #     model.config.pad_token_id = model.config.eos_token_id
