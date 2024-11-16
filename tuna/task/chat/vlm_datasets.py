@@ -73,3 +73,42 @@ class LlavaPretrainCosmosDi16_256px(ChatDataSource):
             "conversations": conversations,
         }
 
+
+@datasources("heegyu/llava-pretrain-titok-256px")
+class LlavaPretrainTitok256px(ChatDataSource):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            return None
+        ds = load_dataset("heegyu/llava-pretrain-titok-256px", streaming=args.dataset_streaming, split=split)
+        return ds
+
+    def map_conversations(self, item):
+        img_tokens = "".join(f"<image_{i}>" for i in item["image"])
+        img_tokens = f"{BOI_TOKEN}{img_tokens}{EOI_TOKEN}"
+
+        conversations = convert_vicuna2openai(json.loads(item["conversations"]))
+
+        instruction = conversations[0]["content"]
+        if "<image>" in instruction:
+            instruction = instruction.replace("<image>", img_tokens)
+        else:
+            instruction = img_tokens + "\n" + instruction
+
+        conversations[0]["content"] = instruction
+
+        return {
+            "conversations": conversations,
+        }
+
+@datasources("heegyu/clean-llama-instruct-mix-titok-256px")
+class CleanLlamaInstructMixTitok256px(LlavaPretrainTitok256px):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            split = "train[-100:]"
+        else:
+            split = "train[:-100]"
+            
+        ds = load_dataset("heegyu/clean-llama-instruct-mix-titok-256px", streaming=args.dataset_streaming, split=split)
+        return ds
