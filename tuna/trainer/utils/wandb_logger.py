@@ -12,9 +12,13 @@ class WandbLogger(BaseLogger):
         config_dict = config.__dict__
         config_dict["VM_NAME"] = os.environ.get("VM_NAME", "unknown")
 
+        name = config.run_name.replace("/", "__").replace(",", "_")
+        if config.revision_prefix:
+            name = f"{name}-{config.revision_prefix}"
+
         self.run = wandb.init(
             project=config.project,
-            name=config.run_name.replace("/", "__").replace(",", "_"),
+            name=name,
             config=config_dict
         )
     
