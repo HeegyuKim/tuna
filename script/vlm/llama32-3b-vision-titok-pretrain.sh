@@ -1,10 +1,10 @@
 
 dataset="heegyu/llava-pretrain-titok-256px"
-model="heegyu/Llama-3.2-1B-vis4k"
+model="heegyu/Llama-3.2-3B-Instruct-vis4k"
 
 wandb online
 
-run_name="llama-3.2-1B-llava-titok-pretrain-full-1119"
+run_name="llama-3.2-3B-llava-titok-pretrain-1117"
 
 train() {
     lr=$1
@@ -20,28 +20,25 @@ train() {
         --check_dataset False \
         --load_from_cache_file \
         --packing False \
-        --train_only_response False \
+        --train_only_response True \
         --max_length=512 \
         --amp True \
         --use_lora False \
-        --lora_r 16 \
-        --lora_alpha 32 \
+        --lora_r 32 \
+        --lora_alpha 64 \
         --lora_modules_to_save "embed_tokens,lm_head" \
         --lr_warmup_ratio 0.01 \
         --truncation \
         --model_name_or_path $model \
-        --total_epochs 1 \
+        --total_epochs 3 \
         --learning_rate $lr \
         --train_total_batch_size 128 \
-        --train_batch_size_per_device 4 \
-        --eval_batch_size_per_device 4 \
-        --save_strategy last \
+        --train_batch_size_per_device 1 \
+        --eval_batch_size_per_device 1 \
+        --save_strategy epoch \
         --push_to_hub \
         --revision_prefix "lr$lr-bs128" \
         --output_dir ""
 }
 
 train 5e-5
-# train 1e-4
-# train 2e-4
-# train 3e-4

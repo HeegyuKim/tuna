@@ -31,4 +31,6 @@ def expand_and_push(model_name, codebook_size):
     tokenizer.push_to_hub(output_path)
 
 # expand_and_push("meta-llama/Llama-3.2-1B-Instruct", 65536)
-expand_and_push("Bllossom/llama-3.2-Korean-Bllossom-3B", 65536)
+# expand_and_push("meta-llama/Llama-3.2-3B-Instruct", 4096)
+expand_and_push("meta-llama/Llama-3.2-8B", 4096)
+# expand_and_push("Bllossom/llama-3.2-Korean-Bllossom-3B", 65536)

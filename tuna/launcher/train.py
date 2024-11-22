@@ -47,7 +47,7 @@ def main():
 
     
     print("Task:", task_cls, task_cls.ARG_CLASS)
-    print("Model:", model_cls)
+    print("Model:", model_cls, model_cls.ARG_CLASS)
     print("Trainer:", trainer_cls)
 
     _, task_args, data_args, model_args, trainer_args = HfArgumentParser([

@@ -30,6 +30,9 @@ class BaseModelArguments:
     lora_bias: Optional[str] = 'none'
     lora_modules_to_save: Optional[str] = None
 
+    # Vision Expansion
+    num_visual_tokens: int = 0
+
 
 class BaseModel:
     ARG_CLASS = BaseModelArguments
@@ -101,6 +104,43 @@ class BaseModel:
 @models("causal-lm")
 class CausalLanguageModel(BaseModel):
     AUTO_CLASS = AutoModelForCausalLM
+    
+
+@models("causal-lm-vision-expansion-stage1")
+class CausalLanguageModelExpansionStage1(CausalLanguageModel):
+    
+    def load_model(self):
+        model = self.AUTO_CLASS.from_pretrained(self.args.model_name_or_path, revision=self.args.revision, trust_remote_code=self.args.trust_remote_code)
+        
+        number_of_old_tokens = model.config.vocab_size
+        
+        codebook_size = self.args.num_visual_tokens
+        model.resize_token_embeddings(number_of_old_tokens + codebook_size)
+
+        # number_of_old_tokens is the size of tokenizer before vocab extension. For example, in case of EEVE-Korean-10.8B-v1.0, number_of_old_tokens is 32000.
+        def freeze_partial_embedding_hook(grad):
+            grad[:number_of_old_tokens] = 0
+            return grad
+
+        for name, param in model.named_parameters():
+            # if ("lm_head" in name or "embed_tokens" in name) and "original" not in name:
+            #     param.requires_grad = True
+            if "embed_tokens" in name:
+                param.register_hook(freeze_partial_embedding_hook)
+            else:
+                param.requires_grad = False
+
+        
+        return model
+
+    def load_artifacts(self):
+        artifacts = super().load_artifacts()
+        tokenizer = artifacts["tokenizer"]
+        codebook_size = self.args.num_visual_tokens
+        new_tokens = ["<begin_of_image>", "<end_of_image>"] + [f"<image_{i}>" for i in range(codebook_size - 2)]
+        num_added_tokens = tokenizer.add_tokens(new_tokens)
+        print(f"추가된 토큰 수: {num_added_tokens}")
+        return artifacts
 
 @models("seq2seq-lm")
 class Seq2SeqLM(BaseModel):
