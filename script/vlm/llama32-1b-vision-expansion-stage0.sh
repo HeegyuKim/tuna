@@ -1,10 +1,13 @@
 
 dataset="heegyu/llava-pretrain-titok-256px"
-model="meta-llama/Llama-3.2-3B-Instruct"
+# model="meta-llama/Llama-3.2-3B-Instruct"
+# run_name="llama-3.2-3B-Instruct-viex-titok-1120"
+
+model="meta-llama/Llama-3.1-8B-Instruct"
+run_name="llama-3.1-8B-Instruct-viex-titok-1120"
 
 wandb online
 
-run_name="llama-3.2-3B-Instruct-viex-titok-1120"
 
 train() {
     lr=$1
@@ -27,18 +30,18 @@ train() {
         --lr_warmup_ratio 0.01 \
         --truncation \
         --model_name_or_path $model \
-        --total_epochs 3 \
+        --total_epochs 2 \
         --learning_rate $lr \
         --train_total_batch_size 128 \
-        --train_batch_size_per_device 8 \
-        --eval_batch_size_per_device 8 \
+        --train_batch_size_per_device 4 \
+        --eval_batch_size_per_device 4 \
         --save_strategy epoch \
-        --push_to_hub \
-        --output_dir ""
+        --push_to_hub False \
+        --output_dir "/data/checkpoint/llama31-8b-titok-256px-stage1/"
 }
 
-# train 5e-5
+train 5e-5
 train 1e-4
 # train 2e-4
 train 3e-4
-train 6e-4
+# train 6e-4
