@@ -101,6 +101,33 @@ class LlavaPretrainTitok256px(ChatDataSource):
             "conversations": conversations,
         }
 
+@datasources("heegyu/infinity-mm-stage1-cosmosdi16-256px")
+class InfinityMMStarge1CosmosDi16_256px(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split == "test":
+            return None
+
+        ds = load_dataset("heegyu/infinity-mm-stage1-cosmosdi16-256px", streaming=args.dataset_streaming, split=split)
+        return ds
+
+    def map_conversations(self, item):
+        img_tokens = "\n".join(["".join([f"<image_{i}>" for i in row]) for row in item["image_tokens"]])
+        img_tokens = f"{BOI_TOKEN}{img_tokens}{EOI_TOKEN}"
+
+        conversations = convert_vicuna2openai(item["conversations"])
+
+        instruction = conversations[0]["content"]
+        if "<image>" in instruction:
+            instruction = instruction.replace("<image>", img_tokens)
+        else:
+            instruction = img_tokens + "\n" + instruction
+
+        conversations[0]["content"] = instruction
+
+        return {
+            "conversations": conversations,
+        }
+
 @datasources("heegyu/clean-llama-instruct-mix-titok-256px")
 class CleanLlamaInstructMixTitok256px(LlavaPretrainTitok256px):
 
@@ -111,4 +138,16 @@ class CleanLlamaInstructMixTitok256px(LlavaPretrainTitok256px):
             split = "train[:-100]"
             
         ds = load_dataset("heegyu/clean-llama-instruct-mix-titok-256px", streaming=args.dataset_streaming, split=split)
+        return ds
+
+@datasources("heegyu/clean-llava-instruct-mix-cosmos-di16-256")
+class CleanLlavaInstructMixCosmosDi16_256px(LlavaPretrainCosmosDi16_256px):
+
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split != "train":
+            split = "train[-100:]"
+        else:
+            split = "train[:-100]"
+
+        ds = load_dataset("heegyu/clean-llava-instruct-mix-cosmos-di16-256", streaming=args.dataset_streaming, split=split)
         return ds

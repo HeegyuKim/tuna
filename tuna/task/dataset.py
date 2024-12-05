@@ -9,7 +9,7 @@ from pprint import pprint
 
 
 
-NUM_PROC = os.environ.get("DATASET_NUM_PROC", max(1, min(8, os.cpu_count() // 2)))
+NUM_PROC = int(os.environ.get("DATASET_NUM_PROC", max(1, min(8, os.cpu_count() // 2))))
 
 @dataclass
 class DatasetArguments():
