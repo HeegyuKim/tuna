@@ -125,7 +125,7 @@ class CausalLanguageModelExpansionStage1(CausalLanguageModel):
         for name, param in model.named_parameters():
             # if ("lm_head" in name or "embed_tokens" in name) and "original" not in name:
             #     param.requires_grad = True
-            if "embed_tokens" in name:# or "lm_head" in name:
+            if "embed_tokens" in name or "lm_head" in name:
                 param.register_hook(freeze_partial_embedding_hook)
             else:
                 param.requires_grad = False
@@ -137,7 +137,7 @@ class CausalLanguageModelExpansionStage1(CausalLanguageModel):
         artifacts = super().load_artifacts()
         tokenizer = artifacts["tokenizer"]
         codebook_size = self.args.num_visual_tokens
-        new_tokens = ["<begin_of_image>", "<end_of_image>"] + [f"<image_{i}>" for i in range(codebook_size - 2)]
+        new_tokens = ["<begin_of_image>", "<end_of_image>", "<image_newline>"] + [f"<image_{i}>" for i in range(codebook_size - 3)]
         num_added_tokens = tokenizer.add_tokens(new_tokens)
         print(f"추가된 토큰 수: {num_added_tokens}")
         return artifacts

@@ -25,8 +25,8 @@ class BaseTrainTemplate:
     INITIAL_USER_FORMAT = None
 
     SYSTEM_FORMAT = "<|im_start|>system\n{content}{eos}"
-    USER_FORMAT = "<|im_start|>user\n{content}{eos}"
-    ASSISTANT_FORMAT = "<|im_start|>assistant\n{content}{eos}"
+    USER_FORMAT = "<|im_start|>user\n{content}{eos}<|im_start|>assistant\n"
+    ASSISTANT_FORMAT = "{content}{eos}"
     GENERATION_PROMPT = "<|im_start|>assistant"
 
     FUNCTION_CALLING_FORMAT = "<|im_start|>function_calling\n{content}{eos}"

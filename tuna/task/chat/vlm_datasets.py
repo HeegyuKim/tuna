@@ -2,7 +2,7 @@ from .datasets import ChatDataSource, BaseAlpacaDataSource, datasources, Dataset
 from datasets import load_dataset, Dataset
 from copy import deepcopy
 import json
-
+import random
 
 BOI_TOKEN, EOI_TOKEN = "<begin_of_image>", "<end_of_image>"
 # [f"<image_{i}>" for i in range(codebook_size - 2)]
@@ -111,7 +111,7 @@ class InfinityMMStarge1CosmosDi16_256px(ChatDataSource):
         return ds
 
     def map_conversations(self, item):
-        img_tokens = "\n".join(["".join([f"<image_{i}>" for i in row]) for row in item["image_tokens"]])
+        img_tokens = "<image_newline>".join(["".join([f"<image_{i}>" for i in row]) for row in item["image_tokens"]])
         img_tokens = f"{BOI_TOKEN}{img_tokens}{EOI_TOKEN}"
 
         conversations = convert_vicuna2openai(item["conversations"])
@@ -127,6 +127,44 @@ class InfinityMMStarge1CosmosDi16_256px(ChatDataSource):
         return {
             "conversations": conversations,
         }
+
+        
+@datasources("heegyu/infinity-mm-stage1-cosmosdi16-256px-rev")
+class InfinityMMStarge1CosmosDi16_256px_Rev(ChatDataSource):
+    def load_dataset(self, args: DatasetArguments, split: str) -> Dataset:
+        if split == "test":
+            return None
+
+        ds = load_dataset("heegyu/infinity-mm-stage1-cosmosdi16-256px", streaming=args.dataset_streaming, split=split)
+        return ds
+
+    def map_conversations(self, item):
+        img_tokens = "<image_newline>".join(["".join([f"<image_{i}>" for i in row]) for row in item["image_tokens"]])
+        img_tokens = f"{BOI_TOKEN}{img_tokens}{EOI_TOKEN}"
+
+        conversations = convert_vicuna2openai(item["conversations"])
+
+        if random.random() < 0.5:
+            instruction = conversations[0]["content"]
+            if "<image>" in instruction:
+                instruction = instruction.replace("<image>", img_tokens)
+            else:
+                instruction = img_tokens + "\n" + instruction
+
+            conversations[0]["content"] = instruction
+
+            return {
+                "conversations": conversations,
+            }
+        else:
+            caption = conversations[1]["content"]
+            instruction = f"Generate an image that looks like the following caption: {caption}"
+            return {
+                "conversations": [
+                    {"role": "user", "content": instruction},
+                    {"role": "assistant", "content": img_tokens},
+                ]
+            }
 
 @datasources("heegyu/clean-llama-instruct-mix-titok-256px")
 class CleanLlamaInstructMixTitok256px(LlavaPretrainTitok256px):
